@@ -1,7 +1,7 @@
 /*依赖：
 express bcryptjs pg dotenv jsonwebtoken cors
 
-npm install express bcryptjs pg dotenv jsonwebtoken
+npm install express bcryptjs pg dotenv jsonwebtoken cors
 */
 
 const express = require('express');
