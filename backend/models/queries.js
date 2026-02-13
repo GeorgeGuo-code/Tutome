@@ -487,6 +487,34 @@ async function searchByMultipleTags(tagIds = [], page = 1, limit = 20, categoryR
   }
 }
 
+// 通过id获取问题
+const getQuestionById = async (questionId) => {
+  const query = 'SELECT * FROM questions WHERE id = $1';  // SQL 查询语句
+  try {
+    const result = await pool.query(query, [questionId]);
+    if (result.rows.length === 0) {
+      return null; // 问题不存在
+    }
+    return result.rows[0]; // 返回问题对象
+  } catch (error) {
+    throw new Error('数据库查询失败');
+  }
+};
+
+// 通过id删除问题
+const deleteQuestion = async (questionId) => {
+  const query = 'DELETE FROM questions WHERE id = $1 RETURNING *';  // SQL 查询语句，删除问题并返回删除的记录
+  try {
+    const result = await pool.query(query, [questionId]);
+    if (result.rows.length === 0) {
+      return { success: false, message: '问题删除失败' }; // 如果没有记录被删除，返回失败
+    }
+    return { success: true, message: '问题已成功删除' }; // 删除成功，返回成功信息
+  } catch (error) {
+    throw new Error('数据库删除失败');
+  }
+};
+
 module.exports = {
   registerUser,
   findUserByUsername,
@@ -497,5 +525,7 @@ module.exports = {
   getQuestionsByTagId,
   getQuestionWithTags,
   getTagsByCategory,
-  searchByMultipleTags
+  searchByMultipleTags,
+  getQuestionById,
+  deleteQuestion
 };
