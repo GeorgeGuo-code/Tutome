@@ -487,7 +487,119 @@ async function searchByMultipleTags(tagIds = [], page = 1, limit = 20, categoryR
   }
 }
 
+// 聊天相关的数据库查询
+const queries = {
+  // 结对相关查询
+  pair: {
+    // 检查是否存在结对
+    checkExisting: async (userId, targetUserId) => {
+      const result = await pool.query(
+        `SELECT * FROM pairs 
+         WHERE ((teacher_id = $1 AND student_id = $2) OR (teacher_id = $2 AND student_id = $1))
+         AND status IN ('pending', 'active')`,
+        [userId, targetUserId]
+      );
+      return result.rows;
+    },
+
+    // 创建结对申请
+    create: async (teacherId, studentId, topicId) => {
+      const result = await pool.query(
+        `INSERT INTO pairs (teacher_id, student_id, topic_id, status) 
+         VALUES ($1, $2, $3, 'pending') RETURNING *`,
+        [teacherId, studentId, topicId]
+      );
+      return result.rows[0];
+    },
+
+    // 接受结对申请
+    accept: async (pairId) => {
+      const result = await pool.query(
+        `UPDATE pairs SET status = 'active', started_at = NOW() 
+         WHERE id = $1 RETURNING *`,
+        [pairId]
+      );
+      return result.rows[0];
+    },
+
+    // 获取用户的结对列表
+    getByUserId: async (userId) => {
+    try {
+      console.log('获取用户结对列表，用户ID:', userId);
+    
+      const result = await pool.query(
+          `SELECT p.*, 
+              CASE 
+                  WHEN p.teacher_id = $1 THEN u_student.username 
+                  ELSE u_teacher.username 
+              END as partner_nickname,
+              t.name as topic_name
+          FROM pairs p
+          LEFT JOIN users u_teacher ON p.teacher_id = u_teacher.id
+          LEFT JOIN users u_student ON p.student_id = u_student.id
+          JOIN topics t ON p.topic_id = t.id
+          WHERE p.teacher_id = $1 OR p.student_id = $1
+          ORDER BY p.created_at DESC`,
+          [userId]
+        );
+    
+        console.log('查询成功，结果数量:', result.rows.length);
+        return result.rows;
+      } catch (error) {
+        console.error('getByUserId 错误:', error);
+        throw error;
+      }
+    },
+    // 根据ID获取结对
+    getById: async (pairId) => {
+      const result = await pool.query(
+        'SELECT * FROM pairs WHERE id = $1',
+        [pairId]
+      );
+      return result.rows[0];
+    },
+
+    // 结束教学
+    end: async (pairId) => {
+      const result = await pool.query(
+        `UPDATE pairs SET status = 'completed', ended_at = NOW() 
+         WHERE id = $1 RETURNING *`,
+        [pairId]
+      );
+      return result.rows[0];
+    }
+  },
+
+  // 消息相关查询
+  message: {
+    // 创建消息
+    create: async (pairId, senderId, content) => {
+      const result = await pool.query(
+        `INSERT INTO messages (pair_id, sender_id, content) 
+         VALUES ($1, $2, $3) RETURNING *`,
+        [pairId, senderId, content]
+      );
+      return result.rows[0];
+    },
+
+    // 获取结对的聊天记录
+    getByPairId: async (pairId) => {
+      const result = await pool.query(
+        `SELECT m.*, u.username as sender_nickname
+         FROM messages m
+         JOIN users u ON m.sender_id = u.id
+         WHERE m.pair_id = $1
+         ORDER BY m.created_at ASC`,
+        [pairId]
+      );
+      return result.rows;
+    }
+  }
+};
+
+
 module.exports = {
+  ...queries,
   registerUser,
   findUserByUsername,
   createQuestion,    
