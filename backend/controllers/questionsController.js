@@ -198,6 +198,54 @@ const searchByMultipleTags = async (req, res) => {
   }
 };
 
+// 删除问题（提问者才能删除）
+const deleteQuestion = async (req, res) => {
+  try {
+    const { questionId } = req.params; // 获取请求中的 questionId
+    const userId = req.user.userId; // 获取当前用户的 userId
+
+    // 检查问题是否存在
+    const question = await queries.getQuestionById(questionId);
+
+    if (!question) {
+      return res.status(404).json({
+        success: false,
+        message: '问题不存在',
+      }); 
+    }
+
+    // 验证用户是否是问题的创建者
+    if (question.user_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: '您无权删除此问题',
+      });
+    }
+    
+    // 删除问题
+    const result = await queries.deleteQuestion(questionId);
+
+    if (result.success) {
+      return res.status(200).json({
+        success: true,
+        message: '问题已成功删除',
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: '删除问题失败',
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '服务器错误',
+      error: error.message,
+    });
+  }
+};
+
+
 module.exports = {
   createQuestion,
   getQuestions,
@@ -206,4 +254,5 @@ module.exports = {
   getQuestionsByTagId,
   getTagsByCategory,
   searchByMultipleTags,
+  deleteQuestion
 };

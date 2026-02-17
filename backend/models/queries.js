@@ -486,7 +486,19 @@ async function searchByMultipleTags(tagIds = [], page = 1, limit = 20, categoryR
     return { success: false, message: error.message };
   }
 }
-
+// 通过id获取问题
+const getQuestionById = async (questionId) => {
+  const query = 'SELECT * FROM questions WHERE id = $1';  // SQL 查询语句
+  try {
+    const result = await pool.query(query, [questionId]);
+    if (result.rows.length === 0) {
+      return null; // 问题不存在
+    }
+    return result.rows[0]; // 返回问题对象
+  } catch (error) {
+    throw new Error('数据库查询失败');
+  }
+};
 // 聊天相关的数据库查询
 const queries = {
   // 结对相关查询
@@ -596,8 +608,6 @@ const queries = {
     }
   }
 };
-
-
 module.exports = {
   ...queries,
   registerUser,
@@ -609,5 +619,7 @@ module.exports = {
   getQuestionsByTagId,
   getQuestionWithTags,
   getTagsByCategory,
-  searchByMultipleTags
+  searchByMultipleTags,
+  getQuestionById,
+  deleteQuestion
 };

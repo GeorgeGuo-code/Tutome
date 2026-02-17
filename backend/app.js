@@ -1,7 +1,7 @@
 /*依赖：
 express bcryptjs pg dotenv jsonwebtoken cors
 
-npm install express bcryptjs pg dotenv jsonwebtoken
+npm install express bcryptjs pg dotenv jsonwebtoken cors
 */
 
 const express = require('express');
@@ -15,10 +15,6 @@ const app = express();
 app.use(cors());  // 使用 cors 中间件
 app.use(express.json());  // 用于解析 JSON 格式的请求体
 
-// ========== 公开路由（不需要 token）==========
-app.get('/', (req, res) => {
-  res.json({ message: 'TUTOME API 服务器运行中' });
-});
 
 
 app.use(usersRouter);
