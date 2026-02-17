@@ -3,7 +3,6 @@ CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    nickname VARCHAR(50),  -- 添加昵称字段（可选）
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -116,10 +115,3 @@ INSERT INTO topics (name, level) VALUES
 ('英语', 1),
 ('编程', 1),
 ON CONFLICT DO NOTHING;
-
--- 插入测试用户（密码都是：123456）
--- 注意：这里用的是 bcrypt 加密后的密码
-INSERT INTO users (username, password, nickname) VALUES 
-('testuser1', '$2a$10$N9qo8uLOickgx2ZMRZoMye1s5QjN7qR8aGc9sZJXY2J5K9Yb5KL2C', '测试用户1'),
-('testuser2', '$2a$10$N9qo8uLOickgx2ZMRZoMye1s5QjN7qR8aGc9sZJXY2J5K9Yb5KL2C', '测试用户2')
-ON CONFLICT (username) DO NOTHING;
