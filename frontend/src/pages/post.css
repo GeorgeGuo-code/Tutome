@@ -1,0 +1,136 @@
+.post-container {
+  min-height: 100vh;
+  background-color: #F5F7FA;
+  padding: 120px 20px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.post-header {
+  position: absolute;
+  top: 64px;
+  left: 0;
+  right: 0;
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.back-btn,
+.view-toggle {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  background: white;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.back-btn:hover,
+.view-toggle:hover {
+  background: #F9FAFB;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.post-content {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.post-card {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.post-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1E293B;
+  text-align: center;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.post-body {
+  margin-bottom: 24px;
+}
+
+.post-text {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #374151;
+  margin-bottom: 16px;
+}
+
+.post-text:last-child {
+  margin-bottom: 0;
+}
+
+.post-footer {
+  border-top: 1px solid #E5E7EB;
+  padding-top: 16px;
+}
+
+.post-end {
+  font-size: 14px;
+  color: #9CA3AF;
+  font-style: italic;
+}
+
+.post-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.dialogue-btn {
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.dialogue-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.dialogue-btn:active {
+  transform: translateY(0);
+}
+
+/* 响应式 */
+@media (max-width: 640px) {
+  .post-container {
+    padding: 100px 16px 32px;
+  }
+
+  .post-card {
+    padding: 24px;
+  }
+
+  .post-title {
+    font-size: 20px;
+  }
+
+  .post-text {
+    font-size: 15px;
+  }
+}
