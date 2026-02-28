@@ -1,8 +1,9 @@
-//数据库
 
+// 连接池
 require('dotenv').config({ path: './config/.env' });
 
 const { Pool } = require("pg");
+
 
 module.exports = new Pool({
   host: process.env.DB_HOST,

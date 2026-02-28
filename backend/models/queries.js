@@ -499,6 +499,34 @@ const getQuestionById = async (questionId) => {
     throw new Error('数据库查询失败');
   }
 };
+
+// 删除问题
+async function deleteQuestion(questionId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    // 删除问题标签关联（由于 ON DELETE CASCADE，删除问题会自动删除关联记录）
+    // 但为了安全起见，可以显式删除
+    await client.query('DELETE FROM question_tags WHERE question_id = $1', [questionId]);
+    
+    // 删除问题
+    const result = await client.query('DELETE FROM questions WHERE id = $1 RETURNING *', [questionId]);
+    
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '问题不存在' };
+    }
+    
+    await client.query('COMMIT');
+    return { success: true, message: '问题已删除' };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    return { success: false, message: error.message };
+  } finally {
+    client.release();
+  }
+}
 // 聊天相关的数据库查询
 const queries = {
   // 结对相关查询

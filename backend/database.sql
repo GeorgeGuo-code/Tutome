@@ -113,5 +113,5 @@ ON CONFLICT (name) DO NOTHING;
 INSERT INTO topics (name, level) VALUES 
 ('数学', 1),
 ('英语', 1),
-('编程', 1),
+('编程', 1)
 ON CONFLICT DO NOTHING;
