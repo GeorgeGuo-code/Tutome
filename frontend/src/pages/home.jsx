@@ -1,16 +1,13 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { requireAuth } from "../services/auth";
 import "./home.css";
 
 const Home = () => {
   const navigate = useNavigate();
 
   const handleEnter = () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("请先登录");
-      navigate("/login");
-    } else {
+    if (requireAuth()) {
       navigate("/personal");
     }
   };

@@ -1,9 +1,12 @@
 import { Link, NavLink, useLocation } from 'react-router-dom';
+import { checkAuth, requireAuth } from '../services/auth';
 import './Navbar.css';
 
 export default function Navbar({ showMinimal = false, showLoginOnly = false }) {
   const username = localStorage.getItem('username');
-  const location = useLocation();
+
+  // 检查登录状态，如果过期则清除
+  const isAuthenticated = checkAuth();
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -31,7 +34,7 @@ export default function Navbar({ showMinimal = false, showLoginOnly = false }) {
           ) : showMinimal ? (
             // 简化版导航栏（主页）
             <>
-              {username ? (
+              {isAuthenticated && username ? (
                 <div className="nav-dropdown">
                   <span className="nav-link nav-username">{username}</span>
                   <div className="dropdown-menu">
@@ -46,7 +49,7 @@ export default function Navbar({ showMinimal = false, showLoginOnly = false }) {
             // 完整版导航栏
             <>
               <NavLink to="/" className="nav-link">主页</NavLink>
-              {username ? (
+              {isAuthenticated && username ? (
                 <>
                   <NavLink to="/personal" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}>个人中心</NavLink>
                   <NavLink to="/ask" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}>提问</NavLink>
