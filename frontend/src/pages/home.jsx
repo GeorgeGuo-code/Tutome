@@ -1,13 +1,26 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import "./home.css";
 
 const Home = () => {
+  const navigate = useNavigate();
+
+  const handleEnter = () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("请先登录");
+      navigate("/login");
+    } else {
+      navigate("/personal");
+    }
+  };
+
   return (
     <div className="home">
       {/* Hero 区 */}
       <section className="hero">
         <h1 className="hero-title">TUTOME</h1>
-        <button className="hero-btn">ENTER</button>
+        <button className="hero-btn" onClick={handleEnter}>ENTER</button>
       </section>
 
       {/* About us */}

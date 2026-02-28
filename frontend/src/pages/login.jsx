@@ -29,6 +29,10 @@ const Login = () => {
         setMessage(isLogin ? "登录成功!" : "注册成功!");
         if (isLogin && data.token) {
           localStorage.setItem("token", data.token);
+          localStorage.setItem("username", username);
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 1000);
         }
       } else {
         setMessage(data.message || "操作失败");
