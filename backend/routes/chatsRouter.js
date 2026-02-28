@@ -14,14 +14,14 @@ if (typeof verifyJWT === 'function') {
 }
 
 // 结对相关
-router.post('/pairs/apply', chatsController.applyPair);
-router.post('/pairs/accept', chatsController.acceptPair);
-router.get('/pairs', chatsController.getMyPairs);
+router.post('/api/pairs/apply', chatsController.applyPair);
+router.post('/api/pairs/accept', chatsController.acceptPair);
+router.get('/api/pairs', chatsController.getMyPairs);
 
 // 聊天相关
-router.get('/chats/:pairId', chatsController.getMessages);
-router.post('/chats/:pairId', chatsController.sendMessage);
-router.post('/chats/:pairId/end', chatsController.endTeaching);
-router.get('/chats/:pairId/time', chatsController.getTeachingTime);
+router.get('/api/chats/:pairId', chatsController.getMessages);
+router.post('/api/chats/:pairId', chatsController.sendMessage);
+router.post('/api/chats/:pairId/end', chatsController.endTeaching);
+router.get('/api/chats/:pairId/time', chatsController.getTeachingTime);
 
 module.exports = router;
