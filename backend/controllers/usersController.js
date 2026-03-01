@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const queries = require('../models/queries')
 const jwt = require('jsonwebtoken');
+const pool = require("../models/pool")
 
 // 用户登录的功能
 const loginUser = async (username, password, res) => {
@@ -26,6 +27,8 @@ const loginUser = async (username, password, res) => {
   });
 };
 
+
+
 const createUser = async (req, res) => {
  // 从请求体中解构出用户名和密码
   const { username, password } = req.body;
@@ -50,6 +53,8 @@ const createUser = async (req, res) => {
   }
 }
 
+
+
 const verifyUserToken = (req, res) => {
   const token = req.headers['authorization']?.split(' ')[1]; // 获取 Authorization 头中的 JWT
 
@@ -67,10 +72,51 @@ const verifyUserToken = (req, res) => {
   });
 }
 
+
+
+const updatePassword = async (req, res) => {
+  const { userId } = req.params;
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ success: false, message: '新密码和确认密码不一致' });
+  }
+
+  try {
+    const user = await queries.findUserById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: '用户不存在' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: '当前密码错误' });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ success: false, message: '新密码不能与当前密码相同' });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    const updateQuery = `UPDATE ${process.env.DB_TABLE_NAME} SET password = $1 WHERE id = $2 RETURNING *`;
+    const result = await pool.query(updateQuery, [hashedNewPassword, userId]);
+
+    if (result.rows.length > 0) {
+      res.json({ success: true, message: '密码更新成功' });
+    } else {
+      res.status(500).json({ success: false, message: '密码更新失败' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: '服务器错误', error: error.message });
+  }
+}
+
+
 module.exports = {
   loginUser,
   createUser,
-  verifyUserToken
+  verifyUserToken,
+  updatePassword
 }
 
 

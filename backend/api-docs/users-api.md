@@ -158,6 +158,99 @@ Content-Type: application/json
 
 ---
 
+## 4. 修改密码
+
+### PATCH /api/:userId/password
+
+修改用户密码，需要 JWT 认证。
+
+**请求头：**
+```
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**路径参数：**
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| userId | number | 是 | 用户ID |
+
+**请求体：**
+```json
+{
+  "currentPassword": "string",
+  "newPassword": "string",
+  "confirmPassword": "string"
+}
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| currentPassword | string | 是 | 当前密码 |
+| newPassword | string | 是 | 新密码 |
+| confirmPassword | string | 是 | 确认新密码 |
+
+**成功响应 (200 OK):**
+```json
+{
+  "success": true,
+  "message": "密码更新成功"
+}
+```
+
+**失败响应 (400 Bad Request):**
+```json
+{
+  "success": false,
+  "message": "新密码和确认密码不一致"
+}
+```
+或
+```json
+{
+  "success": false,
+  "message": "用户不存在"
+}
+```
+或
+```json
+{
+  "success": false,
+  "message": "当前密码错误"
+}
+```
+或
+```json
+{
+  "success": false,
+  "message": "新密码不能与当前密码相同"
+}
+```
+
+**错误响应 (401 Unauthorized):**
+```json
+{
+  "message": "No token provided"
+}
+```
+或
+```json
+{
+  "message": "Invalid or expired token"
+}
+```
+
+**错误响应 (500 Internal Server Error):**
+```json
+{
+  "success": false,
+  "message": "服务器错误",
+  "error": "详细错误信息"
+}
+```
+
+---
+
 ## 数据模型
 
 ### User (用户)

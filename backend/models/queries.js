@@ -32,6 +32,22 @@ async function registerUser(username, password){
   }
 }
 
+
+const findUserById = async (userId) => {
+  try {
+    const result = await pool.query(`SELECT * FROM ${process.env.DB_TABLE_NAME} WHERE id = $1`, [userId]);
+
+    // 如果找到用户，返回第一个用户（或者返回 null）
+    if (result.rows.length > 0) {
+      return result.rows[0];  // 返回找到的第一个用户
+    } else {
+      return null;  // 如果没有找到用户
+    }
+  } catch (error) {
+    throw error;
+  }
+};
+
 const findUserByUsername = async (username) => {
   try {
     // 使用 SQL 查询来查找数据库中的用户
@@ -639,6 +655,7 @@ const queries = {
 module.exports = {
   ...queries,
   registerUser,
+  findUserById,
   findUserByUsername,
   createQuestion,    
   getQuestions,      
