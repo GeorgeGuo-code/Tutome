@@ -55,9 +55,7 @@ const Browse = () => {
                 {question.content.substring(0, 100)}...
               </p>
               <div className="question-actions">
-                <span className="action-icon">💡</span>
-                <span className="action-icon">💬</span>
-                <Link to={`/question/${question.id}`} className="view-details">
+                <Link to={`/question/${question.id}`} state={{ question }} className="view-details">
                   查看详情
                 </Link>
               </div>
