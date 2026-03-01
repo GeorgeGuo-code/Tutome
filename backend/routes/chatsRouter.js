@@ -18,6 +18,12 @@ router.post('/api/pairs/apply', chatsController.applyPair);
 router.post('/api/pairs/accept', chatsController.acceptPair);
 router.get('/api/pairs', chatsController.getMyPairs);
 
+// 获取问题的结对
+router.get('/api/pairs/question/:questionId', chatsController.getPairByQuestionId);
+
+// 自动关联结对到问题
+router.post('/api/pairs/:pairId/associate', verifyJWT, chatsController.associatePairWithQuestion);
+
 // 聊天相关
 router.get('/api/chats/:pairId', chatsController.getMessages);
 router.post('/api/chats/:pairId', chatsController.sendMessage);

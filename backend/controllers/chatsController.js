@@ -1,7 +1,7 @@
 const queries = require('../models/queries');
 
 // 发送结对申请
-exports.applyPair = async (req, res) => {
+const applyPair = async (req, res) => {
     const { targetUserId, topicId, role } = req.body;  // 添加 role
     const userId = req.user.userId;
     
@@ -51,7 +51,7 @@ exports.applyPair = async (req, res) => {
 };
 
 // 同意结对申请
-exports.acceptPair = async (req, res) => {
+const acceptPair = async (req, res) => {
     const { pairId } = req.body;
     const userId = req.user.userId;
 
@@ -79,7 +79,7 @@ exports.acceptPair = async (req, res) => {
 };
 
 // 获取我的结对列表
-exports.getMyPairs = async (req, res) => {
+const getMyPairs = async (req, res) => {
     const userId = req.user.userId;
 
     try {
@@ -91,8 +91,57 @@ exports.getMyPairs = async (req, res) => {
     }
 };
 
+// 获取问题的结对
+const getPairByQuestionId = async (req, res) => {
+    const { questionId } = req.params;
+
+    try {
+        const pair = await queries.pair.getByQuestionId(questionId);
+        
+        if (!pair) {
+            return res.status(404).json({ error: '该问题暂无结对' });
+        }
+        
+        res.json(pair);
+    } catch (err) {
+        console.error('获取问题结对失败:', err);
+        res.status(500).json({ error: '获取失败' });
+    }
+};
+
+// 自动关联结对到问题
+const associatePairWithQuestion = async (req, res) => {
+    const { pairId } = req.params;
+    const { questionId } = req.body;
+
+    try {
+        const pair = await queries.pair.getById(pairId);
+        
+        if (!pair) {
+            return res.status(404).json({ error: '结对不存在' });
+        }
+
+        // 检查结对是否已有问题
+        if (pair.question_id) {
+            return res.status(400).json({ error: '该结对已关联其他问题' });
+        }
+
+        // 更新结对的问题 ID
+        const result = await queries.pair.associateQuestion(pairId, questionId);
+        
+        res.json({
+            success: true,
+            message: '结对关联成功',
+            pair: result
+        });
+    } catch (err) {
+        console.error('关联结对失败:', err);
+        res.status(500).json({ error: '关联失败' });
+    }
+};
+
 // 获取聊天记录
-exports.getMessages = async (req, res) => {
+const getMessages = async (req, res) => {
     const { pairId } = req.params;
     const userId = req.user.userId;
 
@@ -116,7 +165,7 @@ exports.getMessages = async (req, res) => {
 };
 
 // 发送消息
-exports.sendMessage = async (req, res) => {
+const sendMessage = async (req, res) => {
     const { pairId } = req.params;
     const { content } = req.body;
     const senderId = req.user.userId;
@@ -145,7 +194,7 @@ exports.sendMessage = async (req, res) => {
 };
 
 // 结束教学
-exports.endTeaching = async (req, res) => {
+const endTeaching = async (req, res) => {
     const { pairId } = req.params;
     const userId = req.user.userId;
 
@@ -173,7 +222,7 @@ exports.endTeaching = async (req, res) => {
 };
 
 // 获取教学用时
-exports.getTeachingTime = async (req, res) => {
+const getTeachingTime = async (req, res) => {
     const { pairId } = req.params;
 
     try {
@@ -200,4 +249,16 @@ exports.getTeachingTime = async (req, res) => {
         console.error('获取教学用时失败:', err);
         res.status(500).json({ error: '获取失败' });
     }
+};
+
+module.exports = {
+    applyPair,
+    acceptPair,
+    getMyPairs,
+    getPairByQuestionId,
+    associatePairWithQuestion,
+    getMessages,
+    sendMessage,
+    endTeaching,
+    getTeachingTime
 };

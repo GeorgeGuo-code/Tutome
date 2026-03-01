@@ -559,11 +559,11 @@ const queries = {
     },
 
     // 创建结对申请
-    create: async (teacherId, studentId, topicId) => {
+    create: async (teacherId, studentId, topicId, questionId = null) => {
       const result = await pool.query(
-        `INSERT INTO pairs (teacher_id, student_id, topic_id, status) 
-         VALUES ($1, $2, $3, 'pending') RETURNING *`,
-        [teacherId, studentId, topicId]
+        `INSERT INTO pairs (teacher_id, student_id, topic_id, status, started_at, question_id) 
+         VALUES ($1, $2, $3, 'active', NOW(), $4) RETURNING *`,
+        [teacherId, studentId, topicId, questionId]
       );
       return result.rows[0];
     },
@@ -588,24 +588,57 @@ const queries = {
               CASE 
                   WHEN p.teacher_id = $1 THEN u_student.username 
                   ELSE u_teacher.username 
-              END as partner_nickname,
-              t.name as topic_name
-          FROM pairs p
-          LEFT JOIN users u_teacher ON p.teacher_id = u_teacher.id
-          LEFT JOIN users u_student ON p.student_id = u_student.id
-          JOIN topics t ON p.topic_id = t.id
-          WHERE p.teacher_id = $1 OR p.student_id = $1
-          ORDER BY p.created_at DESC`,
+              END as partner_username
+           FROM pairs p
+           LEFT JOIN users u_teacher ON p.teacher_id = u_teacher.id
+           LEFT JOIN users u_student ON p.student_id = u_student.id
+           WHERE p.teacher_id = $1 OR p.student_id = $1
+           ORDER BY p.created_at DESC`,
           [userId]
-        );
-    
-        console.log('查询成功，结果数量:', result.rows.length);
-        return result.rows;
-      } catch (error) {
-        console.error('getByUserId 错误:', error);
-        throw error;
-      }
-    },
+      );
+      return result.rows;
+    } catch (err) {
+      console.error('获取用户结对列表失败:', err);
+      throw err;
+    }
+  },
+
+  // 根据问题ID查找结对
+  getByQuestionId: async (questionId) => {
+    try {
+      const result = await pool.query(
+        `SELECT p.*,
+                CASE 
+                  WHEN p.teacher_id = u_teacher.id THEN u_student.username 
+                  ELSE u_teacher.username 
+                END as partner_username
+         FROM pairs p
+         LEFT JOIN users u_teacher ON p.teacher_id = u_teacher.id
+         LEFT JOIN users u_student ON p.student_id = u_student.id
+         WHERE p.question_id = $1 AND p.status = 'active'
+         LIMIT 1`,
+        [questionId]
+      );
+      return result.rows[0] || null;
+    } catch (err) {
+      console.error('根据问题ID查找结对失败:', err);
+      throw err;
+    }
+  },
+
+  // 关联问题ID到结对
+  associateQuestion: async (pairId, questionId) => {
+    try {
+      const result = await pool.query(
+        'UPDATE pairs SET question_id = $1 WHERE id = $2 RETURNING *',
+        [questionId, pairId]
+      );
+      return result.rows[0];
+    } catch (err) {
+      console.error('关联问题ID失败:', err);
+      throw err;
+    }
+  },
     // 根据ID获取结对
     getById: async (pairId) => {
       const result = await pool.query(
