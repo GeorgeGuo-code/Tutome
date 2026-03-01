@@ -50,12 +50,29 @@ const Browse = () => {
         ) : (
           questions.map((question) => (
             <div key={question.id} className="question-card">
-              <h3 className="question-title">{question.title}</h3>
+              <div className="question-header">
+                <h3 className="question-title">{question.title}</h3>
+                {question.tags && question.tags.length > 0 && (
+                  <div className="question-tags-inline">
+                    {question.tags.map((tag) => (
+                      <span key={tag.id} className="tag-small">{tag.name}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
               <p className="question-summary">
                 {question.content.substring(0, 100)}...
               </p>
+              <div className="question-meta">
+                <span className="meta-item">
+                  {question.username || '未知用户'}
+                </span>
+                <span className="meta-item">
+                  {question.created_at ? new Date(question.created_at).toLocaleString('zh-CN') : '未知时间'}
+                </span>
+              </div>
               <div className="question-actions">
-                <Link to={`/question/${question.id}`} state={{ question }} className="view-details">
+                <Link to={`/question/${question.id}`} state={{ question, from: '/browse' }} className="view-details">
                   查看详情
                 </Link>
               </div>

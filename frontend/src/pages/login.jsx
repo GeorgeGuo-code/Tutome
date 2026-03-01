@@ -30,6 +30,16 @@ const Login = () => {
         if (isLogin && data.token) {
           localStorage.setItem("token", data.token);
           localStorage.setItem("username", username);
+          
+          // 解析 token 获取用户 ID
+          try {
+            const tokenPayload = JSON.parse(atob(data.token.split('.')[1]));
+            localStorage.setItem("userId", tokenPayload.userId);
+            console.log('登录成功，用户ID:', tokenPayload.userId);
+          } catch (err) {
+            console.error('解析用户ID失败:', err);
+          }
+          
           setTimeout(() => {
             window.location.href = "/";
           }, 1000);

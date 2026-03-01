@@ -37,6 +37,34 @@
   font-size: 16px;
 }
 
+.error-state {
+  text-align: center;
+  padding: 40px;
+  color: #EF4444;
+  font-size: 14px;
+  background: #FEF2F2;
+  border-radius: 8px;
+  margin: 20px;
+  border: 1px solid #FECACA;
+}
+
+.error-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.error-message {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.error-hint {
+  font-size: 14px;
+  color: #B91C1C;
+  opacity: 0.8;
+}
+
 .quick-prompts {
   display: flex;
   justify-content: space-between;

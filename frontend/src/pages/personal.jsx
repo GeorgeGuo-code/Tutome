@@ -16,7 +16,7 @@ const Personal = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:3000/api/questions/my?page=${currentPage}&limit=10`,
+        `http://localhost:3000/api/questions/my-questions?page=${currentPage}&limit=10`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -24,6 +24,7 @@ const Personal = () => {
         }
       );
       const data = await response.json();
+      console.log('My questions data:', data); // 调试信息
       setHistory(data.questions || []);
     } catch (error) {
       console.error("Error fetching history:", error);
@@ -45,18 +46,35 @@ const Personal = () => {
           <div className="empty">暂无足迹</div>
         ) : (
           history.map((item) => (
-            <div key={item.id} className="history-card">
-              <h3 className="history-title">标题</h3>
-              <p className="history-summary">
-                {item.content.substring(0, 100)}...
-              </p>
-              <div className="history-actions">
-                <Link to={`/question/${item.id}`} className="view-details">
-                  查看详情
-                </Link>
+              <div key={item.id} className="history-item history-card">
+                <div className="history-header">
+                  <h3 className="history-title">{item.title}</h3>
+                  {item.tags && item.tags.length > 0 && (
+                    <div className="history-tags-inline">
+                      {item.tags.map((tag) => (
+                        <span key={tag.id} className="tag-small">{tag.name}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <p className="history-summary">
+                  {item.content.substring(0, 100)}...
+                </p>
+                <div className="history-meta">
+                  <span className="meta-item">
+                    {item.username || '未知用户'}
+                  </span>
+                  <span className="meta-item">
+                    {item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '未知时间'}
+                  </span>
+                </div>
+                <div className="history-actions">
+                  <Link to={`/question/${item.id}`} state={{ question: item, from: '/personal' }} className="view-details">
+                    查看详情
+                  </Link>
+                </div>
               </div>
-            </div>
-          ))
+            ))
         )}
       </div>
 

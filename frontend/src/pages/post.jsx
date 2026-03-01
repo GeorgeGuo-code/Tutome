@@ -4,23 +4,25 @@ import "./post.css";
 
 const Post = () => {
   const [question, setQuestion] = useState(null);
+  const [questionId, setQuestionId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [validPairId, setValidPairId] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    // 尝试从 location.state 获取问题数据
-    if (location.state && location.state.question) {
-      setQuestion(location.state.question);
-      setLoading(false);
-      return;
-    }
-
-    // 如果没有传递数据，则尝试从后端获取
+    // 从URL获取问题ID
     const pathParts = window.location.pathname.split("/");
     const id = pathParts[pathParts.length - 1];
+    setQuestionId(id);
     fetchQuestion(id);
-  }, [location]);
+  }, []);
+
+  useEffect(() => {
+    if (questionId) {
+      fetchValidPairs();
+    }
+  }, [questionId]);
 
   const fetchQuestion = async (id) => {
     setLoading(true);
@@ -59,8 +61,87 @@ const Post = () => {
     }
   };
 
+  const fetchValidPairs = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        return;
+      }
+
+      // 首先尝试根据问题ID查找结对
+      if (questionId) {
+        const response = await fetch(`http://localhost:3000/api/pairs/question/${questionId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const pair = await response.json();
+          console.log('问题结对:', pair);
+          if (pair) {
+            setValidPairId(pair.id);
+            console.log('找到问题结对:', pair.id);
+            return;
+          }
+        }
+
+        // 如果没找到结对，尝试查找任何可用的结对并自动关联
+        console.log('该问题暂无结对，尝试自动关联...');
+        
+        const allPairsResponse = await fetch(`http://localhost:3000/api/pairs`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (allPairsResponse.ok) {
+          const pairs = await allPairsResponse.json();
+          const activePair = pairs.find(pair => pair.status === 'active');
+          
+          if (activePair) {
+            console.log('找到可用结对，正在自动关联:', activePair.id);
+            
+            // 自动关联结对到问题
+            const associateResponse = await fetch(`http://localhost:3000/api/pairs/${activePair.id}/associate`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                questionId: parseInt(questionId)
+              }),
+            });
+
+            if (associateResponse.ok) {
+              console.log('自动关联成功');
+              setValidPairId(activePair.id);
+            } else {
+              console.error('自动关联失败');
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching pair by question:", error);
+    }
+  };
+
+  const handleDialogueClick = (e) => {
+    e.preventDefault();
+    if (validPairId) {
+      navigate(`/dialogue/${validPairId}`);
+    } else {
+      alert('请先创建有效的结对');
+      navigate('/match');
+    }
+  };
+
   const handleBack = () => {
-    navigate("/browse");
+    // 从 location.state 获取来源页面
+    const fromPage = location.state?.from || '/browse';
+    navigate(fromPage);
   };
 
   if (loading) {
@@ -74,7 +155,7 @@ const Post = () => {
   return (
     <div className="post-container">
       <div className="post-header">
-        <button className="back-btn" onClick={handleBack}>← 返回</button>
+        <button className="back-btn" onClick={handleBack}>←</button>
       </div>
 
       <div className="post-content">
@@ -104,7 +185,9 @@ const Post = () => {
         </div>
 
         <div className="post-actions">
-          <Link to="/dialogue/new" className="dialogue-btn">发起对话</Link>
+          <button onClick={handleDialogueClick} className="dialogue-btn">
+            {validPairId ? '发起对话' : '创建结对'}
+          </button>
         </div>
       </div>
     </div>
