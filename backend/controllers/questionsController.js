@@ -198,6 +198,37 @@ const searchByMultipleTags = async (req, res) => {
   }
 };
 
+// 获取问题详情
+const getQuestionById = async (req, res) => {
+  try {
+    const { questionId } = req.params;
+
+    if (!questionId || isNaN(questionId)) {
+      return res.status(400).json({
+        success: false,
+        message: '问题ID无效'
+      });
+    }
+
+    const question = await queries.getQuestionWithTags(parseInt(questionId));
+
+    if (!question) {
+      return res.status(404).json({
+        success: false,
+        message: '问题不存在'
+      });
+    }
+
+    res.status(200).json(question);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '服务器错误',
+      error: error.message
+    });
+  }
+};
+
 // 删除问题（提问者才能删除）
 const deleteQuestion = async (req, res) => {
   try {
@@ -254,5 +285,6 @@ module.exports = {
   getQuestionsByTagId,
   getTagsByCategory,
   searchByMultipleTags,
+  getQuestionById,
   deleteQuestion
 };

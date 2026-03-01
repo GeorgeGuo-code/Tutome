@@ -28,6 +28,9 @@ questionsRouter.get('/api/questions/my-questions', verifyJWT, questionsControlle
 questionsRouter.get('/api/questions/search', questionsController.searchByMultipleTags);
 questionsRouter.post('/api/questions/search', questionsController.searchByMultipleTags);
 
+// 获取问题详情
+questionsRouter.get('/api/questions/:questionId', questionsController.getQuestionById);
+
 // 删除问题
 questionsRouter.delete('/api/questions/:questionId', verifyJWT, questionsController.deleteQuestion);
 
