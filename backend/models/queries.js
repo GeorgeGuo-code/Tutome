@@ -199,11 +199,16 @@ async function getQuestionWithTags(questionId) {
   
   // 获取标签
   const tagsQuery = `
-    SELECT t.id, t.name 
+    SELECT t.id, t.name, t.category
     FROM tags t 
     JOIN question_tags qt ON t.id = qt.tag_id 
     WHERE qt.question_id = $1
-    ORDER BY t.name
+    ORDER BY CASE t.category
+      WHEN 'subject' THEN 1
+      WHEN 'difficulty' THEN 2
+      WHEN 'progress' THEN 3
+      ELSE 4
+    END, t.name
   `;
   const tagsResult = await pool.query(tagsQuery, [questionId]);
   
@@ -232,7 +237,7 @@ async function getQuestions(page = 1, limit = 20, tagId = null) {
       queryIndex++;
     }
     
-    query += ` ORDER BY q.created_at DESC LIMIT $1 OFFSET $2`;
+    query += ` ORDER BY q.created_at DESC, q.id DESC LIMIT $1 OFFSET $2`;
     
     // 获取问题列表
     const questionsResult = await pool.query(query, queryParams);
@@ -241,11 +246,16 @@ async function getQuestions(page = 1, limit = 20, tagId = null) {
     const questionsWithTags = await Promise.all(
       questionsResult.rows.map(async (question) => {
         const tagsQuery = `
-          SELECT t.id, t.name 
+          SELECT t.id, t.name, t.category
           FROM tags t 
           JOIN question_tags qt ON t.id = qt.tag_id 
           WHERE qt.question_id = $1
-          ORDER BY t.name
+          ORDER BY CASE t.category
+            WHEN 'subject' THEN 1
+            WHEN 'difficulty' THEN 2
+            WHEN 'progress' THEN 3
+            ELSE 4
+          END, t.name
         `;
         const tagsResult = await pool.query(tagsQuery, [question.id]);
         question.tags = tagsResult.rows;
@@ -281,27 +291,36 @@ async function getQuestions(page = 1, limit = 20, tagId = null) {
   }
 }
 
-// 修改：获取用户的问题（包含标签）
-async function getUserQuestions(userId) {
+// 修改：获取用户的问题（包含标签，支持分页）
+async function getUserQuestions(userId, page = 1, limit = 20) {
   try {
+    const offset = (page - 1) * limit;
+    
+    // 获取分页的问题列表
     const query = `
       SELECT q.*, u.username 
       FROM questions q 
       JOIN users u ON q.user_id = u.id 
       WHERE q.user_id = $1 
-      ORDER BY q.created_at DESC
+      ORDER BY q.created_at DESC, q.id DESC
+      LIMIT $2 OFFSET $3
     `;
-    const result = await pool.query(query, [userId]);
+    const result = await pool.query(query, [userId, limit, offset]);
     
     // 为每个问题获取标签
     const questionsWithTags = await Promise.all(
       result.rows.map(async (question) => {
         const tagsQuery = `
-          SELECT t.id, t.name 
+          SELECT t.id, t.name, t.category
           FROM tags t 
           JOIN question_tags qt ON t.id = qt.tag_id 
           WHERE qt.question_id = $1
-          ORDER BY t.name
+          ORDER BY CASE t.category
+            WHEN 'subject' THEN 1
+            WHEN 'difficulty' THEN 2
+            WHEN 'progress' THEN 3
+            ELSE 4
+          END, t.name
         `;
         const tagsResult = await pool.query(tagsQuery, [question.id]);
         question.tags = tagsResult.rows;
@@ -309,9 +328,20 @@ async function getUserQuestions(userId) {
       })
     );
     
+    // 获取总数
+    const countQuery = `
+      SELECT COUNT(*) as total 
+      FROM questions 
+      WHERE user_id = $1
+    `;
+    const countResult = await pool.query(countQuery, [userId]);
+    
     return {
       success: true,
-      questions: questionsWithTags
+      questions: questionsWithTags,
+      total: parseInt(countResult.rows[0].total),
+      page,
+      limit
     };
   } catch (error) {
     return { success: false, message: error.message };
@@ -444,7 +474,7 @@ async function searchByMultipleTags(tagIds = [], page = 1, limit = 20, categoryR
       WHERE qt.tag_id IN (${placeholders})
       GROUP BY q.id, u.username
       HAVING COUNT(DISTINCT qt.tag_id) = $${tagIds.length + 1}
-      ORDER BY q.created_at DESC
+      ORDER BY q.created_at DESC, q.id DESC
       LIMIT $${tagIds.length + 2} OFFSET $${tagIds.length + 3}
     `;
     
@@ -476,7 +506,12 @@ async function searchByMultipleTags(tagIds = [], page = 1, limit = 20, categoryR
           FROM tags t
           JOIN question_tags qt ON t.id = qt.tag_id
           WHERE qt.question_id = $1
-          ORDER BY t.name
+          ORDER BY CASE t.category
+            WHEN 'subject' THEN 1
+            WHEN 'difficulty' THEN 2
+            WHEN 'progress' THEN 3
+            ELSE 4
+          END, t.name
         `;
         const tagsResult = await pool.query(tagsQuery, [question.id]);
         question.tags = tagsResult.rows;

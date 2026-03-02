@@ -93,11 +93,13 @@ const getQuestions = async (req, res) => {
   }
 };
 
-// 获取用户的问题
+// 获取用户的问题（支持分页）
 const getUserQuestions = async (req, res) => {
   try {
     const userId = req.params.userId || req.user.userId;
-    const result = await queries.getUserQuestions(userId);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const result = await queries.getUserQuestions(userId, page, limit);
     res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ 
