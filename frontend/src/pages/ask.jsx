@@ -7,6 +7,7 @@ const Ask = () => {
   const [progress, setProgress] = useState("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [role, setRole] = useState("student"); // 新增：提问者身份，默认为"学生"
   const [message, setMessage] = useState("");
 
   // 学科到标签 ID 的映射
@@ -65,6 +66,7 @@ const Ask = () => {
           title,
           content,
           tagIds,
+          role, // 包含提问者身份
         }),
       });
 
@@ -95,6 +97,19 @@ const Ask = () => {
         <h1 className="ask-title">提问</h1>
 
         <form className="ask-form" onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label">提问者身份</label>
+            <select
+              className="form-select"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              required
+            >
+              <option value="student">学生</option>
+              <option value="teacher">老师</option>
+            </select>
+          </div>
+
           <div className="form-group">
             <label className="form-label">学科</label>
             <select
