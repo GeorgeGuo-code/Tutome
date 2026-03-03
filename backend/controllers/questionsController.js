@@ -19,13 +19,13 @@ const SEARCH_CATEGORY_RULES = {
 // 创建问题（支持标签）
 const createQuestion = async (req, res) => {
   try {
-    const { title, content, tagIds } = req.body;
+    const { title, content, tagIds, role } = req.body;
     const userId = req.user.userId;
 
     if (!title || !content) {
-      return res.status(400).json({ 
-        success: false, 
-        message: '标题和内容是必填项' 
+      return res.status(400).json({
+        success: false,
+        message: '标题和内容是必填项'
       });
     }
 
@@ -36,27 +36,31 @@ const createQuestion = async (req, res) => {
       tagIdsArray = tagIdsArray.map(id => parseInt(id)).filter(id => !isNaN(id));
     }
 
-    // 调用修改后的createQuestion，传入新的分类规则对象
+    // 处理role参数，默认为'student'
+    const userRole = role || 'student';
+
+    // 调用修改后的createQuestion，传入新的分类规则对象和role参数
     const result = await queries.createQuestion(
-      title, 
-      content, 
-      userId, 
+      title,
+      content,
+      userId,
       tagIdsArray,
-      CATEGORY_RULES // 传入完整的规则对象
+      CATEGORY_RULES, // 传入完整的规则对象
+      userRole // 传入用户角色
     );
-    
+
     if (result.success) {
       res.status(201).json(result);
     } else {
-      const statusCode = result.message.includes('至少选择') || 
+      const statusCode = result.message.includes('至少选择') ||
                         result.message.includes('最多选择') ? 400 : 500;
       res.status(statusCode).json(result);
     }
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      message: '服务器错误', 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      message: '服务器错误',
+      error: error.message
     });
   }
 };

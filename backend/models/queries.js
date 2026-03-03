@@ -66,19 +66,19 @@ const findUserByUsername = async (username) => {
 };
 
 //创建问题
-async function createQuestion(title, content, userId, tagIds = [], categoryRules = {}) {
+async function createQuestion(title, content, userId, tagIds = [], categoryRules = {}, role = 'student') {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     // 1. 插入问题
     const questionQuery = `
-      INSERT INTO questions (title, content, user_id) 
-      VALUES ($1, $2, $3) 
-      RETURNING id, title, content, user_id, created_at
+      INSERT INTO questions (title, content, user_id, role)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, title, content, user_id, role, created_at
     `;
-    const questionResult = await client.query(questionQuery, [title, content, userId]);
+    const questionResult = await client.query(questionQuery, [title, content, userId, role]);
     const questionId = questionResult.rows[0].id;
     
     // 2. 验证标签并分类校验（核心修改部分）
