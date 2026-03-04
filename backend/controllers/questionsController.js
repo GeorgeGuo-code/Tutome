@@ -106,10 +106,27 @@ const getUserQuestions = async (req, res) => {
     const result = await queries.getUserQuestions(userId, page, limit);
     res.status(200).json(result);
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      message: '服务器错误', 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      message: '服务器错误',
+      error: error.message
+    });
+  }
+};
+
+// 获取用户参与的所有问题（包括创建的和参与的结对）
+const getUserHistory = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const result = await queries.getUserHistory(userId, page, limit);
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '服务器错误',
+      error: error.message
     });
   }
 };
@@ -287,6 +304,7 @@ module.exports = {
   createQuestion,
   getQuestions,
   getUserQuestions,
+  getUserHistory,
   getAvailableTags,
   getQuestionsByTagId,
   getTagsByCategory,

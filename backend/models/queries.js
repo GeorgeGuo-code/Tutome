@@ -348,6 +348,106 @@ async function getUserQuestions(userId, page = 1, limit = 20) {
   }
 }
 
+// 获取用户参与的所有问题（包括创建的和参与的结对）
+async function getUserHistory(userId, page = 1, limit = 20) {
+  try {
+    const offset = (page - 1) * limit;
+
+    // 获取用户参与的所有问题（创建的 + 作为结对另一端参与的）
+    const query = `
+      WITH user_questions AS (
+        -- 用户创建的问题
+        SELECT q.*, u.username, 'created' as participation_type
+        FROM questions q
+        JOIN users u ON q.user_id = u.id
+        WHERE q.user_id = $1
+
+        UNION
+
+        -- 用户作为结对另一端参与的问题
+        SELECT q.*, u.username, 'participated' as participation_type
+        FROM questions q
+        JOIN users u ON q.user_id = u.id
+        JOIN pairs p ON p.question_id = q.id
+        WHERE (p.teacher_id = $1 OR p.student_id = $1) AND q.user_id != $1
+      )
+      SELECT DISTINCT ON (id) id, title, content, user_id, username, created_at, updated_at, role, participation_type
+      FROM user_questions
+      ORDER BY id DESC
+      LIMIT $2 OFFSET $3
+    `;
+    const result = await pool.query(query, [userId, limit, offset]);
+
+    // 为每个问题获取标签和结对状态
+    const questionsWithTags = await Promise.all(
+      result.rows.map(async (question) => {
+        // 获取标签
+        const tagsQuery = `
+          SELECT t.id, t.name, t.category
+          FROM tags t
+          JOIN question_tags qt ON t.id = qt.tag_id
+          WHERE qt.question_id = $1
+          ORDER BY CASE t.category
+            WHEN 'subject' THEN 1
+            WHEN 'difficulty' THEN 2
+            WHEN 'progress' THEN 3
+            ELSE 4
+          END, t.name
+        `;
+        const tagsResult = await pool.query(tagsQuery, [question.id]);
+        question.tags = tagsResult.rows;
+
+        // 获取结对状态
+        const pairQuery = `
+          SELECT p.status, p.ended_at
+          FROM pairs p
+          WHERE p.question_id = $1
+          ORDER BY p.created_at DESC
+          LIMIT 1
+        `;
+        const pairResult = await pool.query(pairQuery, [question.id]);
+        if (pairResult.rows.length > 0) {
+          question.pair_status = pairResult.rows[0].status;
+          question.pair_ended_at = pairResult.rows[0].ended_at;
+        } else {
+          question.pair_status = null;
+        }
+
+        return question;
+      })
+    );
+
+    // 获取总数
+    const countQuery = `
+      WITH user_questions AS (
+        SELECT q.id
+        FROM questions q
+        WHERE q.user_id = $1
+
+        UNION
+
+        SELECT q.id
+        FROM questions q
+        JOIN pairs p ON p.question_id = q.id
+        WHERE (p.teacher_id = $1 OR p.student_id = $1) AND q.user_id != $1
+      )
+      SELECT COUNT(DISTINCT id) as total
+      FROM user_questions
+    `;
+    const countResult = await pool.query(countQuery, [userId]);
+
+    return {
+      success: true,
+      questions: questionsWithTags,
+      total: parseInt(countResult.rows[0].total),
+      page,
+      limit
+    };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+}
+
 async function getAvailableTags() {
   try {
     const query = `SELECT id, name FROM tags ORDER BY name`;
@@ -643,16 +743,17 @@ const queries = {
     try {
       const result = await pool.query(
         `SELECT p.*,
-                CASE 
-                  WHEN p.teacher_id = u_teacher.id THEN u_student.username 
-                  ELSE u_teacher.username 
-                END as partner_username
-         FROM pairs p
-         LEFT JOIN users u_teacher ON p.teacher_id = u_teacher.id
-         LEFT JOIN users u_student ON p.student_id = u_student.id
-         WHERE p.question_id = $1 AND p.status = 'active'
-         LIMIT 1`,
-        [questionId]
+                  CASE
+                    WHEN p.teacher_id = u_teacher.id THEN u_student.username
+                    ELSE u_teacher.username
+                  END as partner_username
+           FROM pairs p
+           LEFT JOIN users u_teacher ON p.teacher_id = u_teacher.id
+           LEFT JOIN users u_student ON p.student_id = u_student.id
+           WHERE p.question_id = $1
+           ORDER BY p.created_at DESC
+           LIMIT 1`,
+          [questionId]
       );
       return result.rows[0] || null;
     } catch (err) {
@@ -660,7 +761,6 @@ const queries = {
       throw err;
     }
   },
-
   // 关联问题ID到结对
   associateQuestion: async (pairId, questionId) => {
     try {
@@ -686,8 +786,57 @@ const queries = {
     // 结束教学
     end: async (pairId) => {
       const result = await pool.query(
-        `UPDATE pairs SET status = 'completed', ended_at = NOW() 
+        `UPDATE pairs SET status = 'completed', ended_at = NOW()
          WHERE id = $1 RETURNING *`,
+        [pairId]
+      );
+      return result.rows[0];
+    },
+
+    // 申请结束教学
+    requestEnd: async (pairId, userId) => {
+      const result = await pool.query(
+        `UPDATE pairs
+         SET status = 'end_requested',
+             end_requested_by = $2,
+             end_request_status = 'pending',
+             end_requested_at = NOW()
+         WHERE id = $1
+           AND status = 'active'
+         RETURNING *`,
+        [pairId, userId]
+      );
+      return result.rows[0];
+    },
+
+    // 同意结束请求
+    acceptEndRequest: async (pairId) => {
+      const result = await pool.query(
+        `UPDATE pairs
+         SET status = 'completed',
+             end_request_status = 'accepted',
+             ended_at = NOW()
+         WHERE id = $1
+           AND status = 'end_requested'
+           AND end_request_status = 'pending'
+         RETURNING *`,
+        [pairId]
+      );
+      return result.rows[0];
+    },
+
+    // 拒绝结束请求
+    rejectEndRequest: async (pairId) => {
+      const result = await pool.query(
+        `UPDATE pairs
+         SET status = 'active',
+             end_request_status = 'rejected',
+             end_requested_by = NULL,
+             end_requested_at = NULL
+         WHERE id = $1
+           AND status = 'end_requested'
+           AND end_request_status = 'pending'
+         RETURNING *`,
         [pairId]
       );
       return result.rows[0];
@@ -725,9 +874,10 @@ module.exports = {
   registerUser,
   findUserById,
   findUserByUsername,
-  createQuestion,    
-  getQuestions,      
-  getUserQuestions,   
+  createQuestion,
+  getQuestions,
+  getUserQuestions,
+  getUserHistory,
   getAvailableTags,
   getQuestionsByTagId,
   getQuestionWithTags,

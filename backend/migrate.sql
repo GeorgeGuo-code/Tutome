@@ -15,5 +15,10 @@ ALTER TABLE pairs ADD COLUMN IF NOT EXISTS question_id INTEGER REFERENCES questi
 -- 添加 role 字段到 questions 表
 ALTER TABLE questions ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'student';
 
+-- 添加结束请求相关字段到 pairs 表
+ALTER TABLE pairs ADD COLUMN IF NOT EXISTS end_requested_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE pairs ADD COLUMN IF NOT EXISTS end_request_status VARCHAR(20);
+ALTER TABLE pairs ADD COLUMN IF NOT EXISTS end_requested_at TIMESTAMP;
+
 -- 为 pairs.question_id 添加索引
 CREATE INDEX IF NOT EXISTS idx_pairs_question_id ON pairs(question_id);

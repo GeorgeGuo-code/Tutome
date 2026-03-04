@@ -50,6 +50,30 @@ const applyPair = async (req, res) => {
     }
 };
 
+// 获取结对信息
+const getPairById = async (req, res) => {
+    const { pairId } = req.params;
+    const userId = req.user.userId;
+
+    try {
+        const pair = await queries.pair.getById(pairId);
+
+        if (!pair) {
+            return res.status(404).json({ error: '结对不存在' });
+        }
+
+        // 检查权限
+        if (pair.teacher_id !== userId && pair.student_id !== userId) {
+            return res.status(403).json({ error: '无权查看此结对' });
+        }
+
+        res.json(pair);
+    } catch (err) {
+        console.error('获取结对信息失败:', err);
+        res.status(500).json({ error: '获取失败' });
+    }
+};
+
 // 同意结对申请
 const acceptPair = async (req, res) => {
     const { pairId } = req.body;
@@ -193,22 +217,23 @@ const sendMessage = async (req, res) => {
     }
 };
 
-// 结束教学
+// 结束教学（直接结束，不要求确认）
 const endTeaching = async (req, res) => {
     const { pairId } = req.params;
     const userId = req.user.userId;
 
     try {
         const pair = await queries.pair.getById(pairId);
-        
+
         if (!pair) {
             return res.status(404).json({ error: '结对不存在' });
         }
-        
-        if (pair.student_id !== userId) {
-            return res.status(403).json({ error: '只有学生可以结束教学' });
+
+        // 任意一方都可以结束教学
+        if (pair.teacher_id !== userId && pair.student_id !== userId) {
+            return res.status(403).json({ error: '无权结束此教学' });
         }
-        
+
         if (pair.status !== 'active') {
             return res.status(400).json({ error: '结对未激活或已结束' });
         }
@@ -218,6 +243,113 @@ const endTeaching = async (req, res) => {
     } catch (err) {
         console.error('结束教学失败:', err);
         res.status(500).json({ error: '结束失败' });
+    }
+};
+
+// 申请结束教学
+const requestEndTeaching = async (req, res) => {
+    const { pairId } = req.params;
+    const userId = req.user.userId;
+
+    try {
+        const pair = await queries.pair.getById(pairId);
+
+        if (!pair) {
+            return res.status(404).json({ error: '结对不存在' });
+        }
+
+        // 任意一方都可以申请结束
+        if (pair.teacher_id !== userId && pair.student_id !== userId) {
+            return res.status(403).json({ error: '无权申请结束此教学' });
+        }
+
+        if (pair.status !== 'active') {
+            return res.status(400).json({ error: '结对未激活或已结束' });
+        }
+
+        const updatedPair = await queries.pair.requestEnd(pairId, userId);
+        res.json({
+            success: true,
+            message: '已申请结束教学，等待对方确认',
+            pair: updatedPair
+        });
+    } catch (err) {
+        console.error('申请结束教学失败:', err);
+        res.status(500).json({ error: '申请失败' });
+    }
+};
+
+// 同意结束请求
+const acceptEndRequest = async (req, res) => {
+    const { pairId } = req.params;
+    const userId = req.user.userId;
+
+    try {
+        const pair = await queries.pair.getById(pairId);
+
+        if (!pair) {
+            return res.status(404).json({ error: '结对不存在' });
+        }
+
+        // 只有对方可以同意（不是申请者）
+        if (pair.end_requested_by === userId) {
+            return res.status(403).json({ error: '不能同意自己发起的申请' });
+        }
+
+        if (pair.teacher_id !== userId && pair.student_id !== userId) {
+            return res.status(403).json({ error: '无权操作此教学' });
+        }
+
+        if (pair.status !== 'end_requested' || pair.end_request_status !== 'pending') {
+            return res.status(400).json({ error: '没有待确认的结束申请' });
+        }
+
+        const updatedPair = await queries.pair.acceptEndRequest(pairId);
+        res.json({
+            success: true,
+            message: '已同意结束教学',
+            pair: updatedPair
+        });
+    } catch (err) {
+        console.error('同意结束请求失败:', err);
+        res.status(500).json({ error: '操作失败' });
+    }
+};
+
+// 拒绝结束请求
+const rejectEndRequest = async (req, res) => {
+    const { pairId } = req.params;
+    const userId = req.user.userId;
+
+    try {
+        const pair = await queries.pair.getById(pairId);
+
+        if (!pair) {
+            return res.status(404).json({ error: '结对不存在' });
+        }
+
+        // 只有对方可以拒绝（不是申请者）
+        if (pair.end_requested_by === userId) {
+            return res.status(403).json({ error: '不能拒绝自己发起的申请' });
+        }
+
+        if (pair.teacher_id !== userId && pair.student_id !== userId) {
+            return res.status(403).json({ error: '无权操作此教学' });
+        }
+
+        if (pair.status !== 'end_requested' || pair.end_request_status !== 'pending') {
+            return res.status(400).json({ error: '没有待确认的结束申请' });
+        }
+
+        const updatedPair = await queries.pair.rejectEndRequest(pairId);
+        res.json({
+            success: true,
+            message: '已拒绝结束申请，继续教学',
+            pair: updatedPair
+        });
+    } catch (err) {
+        console.error('拒绝结束请求失败:', err);
+        res.status(500).json({ error: '操作失败' });
     }
 };
 
@@ -255,10 +387,14 @@ module.exports = {
     applyPair,
     acceptPair,
     getMyPairs,
+    getPairById,
     getPairByQuestionId,
     associatePairWithQuestion,
     getMessages,
     sendMessage,
     endTeaching,
+    requestEndTeaching,
+    acceptEndRequest,
+    rejectEndRequest,
     getTeachingTime
 };

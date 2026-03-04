@@ -11,6 +11,8 @@
   padding: 16px 24px;
   border-bottom: 1px solid #E0E0E0;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 .dialogue-title {
@@ -229,4 +231,135 @@
   .message-input {
     min-height: 60px;
   }
+}
+
+/* 结束对话按钮 */
+.end-dialogue-btn {
+  margin-left: auto;
+  padding: 8px 16px;
+  border: 1px solid #EF4444;
+  background: white;
+  color: #EF4444;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.end-dialogue-btn:hover {
+  background: #FEF2F2;
+  border-color: #DC2626;
+  color: #DC2626;
+}
+
+.end-dialogue-btn:active {
+  transform: scale(0.98);
+}
+
+/* 模态框样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1E293B;
+  margin: 0 0 12px 0;
+}
+
+.modal-message {
+  font-size: 14px;
+  color: #6B7280;
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.modal-buttons button {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel {
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+.btn-cancel:hover {
+  background: #E5E7EB;
+}
+
+.btn-confirm {
+  background: #EF4444;
+  color: white;
+}
+
+.btn-confirm:hover {
+  background: #DC2626;
+}
+
+.btn-reject {
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+.btn-reject:hover {
+  background: #E5E7EB;
+}
+
+.modal-buttons button:active {
+  transform: scale(0.98);
 }

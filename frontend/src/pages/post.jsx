@@ -7,6 +7,7 @@ const Post = () => {
   const [questionId, setQuestionId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [validPairId, setValidPairId] = useState(null);
+  const [pairStatus, setPairStatus] = useState(null); // 结对状态
   const [currentUserId, setCurrentUserId] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -111,8 +112,15 @@ const Post = () => {
           console.log('问题结对:', pair);
           if (pair) {
             setValidPairId(pair.id);
-            console.log('找到问题结对:', pair.id);
+            setPairStatus(pair.status); // 设置结对状态
+            console.log('找到问题结对:', pair.id, '状态:', pair.status);
+          } else {
+            setValidPairId(null);
+            setPairStatus(null); // 没有结对
           }
+        } else {
+          setValidPairId(null);
+          setPairStatus(null);
         }
       }
     } catch (error) {
@@ -123,8 +131,14 @@ const Post = () => {
   const handleDialogueClick = async (e) => {
     e.preventDefault();
 
-    // 如果已经有结对，直接跳转到对话页面
+    // 如果已经有结对
     if (validPairId) {
+      // 如果结对已结束，提示用户
+      if (pairStatus === 'completed') {
+        alert('该问题已结束教学，无法重新结对');
+        return;
+      }
+      // 否则跳转到对话页面
       navigate(`/dialogue/${validPairId}`);
       return;
     }
@@ -257,8 +271,16 @@ const Post = () => {
         </div>
 
         <div className="post-actions">
-          <button onClick={handleDialogueClick} className="dialogue-btn">
-            {validPairId ? '继续对话' : '创建结对'}
+          <button
+            onClick={handleDialogueClick}
+            className="dialogue-btn"
+            disabled={pairStatus === 'completed'}
+            style={{
+              backgroundColor: pairStatus === 'completed' ? '#9CA3AF' : undefined,
+              cursor: pairStatus === 'completed' ? 'not-allowed' : undefined
+            }}
+          >
+            {pairStatus === 'completed' ? '已结束' : (validPairId ? '继续对话' : '创建结对')}
           </button>
         </div>
       </div>

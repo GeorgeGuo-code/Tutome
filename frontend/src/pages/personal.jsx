@@ -91,7 +91,7 @@ const Personal = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:3000/api/questions/my-questions?page=${currentPage}&limit=4`,
+        `http://localhost:3000/api/questions/my-history?page=${currentPage}&limit=4`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

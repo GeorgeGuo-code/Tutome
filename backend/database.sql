@@ -47,10 +47,13 @@ CREATE TABLE IF NOT EXISTS pairs (
     teacher_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     topic_id INTEGER REFERENCES topics(id) ON DELETE CASCADE,
-    status VARCHAR(20) DEFAULT 'pending', -- pending, active, completed
+    status VARCHAR(20) DEFAULT 'pending', -- pending, active, completed, end_requested
     created_at TIMESTAMP DEFAULT NOW(),
     started_at TIMESTAMP,
-    ended_at TIMESTAMP
+    ended_at TIMESTAMP,
+    end_requested_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    end_request_status VARCHAR(20), -- pending, accepted, rejected
+    end_requested_at TIMESTAMP
 );
 
 -- 创建消息表

@@ -17,6 +17,7 @@ if (typeof verifyJWT === 'function') {
 router.post('/api/pairs/apply', chatsController.applyPair);
 router.post('/api/pairs/accept', chatsController.acceptPair);
 router.get('/api/pairs', chatsController.getMyPairs);
+router.get('/api/pairs/:pairId', chatsController.getPairById);
 
 // 获取问题的结对
 router.get('/api/pairs/question/:questionId', chatsController.getPairByQuestionId);
@@ -28,6 +29,9 @@ router.post('/api/pairs/:pairId/associate', verifyJWT, chatsController.associate
 router.get('/api/chats/:pairId', chatsController.getMessages);
 router.post('/api/chats/:pairId', chatsController.sendMessage);
 router.post('/api/chats/:pairId/end', chatsController.endTeaching);
+router.post('/api/chats/:pairId/request-end', chatsController.requestEndTeaching);
+router.post('/api/chats/:pairId/accept-end', chatsController.acceptEndRequest);
+router.post('/api/chats/:pairId/reject-end', chatsController.rejectEndRequest);
 router.get('/api/chats/:pairId/time', chatsController.getTeachingTime);
 
 module.exports = router;

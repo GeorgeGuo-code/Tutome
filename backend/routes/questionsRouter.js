@@ -24,6 +24,9 @@ questionsRouter.get('/api/questions/user/:userId', questionsController.getUserQu
 // 获取当前用户的问题（需要登录）
 questionsRouter.get('/api/questions/my-questions', verifyJWT, questionsController.getUserQuestions);
 
+// 获取用户参与的所有问题（包括创建的和参与的结对，需要登录）
+questionsRouter.get('/api/questions/my-history', verifyJWT, questionsController.getUserHistory);
+
 // 多标签搜索（支持GET和POST）
 questionsRouter.get('/api/questions/search', questionsController.searchByMultipleTags);
 questionsRouter.post('/api/questions/search', questionsController.searchByMultipleTags);
