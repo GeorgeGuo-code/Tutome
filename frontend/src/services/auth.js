@@ -36,9 +36,19 @@ export const checkAuth = () => {
 
 // 强制检查并跳转（用于需要登录的页面）
 export const requireAuth = () => {
-  const isAuthenticated = checkAuth();
+  const token = localStorage.getItem('token');
 
-  if (!isAuthenticated) {
+  if (!token) {
+    // 未登录
+    alert('请先登录');
+    window.location.href = '/login';
+    return false;
+  }
+
+  if (isTokenExpired(token)) {
+    // 登录已过期
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
     alert('登录已过期，请重新登录');
     window.location.href = '/login';
     return false;
