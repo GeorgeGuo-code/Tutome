@@ -20,5 +20,17 @@ ALTER TABLE pairs ADD COLUMN IF NOT EXISTS end_requested_by INTEGER REFERENCES u
 ALTER TABLE pairs ADD COLUMN IF NOT EXISTS end_request_status VARCHAR(20);
 ALTER TABLE pairs ADD COLUMN IF NOT EXISTS end_requested_at TIMESTAMP;
 
+-- 补充缺失的学科标签（指定ID确保连续性）
+INSERT INTO tags (id, name, category) VALUES
+(12, '化学', 'subject'),
+(13, '生物', 'subject'),
+(14, '编程与计算机', 'subject'),
+(15, '经管/社科', 'subject'),
+(16, '电子与工程', 'subject'),
+(17, '英语与学术写作', 'subject'),
+(18, '科研', 'subject'),
+(19, '其他', 'subject')
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, category = EXCLUDED.category;
+
 -- 为 pairs.question_id 添加索引
 CREATE INDEX IF NOT EXISTS idx_pairs_question_id ON pairs(question_id);
