@@ -395,6 +395,26 @@ const getTeachingTime = async (req, res) => {
     }
 };
 
+// 获取用户的待处理结束申请
+const getPendingEndRequests = async (req, res) => {
+    const userId = req.user.userId;
+    console.log('[DEBUG] Fetching pending end requests for user:', userId);
+
+    try {
+        const pendingRequests = await queries.pair.getPendingEndRequests(userId);
+        console.log('[DEBUG] Found pending requests:', pendingRequests.length);
+        console.log('[DEBUG] Requests:', JSON.stringify(pendingRequests, null, 2));
+        
+        res.json({
+            success: true,
+            requests: pendingRequests
+        });
+    } catch (err) {
+        console.error('获取待处理申请失败:', err);
+        res.status(500).json({ error: '获取失败' });
+    }
+};
+
 module.exports = {
     applyPair,
     acceptPair,
@@ -408,5 +428,6 @@ module.exports = {
     requestEndTeaching,
     acceptEndRequest,
     rejectEndRequest,
-    getTeachingTime
+    getTeachingTime,
+    getPendingEndRequests
 };

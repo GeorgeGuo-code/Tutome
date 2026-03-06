@@ -10,9 +10,13 @@ const Personal = () => {
   const [prevTotalPages, setPrevTotalPages] = useState(1);
   const [visiblePages, setVisiblePages] = useState([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationLoading, setNotificationLoading] = useState(false);
 
   useEffect(() => {
     fetchHistory();
+    fetchNotifications();
   }, [currentPage]);
 
   // 更新可见页码
@@ -109,8 +113,145 @@ const Personal = () => {
     }
   };
 
+  // 获取待处理的结束申请
+  const fetchNotifications = async () => {
+    setNotificationLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      console.log('[DEBUG] Fetching notifications with token:', token ? 'exists' : 'missing');
+
+      if (!token) {
+        console.error('[ERROR] No authentication token found');
+        setNotifications([]);
+        return;
+      }
+
+      const response = await fetch(
+        "http://localhost:3000/api/chats/pending-requests",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log('[DEBUG] Response status:', response.status);
+      const data = await response.json();
+      console.log('[DEBUG] Response data:', data);
+
+      if (!response.ok) {
+        console.error('[ERROR] API request failed:', data);
+        if (response.status === 401) {
+          console.error('[ERROR] Authentication failed - token may be expired');
+        }
+        setNotifications([]);
+        return;
+      }
+
+      if (!data.success) {
+        console.error('[ERROR] API returned unsuccessful:', data);
+        setNotifications([]);
+        return;
+      }
+
+      console.log('[SUCCESS] Notifications received:', data.requests?.length || 0);
+      setNotifications(data.requests || []);
+    } catch (error) {
+      console.error("[ERROR] Network error:", error);
+      setNotifications([]);
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
+
   const getPageNumbers = () => {
     return visiblePages;
+  };
+
+  const handleDeleteQuestion = async (questionId) => {
+    const confirmed = window.confirm('确定要删除这个问题吗？此操作不可恢复。');
+
+    if (!confirmed) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:3000/api/questions/${questionId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        // 删除成功，刷新列表
+        fetchHistory();
+      } else {
+        const errorData = await response.json();
+        alert(`删除失败：${errorData.message || '未知错误'}`);
+      }
+    } catch (error) {
+      console.error('删除问题错误:', error);
+      alert('删除失败，请稍后重试');
+    }
+  };
+
+  // 处理同意结束申请
+  const handleAcceptEndRequest = async (pairId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:3000/api/chats/${pairId}/accept-end`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        alert('已同意结束教学');
+        fetchNotifications();
+        fetchHistory();
+      } else {
+        const errorData = await response.json();
+        alert(`操作失败：${errorData.message || '未知错误'}`);
+      }
+    } catch (error) {
+      console.error('同意结束申请错误:', error);
+      alert('操作失败，请稍后重试');
+    }
+  };
+
+  // 处理拒绝结束申请
+  const handleRejectEndRequest = async (pairId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:3000/api/chats/${pairId}/reject-end`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        alert('已拒绝结束申请');
+        fetchNotifications();
+        fetchHistory();
+      } else {
+        const errorData = await response.json();
+        alert(`操作失败：${errorData.message || '未知错误'}`);
+      }
+    } catch (error) {
+      console.error('拒绝结束申请错误:', error);
+      alert('操作失败，请稍后重试');
+    }
   };
 
   // 根据结对状态分类问题
@@ -128,6 +269,66 @@ const Personal = () => {
     <div className="personal-container">
       <div className="personal-header">
         <span className="breadcrumb-text">足迹</span>
+      </div>
+
+      {/* 消息通知区域 */}
+      <div className="notification-section">
+        <div className="notification-header">
+          <div className="notification-icon-wrapper">
+            <span className="notification-bell">🔔</span>
+            {notifications.length > 0 && (
+              <span className="notification-badge">{notifications.length}</span>
+            )}
+          </div>
+          <button
+            className="notification-toggle-btn"
+            onClick={() => setShowNotifications(!showNotifications)}
+          >
+            {showNotifications ? '收起' : '展开'}
+          </button>
+        </div>
+
+        {showNotifications && (
+          <div className="notification-list">
+            {notificationLoading ? (
+              <div className="notification-loading">加载中...</div>
+            ) : notifications.length > 0 ? (
+              notifications.map((notification) => (
+                <div key={notification.pair_id} className="notification-item">
+                  <div className="notification-content">
+                    <div className="notification-title">对话结束申请</div>
+                    <div className="notification-question-info">
+                      <div className="notification-question-title">
+                        问题：{notification.question_title}
+                      </div>
+                      <div className="notification-question-content">
+                        {notification.question_content && notification.question_content.length > 50
+                          ? notification.question_content.substring(0, 50) + '...'
+                          : notification.question_content || '无内容'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="notification-actions">
+                    <button
+                      className="notification-btn notification-btn-reject"
+                      onClick={() => handleRejectEndRequest(notification.pair_id)}
+                    >
+                      拒绝
+                    </button>
+                    <button
+                      className="notification-btn notification-btn-accept"
+                      onClick={() => handleAcceptEndRequest(notification.pair_id)}
+                    >
+                      同意
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="notification-empty">暂无待处理消息</div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="history-list">
@@ -202,6 +403,12 @@ const Personal = () => {
                       </span>
                     </div>
                     <div className="history-actions">
+                      <button
+                        className="delete-question-btn"
+                        onClick={() => handleDeleteQuestion(item.id)}
+                      >
+                        删除问题
+                      </button>
                       <Link to={`/question/${item.id}`} state={{ question: item, from: '/personal' }} className="view-details">
                         查看详情
                       </Link>

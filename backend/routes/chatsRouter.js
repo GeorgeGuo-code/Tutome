@@ -26,6 +26,7 @@ router.get('/api/pairs/question/:questionId', chatsController.getPairByQuestionI
 router.post('/api/pairs/:pairId/associate', verifyJWT, chatsController.associatePairWithQuestion);
 
 // 聊天相关
+router.get('/api/chats/pending-requests', chatsController.getPendingEndRequests);
 router.get('/api/chats/:pairId', chatsController.getMessages);
 router.post('/api/chats/:pairId', chatsController.sendMessage);
 router.post('/api/chats/:pairId/end', chatsController.endTeaching);

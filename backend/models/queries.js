@@ -887,6 +887,36 @@ const queries = {
         [pairId]
       );
       return result.rows[0];
+    },
+
+    // 获取用户的待处理结束申请
+    getPendingEndRequests: async (userId) => {
+      const result = await pool.query(
+        `SELECT
+          p.id as pair_id,
+          p.teacher_id,
+          p.student_id,
+          p.end_requested_by,
+          p.end_requested_at,
+          q.id as question_id,
+          q.title as question_title,
+          q.content as question_content,
+          CASE
+            WHEN p.teacher_id = $1 THEN u_student.username
+            ELSE u_teacher.username
+          END as requester_username
+         FROM pairs p
+         LEFT JOIN users u_teacher ON p.teacher_id = u_teacher.id
+         LEFT JOIN users u_student ON p.student_id = u_student.id
+         LEFT JOIN questions q ON p.question_id = q.id
+         WHERE p.status = 'end_requested'
+           AND p.end_request_status = 'pending'
+           AND (p.teacher_id = $1 OR p.student_id = $1)
+           AND p.end_requested_by != $1
+         ORDER BY p.end_requested_at DESC`,
+        [userId]
+      );
+      return result.rows;
     }
   },
 
