@@ -184,9 +184,9 @@ async function getQuestionsByTagId(tagId, page = 1, limit = 20) {
 // 新增：根据问题ID获取问题及标签
 async function getQuestionWithTags(questionId) {
   const questionQuery = `
-    SELECT q.*, u.username 
-    FROM questions q 
-    JOIN users u ON q.user_id = u.id 
+    SELECT q.*, u.username, q.role
+    FROM questions q
+    JOIN users u ON q.user_id = u.id
     WHERE q.id = $1
   `;
   const questionResult = await pool.query(questionQuery, [questionId]);
@@ -222,23 +222,23 @@ async function getQuestions(page = 1, limit = 20, tagId = null) {
     const offset = (page - 1) * limit;
     let queryParams = [limit, offset];
     let queryIndex = 3;
-    
+
     // 基础查询
     let query = `
-      SELECT q.*, u.username 
-      FROM questions q 
-      JOIN users u ON q.user_id = u.id 
+      SELECT q.*, u.username, q.role
+      FROM questions q
+      JOIN users u ON q.user_id = u.id
     `;
-    
+
     // 如果指定了标签，添加关联
     if (tagId) {
       query += `JOIN question_tags qt ON q.id = qt.question_id WHERE qt.tag_id = $${queryIndex}`;
       queryParams.push(tagId);
       queryIndex++;
     }
-    
+
     query += ` ORDER BY q.created_at DESC, q.id DESC LIMIT $1 OFFSET $2`;
-    
+
     // 获取问题列表
     const questionsResult = await pool.query(query, queryParams);
     
@@ -295,13 +295,13 @@ async function getQuestions(page = 1, limit = 20, tagId = null) {
 async function getUserQuestions(userId, page = 1, limit = 20) {
   try {
     const offset = (page - 1) * limit;
-    
+
     // 获取分页的问题列表
     const query = `
-      SELECT q.*, u.username 
-      FROM questions q 
-      JOIN users u ON q.user_id = u.id 
-      WHERE q.user_id = $1 
+      SELECT q.*, u.username, q.role
+      FROM questions q
+      JOIN users u ON q.user_id = u.id
+      WHERE q.user_id = $1
       ORDER BY q.created_at DESC, q.id DESC
       LIMIT $2 OFFSET $3
     `;
@@ -567,7 +567,7 @@ async function searchByMultipleTags(tagIds = [], page = 1, limit = 20, categoryR
     const offset = (page - 1) * limit;
     
     const searchQuery = `
-      SELECT q.*, u.username 
+      SELECT q.*, u.username, q.role
       FROM questions q
       JOIN users u ON q.user_id = u.id
       JOIN question_tags qt ON q.id = qt.question_id

@@ -12,6 +12,12 @@ const Browse = () => {
   const [visiblePages, setVisiblePages] = useState([]);
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // 角色转换函数
+  const getRoleText = (role) => {
+    if (!role) return '未知';
+    return role === 'student' ? '学生' : '老师';
+  };
+
   useEffect(() => {
     fetchQuestions();
   }, [currentPage, mode]);
@@ -145,7 +151,10 @@ const Browse = () => {
               </p>
               <div className="question-meta">
                 <span className="meta-item">
-                  {question.username || '未知用户'}
+                  发起者: {question.username || '未知用户'}
+                </span>
+                <span className="meta-item">
+                  发起者身份: {getRoleText(question.role)}
                 </span>
                 <span className="meta-item">
                   {question.created_at ? new Date(question.created_at).toLocaleString('zh-CN') : '未知时间'}
