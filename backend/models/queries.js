@@ -225,14 +225,18 @@ async function getQuestions(page = 1, limit = 20, tagId = null) {
 
     // 基础查询
     let query = `
-      SELECT q.*, u.username, q.role
+      SELECT DISTINCT q.*, u.username, q.role
       FROM questions q
       JOIN users u ON q.user_id = u.id
+      LEFT JOIN pairs p ON q.id = p.question_id
     `;
+
+    // WHERE 条件：只显示没有结对的问题
+    query += ` WHERE p.id IS NULL`;
 
     // 如果指定了标签，添加关联
     if (tagId) {
-      query += `JOIN question_tags qt ON q.id = qt.question_id WHERE qt.tag_id = $${queryIndex}`;
+      query += ` AND q.id IN (SELECT question_id FROM question_tags WHERE tag_id = $${queryIndex})`;
       queryParams.push(tagId);
       queryIndex++;
     }
@@ -264,15 +268,21 @@ async function getQuestions(page = 1, limit = 20, tagId = null) {
     );
     
     // 获取总数
-    let countQuery = `SELECT COUNT(*) FROM questions`;
+    let countQuery = `
+      SELECT COUNT(DISTINCT q.id)
+      FROM questions q
+      LEFT JOIN pairs p ON q.id = p.question_id
+      WHERE p.id IS NULL
+    `;
     let countParams = [];
-    
+
     if (tagId) {
       countQuery = `
-        SELECT COUNT(DISTINCT q.id) 
-        FROM questions q 
-        JOIN question_tags qt ON q.id = qt.question_id 
-        WHERE qt.tag_id = $1
+        SELECT COUNT(DISTINCT q.id)
+        FROM questions q
+        LEFT JOIN pairs p ON q.id = p.question_id
+        WHERE p.id IS NULL
+          AND q.id IN (SELECT question_id FROM question_tags WHERE tag_id = $1)
       `;
       countParams = [tagId];
     }
