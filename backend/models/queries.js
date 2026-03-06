@@ -695,12 +695,29 @@ const queries = {
     // 检查是否存在结对
     checkExisting: async (userId, targetUserId) => {
       const result = await pool.query(
-        `SELECT * FROM pairs 
+        `SELECT * FROM pairs
          WHERE ((teacher_id = $1 AND student_id = $2) OR (teacher_id = $2 AND student_id = $1))
          AND status IN ('pending', 'active')`,
         [userId, targetUserId]
       );
       return result.rows;
+    },
+
+    // 检查用户的总结对数量（active 和 end_requested 状态）
+    checkUserPairLimit: async (userId, limit = 5) => {
+      const result = await pool.query(
+        `SELECT COUNT(*) as count
+         FROM pairs
+         WHERE (teacher_id = $1 OR student_id = $1)
+         AND status IN ('active', 'end_requested')`,
+        [userId]
+      );
+      const currentCount = parseInt(result.rows[0].count);
+      return {
+        canCreate: currentCount < limit,
+        currentCount,
+        limit
+      };
     },
 
     // 创建结对申请

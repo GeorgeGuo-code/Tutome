@@ -14,11 +14,23 @@ const applyPair = async (req, res) => {
     }
 
     try {
-        // 检查是否已有结对
-        const existingPairs = await queries.pair.checkExisting(userId, targetUserId);
-        
-        if (existingPairs.length > 0) {
-            return res.status(400).json({ error: '已有结对存在' });
+        // 检查发起方的结对数量
+        const MAX_PAIRS = 5;
+        const initiatorLimit = await queries.pair.checkUserPairLimit(userId, MAX_PAIRS);
+        if (!initiatorLimit.canCreate) {
+            return res.status(400).json({
+                error: `已达到最大结对数量限制（${MAX_PAIRS}个）`,
+                message: `您当前已有${initiatorLimit.currentCount}个活跃结对，无法创建更多`
+            });
+        }
+
+        // 检查接受方的结对数量
+        const targetLimit = await queries.pair.checkUserPairLimit(targetUserId, MAX_PAIRS);
+        if (!targetLimit.canCreate) {
+            return res.status(400).json({
+                error: '对方已达到最大结对数量限制',
+                message: `对方当前已有${targetLimit.currentCount}个活跃结对，无法创建更多结对`
+            });
         }
 
         // 根据角色决定 teacher_id 和 student_id
