@@ -690,6 +690,22 @@ async function deleteQuestion(questionId) {
 }
 // 聊天相关的数据库查询
 const queries = {
+  // 用户相关查询
+  user: {
+    // 获取所有可用用户（排除当前用户，只返回有问题的用户）
+    getAvailableUsers: async (currentUserId) => {
+      const result = await pool.query(
+        `SELECT DISTINCT u.id, u.username, u.created_at
+         FROM users u
+         INNER JOIN questions q ON u.id = q.user_id
+         WHERE u.id != $1
+         ORDER BY u.created_at DESC`,
+        [currentUserId]
+      );
+      return result.rows;
+    }
+  },
+
   // 结对相关查询
   pair: {
     // 检查是否存在结对

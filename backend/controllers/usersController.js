@@ -112,11 +112,43 @@ const updatePassword = async (req, res) => {
 }
 
 
+const getAvailableUsers = async (req, res) => {
+  try {
+    // 从 JWT token 中获取当前用户 ID
+    const token = req.headers['authorization']?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ success: false, message: '未提供认证令牌' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    const currentUserId = decoded.userId;
+
+    // 获取可用用户列表（排除当前用户）
+    const availableUsers = await queries.user.getAvailableUsers(currentUserId);
+
+    res.json({
+      success: true,
+      users: availableUsers
+    });
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ success: false, message: '无效的认证令牌' });
+    }
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ success: false, message: '认证令牌已过期' });
+    }
+    res.status(500).json({ success: false, message: '服务器错误', error: error.message });
+  }
+}
+
+
 module.exports = {
   loginUser,
   createUser,
   verifyUserToken,
-  updatePassword
+  updatePassword,
+  getAvailableUsers
 }
 
 
