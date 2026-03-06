@@ -113,6 +113,17 @@ const Personal = () => {
     return visiblePages;
   };
 
+  // 根据结对状态分类问题
+  const inProgressQuestions = history.filter(item =>
+    item.pair_status === 'active' || item.pair_status === 'end_requested'
+  );
+  const unpairedQuestions = history.filter(item =>
+    item.pair_status === null
+  );
+  const completedQuestions = history.filter(item =>
+    item.pair_status === 'completed'
+  );
+
   return (
     <div className="personal-container">
       <div className="personal-header">
@@ -125,36 +136,118 @@ const Personal = () => {
         ) : history.length === 0 ? (
           <div className="empty">暂无足迹</div>
         ) : (
-          history.map((item) => (
-              <div key={item.id} className="history-item history-card">
-                <div className="history-header">
-                  <h3 className="history-title">{item.title}</h3>
-                  {item.tags && item.tags.length > 0 && (
-                    <div className="history-tags-inline">
-                      {item.tags.map((tag) => (
-                        <span key={tag.id} className="tag-small">{tag.name}</span>
-                      ))}
+          <>
+            {/* 进行中 */}
+            {inProgressQuestions.length > 0 && (
+              <>
+                <div className="history-section-title">进行中</div>
+                {inProgressQuestions.map((item) => (
+                  <div key={item.id} className="history-item history-card">
+                    <div className="history-header">
+                      <h3 className="history-title">{item.title}</h3>
+                      {item.tags && item.tags.length > 0 && (
+                        <div className="history-tags-inline">
+                          {item.tags.map((tag) => (
+                            <span key={tag.id} className="tag-small">{tag.name}</span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <p className="history-summary">
-                  {item.content.substring(0, 100)}...
-                </p>
-                <div className="history-meta">
-                  <span className="meta-item">
-                    {item.username || '未知用户'}
-                  </span>
-                  <span className="meta-item">
-                    {item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '未知时间'}
-                  </span>
-                </div>
-                <div className="history-actions">
-                  <Link to={`/question/${item.id}`} state={{ question: item, from: '/personal' }} className="view-details">
-                    查看详情
-                  </Link>
-                </div>
-              </div>
-            ))
+                    <p className="history-summary">
+                      {item.content.substring(0, 100)}...
+                    </p>
+                    <div className="history-meta">
+                      <span className="meta-item">
+                        {item.username || '未知用户'}
+                      </span>
+                      <span className="meta-item">
+                        {item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '未知时间'}
+                      </span>
+                    </div>
+                    <div className="history-actions">
+                      <Link to={`/question/${item.id}`} state={{ question: item, from: '/personal' }} className="view-details">
+                        查看详情
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* 未结对 */}
+            {unpairedQuestions.length > 0 && (
+              <>
+                <div className="history-section-title">未结对</div>
+                {unpairedQuestions.map((item) => (
+                  <div key={item.id} className="history-item history-card">
+                    <div className="history-header">
+                      <h3 className="history-title">{item.title}</h3>
+                      {item.tags && item.tags.length > 0 && (
+                        <div className="history-tags-inline">
+                          {item.tags.map((tag) => (
+                            <span key={tag.id} className="tag-small">{tag.name}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <p className="history-summary">
+                      {item.content.substring(0, 100)}...
+                    </p>
+                    <div className="history-meta">
+                      <span className="meta-item">
+                        {item.username || '未知用户'}
+                      </span>
+                      <span className="meta-item">
+                        {item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '未知时间'}
+                      </span>
+                    </div>
+                    <div className="history-actions">
+                      <Link to={`/question/${item.id}`} state={{ question: item, from: '/personal' }} className="view-details">
+                        查看详情
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* 已结束 */}
+            {completedQuestions.length > 0 && (
+              <>
+                <div className="history-section-title">已结束</div>
+                {completedQuestions.map((item) => (
+                  <div key={item.id} className="history-item history-card">
+                    <div className="history-header">
+                      <h3 className="history-title">{item.title}</h3>
+                      {item.tags && item.tags.length > 0 && (
+                        <div className="history-tags-inline">
+                          {item.tags.map((tag) => (
+                            <span key={tag.id} className="tag-small">{tag.name}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <p className="history-summary">
+                      {item.content.substring(0, 100)}...
+                    </p>
+                    <div className="history-meta">
+                      <span className="meta-item">
+                        {item.username || '未知用户'}
+                      </span>
+                      <span className="meta-item">
+                        {item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '未知时间'}
+                      </span>
+                    </div>
+                    <div className="history-actions">
+                      <Link to={`/question/${item.id}`} state={{ question: item, from: '/personal' }} className="view-details">
+                        查看详情
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </>
         )}
       </div>
 
