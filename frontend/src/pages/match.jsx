@@ -341,7 +341,7 @@ const Match = () => {
 
         <form className="match-form" onSubmit={handleSearchUsers}>
           <div className="form-row">
-            <label className="form-label">对方身份</label>
+            <label className="form-label">我的身份</label>
             <select
               className="form-select"
               value={role}
