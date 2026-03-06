@@ -306,12 +306,14 @@ async function getUserQuestions(userId, page = 1, limit = 20) {
   try {
     const offset = (page - 1) * limit;
 
-    // 获取分页的问题列表
+    // 获取分页的问题列表（只返回未结对的问题）
     const query = `
       SELECT q.*, u.username, q.role
       FROM questions q
       JOIN users u ON q.user_id = u.id
+      LEFT JOIN pairs p ON q.id = p.question_id
       WHERE q.user_id = $1
+        AND p.id IS NULL
       ORDER BY q.created_at DESC, q.id DESC
       LIMIT $2 OFFSET $3
     `;
@@ -338,11 +340,13 @@ async function getUserQuestions(userId, page = 1, limit = 20) {
       })
     );
     
-    // 获取总数
+    // 获取总数（只计算未结对的问题）
     const countQuery = `
       SELECT COUNT(*) as total 
-      FROM questions 
-      WHERE user_id = $1
+      FROM questions q
+      LEFT JOIN pairs p ON q.id = p.question_id
+      WHERE q.user_id = $1
+        AND p.id IS NULL
     `;
     const countResult = await pool.query(countQuery, [userId]);
     
