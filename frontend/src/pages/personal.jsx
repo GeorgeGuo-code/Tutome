@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import "./personal.css";
 
 const Personal = () => {
+  const location = useLocation();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -18,6 +19,21 @@ const Personal = () => {
     fetchHistory();
     fetchNotifications();
   }, [currentPage]);
+
+  // 监听 location.state，实现滚动到指定部分
+  useEffect(() => {
+    if (location.state?.scrollTo === 'in-progress') {
+      // 等待页面加载完成后滚动
+      setTimeout(() => {
+        const sectionTitles = document.querySelectorAll('.history-section-title');
+        sectionTitles.forEach(title => {
+          if (title.textContent === '进行中') {
+            title.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      }, 300);
+    }
+  }, [location.state]);
 
   // 更新可见页码
   useEffect(() => {
