@@ -1,0 +1,179 @@
+.post-container {
+  min-height: 100vh;
+  background-color: #F5F7FA;
+  padding: 120px 20px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.post-header {
+  position: absolute;
+  top: 64px;
+  left: 0;
+  right: 0;
+  padding: 12px 24px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.back-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  background: white;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.back-btn:hover {
+  background: #F9FAFB;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.post-content {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.post-card {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.post-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1E293B;
+  text-align: center;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+/* 标签区域 */
+.post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #F8FAFC;
+  border-radius: 8px;
+}
+
+.tag {
+  padding: 6px 14px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 16px;
+  white-space: nowrap;
+}
+
+/* 发布者信息区域 */
+.post-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #F8FAFC;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  margin-bottom: 24px;
+}
+
+.post-author,
+.post-time {
+  font-size: 14px;
+  color: #64748B;
+  font-weight: 500;
+}
+
+/* 问题内容区域 */
+.post-body {
+  margin-bottom: 24px;
+  padding: 24px;
+  background: #FAFBFC;
+  border: 2px solid #E2E8F0;
+  border-radius: 12px;
+  min-height: 200px;
+}
+
+.post-text {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #374151;
+  margin-bottom: 16px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.post-text:last-child {
+  margin-bottom: 0;
+}
+
+.post-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.dialogue-btn {
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  text-decoration: none;
+}
+
+.dialogue-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.dialogue-btn:active {
+  transform: translateY(0);
+}
+
+/* 响应式 */
+@media (max-width: 640px) {
+  .post-container {
+    padding: 100px 16px 32px;
+  }
+
+  .post-card {
+    padding: 24px;
+  }
+
+  .post-title {
+    font-size: 20px;
+  }
+
+  .post-text {
+    font-size: 15px;
+  }
+
+  .post-meta {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+}

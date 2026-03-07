@@ -1,0 +1,154 @@
+const bcrypt = require('bcryptjs');
+const queries = require('../models/queries')
+const jwt = require('jsonwebtoken');
+const pool = require("../models/pool")
+
+// 用户登录的功能
+const loginUser = async (username, password, res) => {
+  const user = await queries.findUserByUsername(username);
+
+  if (!user) {
+    return res.status(400).send("用户名或密码错误");
+  }
+
+  // 验证密码
+  bcrypt.compare(password, user.password, (err, result) => {
+    if (err) {
+      return res.status(500).send("密码验证时发生错误");
+    }
+
+    if (!result) {
+      return res.status(400).send("用户名或密码错误");
+    }
+
+    // 密码正确，返回成功消息或生成 token
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+    res.json({ token });
+  });
+};
+
+
+
+const createUser = async (req, res) => {
+ // 从请求体中解构出用户名和密码
+  const { username, password } = req.body;
+
+  // 确保用户名和密码存在
+  if (!username || !password) {
+    return res.status(400).json({ success: false, message: '用户名和密码是必填项' });
+  }
+
+  try {
+    // 调用 registerUser 函数
+    const result = await queries.registerUser(username, password);
+
+    // 根据结果返回响应
+    if (result.success) {
+      res.status(200).json(result); // 注册成功
+    } else {
+      res.status(400).json(result); // 注册失败
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: '服务器错误', error: error.message });
+  }
+}
+
+
+
+const verifyUserToken = (req, res) => {
+  const token = req.headers['authorization']?.split(' ')[1]; // 获取 Authorization 头中的 JWT
+
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET_KEY, (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ message: 'Invalid or expired token' });
+    }
+
+    // JWT 验证通过，返回成功
+    res.json({ message: 'Token is valid', user: decoded });
+  });
+}
+
+
+
+const updatePassword = async (req, res) => {
+  const { userId } = req.params;
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ success: false, message: '新密码和确认密码不一致' });
+  }
+
+  try {
+    const user = await queries.findUserById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: '用户不存在' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: '当前密码错误' });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ success: false, message: '新密码不能与当前密码相同' });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    const updateQuery = `UPDATE ${process.env.DB_TABLE_NAME} SET password = $1 WHERE id = $2 RETURNING *`;
+    const result = await pool.query(updateQuery, [hashedNewPassword, userId]);
+
+    if (result.rows.length > 0) {
+      res.json({ success: true, message: '密码更新成功' });
+    } else {
+      res.status(500).json({ success: false, message: '密码更新失败' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: '服务器错误', error: error.message });
+  }
+}
+
+
+const getAvailableUsers = async (req, res) => {
+  try {
+    // 从 JWT token 中获取当前用户 ID
+    const token = req.headers['authorization']?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ success: false, message: '未提供认证令牌' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    const currentUserId = decoded.userId;
+
+    // 获取可用用户列表（排除当前用户）
+    const availableUsers = await queries.user.getAvailableUsers(currentUserId);
+
+    res.json({
+      success: true,
+      users: availableUsers
+    });
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ success: false, message: '无效的认证令牌' });
+    }
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ success: false, message: '认证令牌已过期' });
+    }
+    res.status(500).json({ success: false, message: '服务器错误', error: error.message });
+  }
+}
+
+
+module.exports = {
+  loginUser,
+  createUser,
+  verifyUserToken,
+  updatePassword,
+  getAvailableUsers
+}
+
+
