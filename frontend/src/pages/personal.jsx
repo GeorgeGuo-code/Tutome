@@ -18,27 +18,29 @@ const Personal = () => {
   const [showTipModal, setShowTipModal] = useState(false);
 
   useEffect(() => {
-    const hasSeenHomeTip = localStorage.getItem('hasSeenHomeTip');
-    if (!hasSeenHomeTip) {
+    const hasSeenPersonalTip = localStorage.getItem('hasSeenPersonalTip');
+    if (!hasSeenPersonalTip) {
       setShowTipModal(true);
     }
   }, []);
 
+  // 新增：关闭弹窗并记录
   const handleCloseModal = () => {
     setShowTipModal(false);
-    localStorage.setItem('hasSeenHomeTip', 'true');
+    localStorage.setItem('hasSeenPersonalTip', 'true');
   };
 
-  const homeFeatures = [
-    '展示平台核心功能入口和推荐内容',
-    '轮播图展示热门问题或平台公告',
-    '可快速跳转到提问、浏览、匹配等核心板块',
-    '无需登录即可查看首页内容'
+  // 新增：个人中心配置（变量名也替换为 personal 开头）
+  const personalFeatures = [
+    '查看个人基本信息（用户名、头像、注册时间）',
+    '管理自己发布的提问、回答、收藏内容',
+    '修改个人资料和密码',
+    '查看消息通知（回答提醒、对话提醒）'
   ];
-  const homeNotes = [
-    '首页内容会根据平台更新动态调整',
-    '部分功能按钮需登录后才能使用',
-    '轮播图点击可查看对应详情内容'
+  const personalNotes = [
+    '仅可修改自己的个人信息，无法查看他人隐私',
+    '删除提问/回答后无法恢复，请谨慎操作',
+    '密码修改后需重新登录，请牢记新密码'
   ];
 
   useEffect(() => {
