@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import "./dialogue.css";
+import FeatureTipModal from '../components/FeatureTipModal';
 
 const Dialogue = () => {
   const { pairId } = useParams();
@@ -16,6 +17,45 @@ const Dialogue = () => {
   const currentUserId = parseInt(localStorage.getItem("userId")) || null;
   const messagesEndRef = useRef(null);
   const pollingIntervalRef = useRef(null); // 轮询定时器引用
+  // 新增：首次进入对话页面触发弹窗
+  useEffect(() => {
+    // 专属 localStorage key，避免和其他板块冲突
+    const hasSeenDialogueTip = localStorage.getItem('hasSeenDialogueTip');
+    if (!hasSeenDialogueTip) {
+      setShowTipModal(true);
+    }
+
+    // 原有对话逻辑（保留不动，比如加载聊天记录、接收消息等）
+    const loadDialogueHistory = async () => {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/dialogue/history', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      // 你原有处理聊天记录的逻辑...
+    };
+    loadDialogueHistory();
+  }, []);
+
+  // 新增：关闭弹窗并标记已查看
+  const handleCloseModal = () => {
+    setShowTipModal(false);
+    localStorage.setItem('hasSeenDialogueTip', 'true');
+  };
+
+  // 新增：对话板块功能说明和注意事项（适配你的场景）
+  const dialogueFeatures = [
+    '与匹配的解答者/提问者实时文字交流',
+    '支持发送代码片段、问题相关截图（如有）',
+    '聊天记录自动保存，可在个人中心（Personal）查看',
+    '可标记消息已读/未读，支持限时撤回消息'
+  ];
+  const dialogueNotes = [
+    '仅可与匹配用户或问题相关方对话，无法随意发起聊天',
+    '请勿发送广告、辱骂等违规内容，否则限制对话功能',
+    '未登录状态下无法进入对话页面，会自动跳转登录页',
+    '网络异常时聊天记录可能延迟加载，可刷新页面'
+  ];
 
   // 验证 Pair ID 并启动轮询
   useEffect(() => {
@@ -432,6 +472,13 @@ const Dialogue = () => {
           </div>
         </div>
       )}
+      <FeatureTipModal
+        visible={showTipModal}
+        title="对话交流使用说明"
+        features={dialogueFeatures}
+        notes={dialogueNotes}
+        onClose={handleCloseModal}
+      />      
     </div>
   );
 };
