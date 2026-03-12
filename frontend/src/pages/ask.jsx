@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import "./ask.css";
 // 新增：引入弹窗组件
 import FeatureTipModal from '../components/FeatureTipModal';
-import { useState, useEffect } from 'react'; // 如果已有这行，无需重复加
 
 const Ask = () => {
     // 新增弹窗状态
