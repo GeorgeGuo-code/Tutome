@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "./personal.css";
+import FeatureTipModal from '../components/FeatureTipModal';
 
 const Personal = () => {
   const location = useLocation();
@@ -14,6 +15,31 @@ const Personal = () => {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationLoading, setNotificationLoading] = useState(false);
+  const [showTipModal, setShowTipModal] = useState(false);
+
+  useEffect(() => {
+    const hasSeenHomeTip = localStorage.getItem('hasSeenHomeTip');
+    if (!hasSeenHomeTip) {
+      setShowTipModal(true);
+    }
+  }, []);
+
+  const handleCloseModal = () => {
+    setShowTipModal(false);
+    localStorage.setItem('hasSeenHomeTip', 'true');
+  };
+
+  const homeFeatures = [
+    '展示平台核心功能入口和推荐内容',
+    '轮播图展示热门问题或平台公告',
+    '可快速跳转到提问、浏览、匹配等核心板块',
+    '无需登录即可查看首页内容'
+  ];
+  const homeNotes = [
+    '首页内容会根据平台更新动态调整',
+    '部分功能按钮需登录后才能使用',
+    '轮播图点击可查看对应详情内容'
+  ];
 
   useEffect(() => {
     fetchHistory();
@@ -499,6 +525,13 @@ const Personal = () => {
           &gt;
         </button>
       </div>
+      <FeatureTipModal
+        visible={showTipModal}
+        title="首页使用说明"
+        features={homeFeatures}
+        notes={homeNotes}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 };
