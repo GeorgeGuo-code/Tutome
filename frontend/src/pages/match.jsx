@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./match.css";
+import FeatureTipModal from '../components/FeatureTipModal';
 
 const Match = () => {
   const [subject, setSubject] = useState("");
@@ -13,6 +14,31 @@ const Match = () => {
   const [userQuestions, setUserQuestions] = useState([]);
   const [showQuestions, setShowQuestions] = useState(false);
   const [expandedQuestionId, setExpandedQuestionId] = useState(null);
+  const [showTipModal, setShowTipModal] = useState(false);
+
+  useEffect(() => {
+    const hasSeenMatchTip = localStorage.getItem('hasSeenMatchTip');
+    if (!hasSeenMatchTip) {
+      setShowTipModal(true);
+    }
+  }, []);
+
+  const handleCloseModal = () => {
+    setShowTipModal(false);
+    localStorage.setItem('hasSeenMatchTip', 'true');
+  };
+
+  const matchFeatures = [
+    '根据你发布的问题/擅长的技术标签匹配解答者',
+    '展示匹配度高的用户列表，可直接发起对话',
+    '支持查看匹配用户的个人简介和历史回答',
+    '匹配结果会根据双方标签实时更新'
+  ];
+  const matchNotes = [
+    '匹配功能需登录后才能使用',
+    '匹配度仅为参考，可手动选择对话对象',
+    '发起对话前请确认对方是否在线'
+  ];
 
   // 学科到 topicId 的映射
   const subjectToTopicId = {
@@ -412,6 +438,13 @@ const Match = () => {
           </button>
         </form>
       </div>
+            <FeatureTipModal
+        visible={showTipModal}
+        title="匹配板块使用说明"
+        features={matchFeatures}
+        notes={matchNotes}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 };
