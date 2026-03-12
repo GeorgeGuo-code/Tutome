@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import "./post.css";
+import FeatureTipModal from '../components/FeatureTipModal';
 
 const Post = () => {
   const [question, setQuestion] = useState(null);
@@ -11,6 +12,32 @@ const Post = () => {
   const [currentUserId, setCurrentUserId] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const [showTipModal, setShowTipModal] = useState(false);
+
+  useEffect(() => {
+    const hasSeenPostTip = localStorage.getItem('hasSeenPostTip');
+    if (!hasSeenPostTip) {
+      setShowTipModal(true);
+    }
+  }, []);
+
+  const handleCloseModal = () => {
+    setShowTipModal(false);
+    localStorage.setItem('hasSeenPostTip', true);
+  };
+
+  const postFeatures = [
+    '查看问题的完整标题与详细描述',
+    '查看问题所属科目、难度标签',
+    '可查看其他用户的回答',
+    '可进入对话与答主交流'
+  ];
+
+  const postNotes = [
+    '请文明提问与回答',
+    '禁止发布广告、违规内容',
+    '未登录可能无法查看完整信息'
+  ];
 
   // 学科到 topicId 的映射
   const subjectToTopicId = {
@@ -284,6 +311,13 @@ const Post = () => {
           </button>
         </div>
       </div>
+      <FeatureTipModal
+        visible={showTipModal}
+        title="帖子详情使用说明"
+        features={postFeatures}
+        notes={postNotes}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 };
