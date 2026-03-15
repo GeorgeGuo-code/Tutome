@@ -62,7 +62,7 @@ const applyPair = async (req, res) => {
     }
 };
 
-// 获取结对信息
+// 获取结对信息（含对方用户信息 partner）
 const getPairById = async (req, res) => {
     const { pairId } = req.params;
     const userId = req.user.userId;
@@ -74,11 +74,14 @@ const getPairById = async (req, res) => {
             return res.status(404).json({ error: '结对不存在' });
         }
 
-        // 检查权限
         if (pair.teacher_id !== userId && pair.student_id !== userId) {
             return res.status(403).json({ error: '无权查看此结对' });
         }
 
+        const partnerId = pair.teacher_id === userId ? pair.student_id : pair.teacher_id;
+        const partnerUser = await queries.findUserById(partnerId);
+        pair.partner_username = partnerUser ? partnerUser.username : null;
+        await queries.attachPartnerProfileToPairs([pair], userId);
         res.json(pair);
     } catch (err) {
         console.error('获取结对信息失败:', err);
@@ -127,9 +130,10 @@ const getMyPairs = async (req, res) => {
     }
 };
 
-// 获取问题的结对
+// 获取问题的结对（含对方用户信息 partner）
 const getPairByQuestionId = async (req, res) => {
     const { questionId } = req.params;
+    const userId = req.user.userId;
 
     try {
         const pair = await queries.pair.getByQuestionId(questionId);
@@ -137,7 +141,12 @@ const getPairByQuestionId = async (req, res) => {
         if (!pair) {
             return res.status(404).json({ error: '该问题暂无结对' });
         }
-        
+
+        if (pair.teacher_id !== userId && pair.student_id !== userId) {
+            return res.status(403).json({ error: '无权查看此结对' });
+        }
+
+        await queries.attachPartnerProfileToPairs([pair], userId);
         res.json(pair);
     } catch (err) {
         console.error('获取问题结对失败:', err);

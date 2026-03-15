@@ -213,7 +213,71 @@ async function getQuestionWithTags(questionId) {
   const tagsResult = await pool.query(tagsQuery, [questionId]);
   
   question.tags = tagsResult.rows;
+  await attachCreatorsToQuestions([question]);
   return question;
+}
+
+// 为问题列表附加提出者（creator）信息：id、username、nickname、bio、avatar_url
+async function attachCreatorsToQuestions(questions) {
+  if (!questions || questions.length === 0) return questions;
+  const userIds = [...new Set(questions.map(q => q.user_id).filter(Boolean))];
+  if (userIds.length === 0) {
+    questions.forEach(q => { q.creator = { id: q.user_id, username: q.username || null, nickname: null, bio: null, avatar_url: null }; });
+    return questions;
+  }
+  const placeholders = userIds.map((_, i) => `$${i + 1}`).join(',');
+  const res = await pool.query(
+    `SELECT user_id, nickname, bio, avatar_url FROM user_profiles WHERE user_id IN (${placeholders})`,
+    userIds
+  );
+  const profileByUser = {};
+  res.rows.forEach(r => { profileByUser[r.user_id] = r; });
+  questions.forEach(q => {
+    const p = profileByUser[q.user_id] || {};
+    q.creator = {
+      id: q.user_id,
+      username: q.username || null,
+      nickname: p.nickname || null,
+      bio: p.bio || null,
+      avatar_url: p.avatar_url || null
+    };
+  });
+  return questions;
+}
+
+// 为结对列表附加对方（结对者）用户信息：id、username、nickname、bio、avatar_url
+async function attachPartnerProfileToPairs(pairs, currentUserId) {
+  if (!pairs || pairs.length === 0) return pairs;
+  const partnerIds = [...new Set(pairs.map(p => {
+    const id = p.teacher_id === currentUserId ? p.student_id : p.teacher_id;
+    return id;
+  }).filter(Boolean))];
+  if (partnerIds.length === 0) {
+    pairs.forEach(p => {
+      const partnerId = p.teacher_id === currentUserId ? p.student_id : p.teacher_id;
+      p.partner = { id: partnerId, username: p.partner_username || null, nickname: null, bio: null, avatar_url: null };
+    });
+    return pairs;
+  }
+  const placeholders = partnerIds.map((_, i) => `$${i + 1}`).join(',');
+  const res = await pool.query(
+    `SELECT user_id, nickname, bio, avatar_url FROM user_profiles WHERE user_id IN (${placeholders})`,
+    partnerIds
+  );
+  const profileByUser = {};
+  res.rows.forEach(r => { profileByUser[r.user_id] = r; });
+  pairs.forEach(p => {
+    const partnerId = p.teacher_id === currentUserId ? p.student_id : p.teacher_id;
+    const prof = profileByUser[partnerId] || {};
+    p.partner = {
+      id: partnerId,
+      username: p.partner_username || null,
+      nickname: prof.nickname || null,
+      bio: prof.bio || null,
+      avatar_url: prof.avatar_url || null
+    };
+  });
+  return pairs;
 }
 
 // 修改：获取所有问题（包含标签）
@@ -266,6 +330,7 @@ async function getQuestions(page = 1, limit = 20, tagId = null) {
         return question;
       })
     );
+    await attachCreatorsToQuestions(questionsWithTags);
     
     // 获取总数
     let countQuery = `
@@ -339,6 +404,7 @@ async function getUserQuestions(userId, page = 1, limit = 20) {
         return question;
       })
     );
+    await attachCreatorsToQuestions(questionsWithTags);
     
     // 获取总数（只计算未结对的问题）
     const countQuery = `
@@ -430,6 +496,7 @@ async function getUserHistory(userId, page = 1, limit = 20) {
         return question;
       })
     );
+    await attachCreatorsToQuestions(questionsWithTags);
 
     // 获取总数
     const countQuery = `
@@ -632,6 +699,7 @@ async function searchByMultipleTags(tagIds = [], page = 1, limit = 20, categoryR
         return question;
       })
     );
+    await attachCreatorsToQuestions(questionsWithTags);
     
     return {
       success: true,
@@ -692,21 +760,205 @@ async function deleteQuestion(questionId) {
     client.release();
   }
 }
+// 获取所有学科（用于结对与学科偏好选择）
+async function getTopics() {
+  const result = await pool.query('SELECT id, name FROM topics ORDER BY name');
+  return result.rows;
+}
+
+// 获取难度标签（category='difficulty'，用于难度偏好选择）
+async function getDifficultyTags() {
+  const result = await pool.query(
+    "SELECT id, name FROM tags WHERE category = 'difficulty' ORDER BY name"
+  );
+  return result.rows;
+}
+
+// 获取用户公开信息（含感兴趣学科、擅长学科、难度偏好）
+async function getPublicUserProfile(userId) {
+  const user = await findUserById(userId);
+  if (!user) return null;
+  const profile = await pool.query(
+    'SELECT nickname, bio, avatar_url FROM user_profiles WHERE user_id = $1',
+    [userId]
+  ).then(r => r.rows[0] || null);
+  const [interestedRows, proficientRows, difficultyRows] = await Promise.all([
+    pool.query(
+      `SELECT t.id, t.name FROM user_topic_preferences utp
+       JOIN topics t ON utp.topic_id = t.id WHERE utp.user_id = $1 AND utp.type = 'interested' ORDER BY t.name`,
+      [userId]
+    ).then(r => r.rows),
+    pool.query(
+      `SELECT t.id, t.name FROM user_topic_preferences utp
+       JOIN topics t ON utp.topic_id = t.id WHERE utp.user_id = $1 AND utp.type = 'proficient' ORDER BY t.name`,
+      [userId]
+    ).then(r => r.rows),
+    pool.query(
+      `SELECT t.id, t.name FROM user_difficulty_preferences udp
+       JOIN tags t ON udp.tag_id = t.id WHERE udp.user_id = $1 ORDER BY t.name`,
+      [userId]
+    ).then(r => r.rows)
+  ]);
+  return {
+    id: user.id,
+    username: user.username,
+    nickname: profile ? profile.nickname : null,
+    bio: profile ? profile.bio : null,
+    avatar_url: profile ? profile.avatar_url : null,
+    interested_topics: interestedRows,
+    proficient_topics: proficientRows,
+    difficulty_preferences: difficultyRows
+  };
+}
+
 // 聊天相关的数据库查询
 const queries = {
   // 用户相关查询
   user: {
-    // 获取所有可用用户（排除当前用户，只返回有问题的用户）
+    // 获取所有可用用户（排除当前用户，只返回有问题的用户；含昵称）
     getAvailableUsers: async (currentUserId) => {
       const result = await pool.query(
-        `SELECT DISTINCT u.id, u.username, u.created_at
+        `SELECT DISTINCT u.id, u.username, u.created_at, up.nickname
          FROM users u
          INNER JOIN questions q ON u.id = q.user_id
+         LEFT JOIN user_profiles up ON u.id = up.user_id
          WHERE u.id != $1
          ORDER BY u.created_at DESC`,
         [currentUserId]
       );
       return result.rows;
+    },
+
+    // 获取用户资料（仅 profile 表，可能为空）
+    getProfile: async (userId) => {
+      const result = await pool.query(
+        'SELECT id, user_id, nickname, bio, avatar_url, created_at, updated_at FROM user_profiles WHERE user_id = $1',
+        [userId]
+      );
+      return result.rows[0] || null;
+    },
+
+    // 新增或更新用户资料
+    upsertProfile: async (userId, { nickname, bio, avatar_url }) => {
+      const result = await pool.query(
+        `INSERT INTO user_profiles (user_id, nickname, bio, avatar_url)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id) DO UPDATE SET
+           nickname = COALESCE(EXCLUDED.nickname, user_profiles.nickname),
+           bio = COALESCE(EXCLUDED.bio, user_profiles.bio),
+           avatar_url = COALESCE(EXCLUDED.avatar_url, user_profiles.avatar_url),
+           updated_at = CURRENT_TIMESTAMP
+         RETURNING id, user_id, nickname, bio, avatar_url, created_at, updated_at`,
+        [userId, nickname || null, bio || null, avatar_url || null]
+      );
+      return result.rows[0];
+    },
+
+    // 感兴趣学科（topic id + name）
+    getInterestedTopics: async (userId) => {
+      const result = await pool.query(
+        `SELECT t.id, t.name FROM user_topic_preferences utp
+         JOIN topics t ON utp.topic_id = t.id
+         WHERE utp.user_id = $1 AND utp.type = 'interested' ORDER BY t.name`,
+        [userId]
+      );
+      return result.rows;
+    },
+
+    // 擅长学科（topic id + name）
+    getProficientTopics: async (userId) => {
+      const result = await pool.query(
+        `SELECT t.id, t.name FROM user_topic_preferences utp
+         JOIN topics t ON utp.topic_id = t.id
+         WHERE utp.user_id = $1 AND utp.type = 'proficient' ORDER BY t.name`,
+        [userId]
+      );
+      return result.rows;
+    },
+
+    // 设置感兴趣学科（先删该类型后插）
+    setInterestedTopics: async (userId, topicIds) => {
+      const client = await pool.connect();
+      try {
+        await client.query(
+          "DELETE FROM user_topic_preferences WHERE user_id = $1 AND type = 'interested'",
+          [userId]
+        );
+        const validIds = (topicIds || []).filter(id => Number.isInteger(id) || !isNaN(parseInt(id))).map(id => parseInt(id));
+        for (const topicId of validIds) {
+          await client.query(
+            "INSERT INTO user_topic_preferences (user_id, topic_id, type) VALUES ($1, $2, 'interested') ON CONFLICT DO NOTHING",
+            [userId, topicId]
+          );
+        }
+        const res = await client.query(
+          `SELECT t.id, t.name FROM user_topic_preferences utp
+           JOIN topics t ON utp.topic_id = t.id WHERE utp.user_id = $1 AND utp.type = 'interested' ORDER BY t.name`,
+          [userId]
+        );
+        return res.rows;
+      } finally {
+        client.release();
+      }
+    },
+
+    // 设置擅长学科（先删该类型后插）
+    setProficientTopics: async (userId, topicIds) => {
+      const client = await pool.connect();
+      try {
+        await client.query(
+          "DELETE FROM user_topic_preferences WHERE user_id = $1 AND type = 'proficient'",
+          [userId]
+        );
+        const validIds = (topicIds || []).filter(id => Number.isInteger(id) || !isNaN(parseInt(id))).map(id => parseInt(id));
+        for (const topicId of validIds) {
+          await client.query(
+            "INSERT INTO user_topic_preferences (user_id, topic_id, type) VALUES ($1, $2, 'proficient') ON CONFLICT DO NOTHING",
+            [userId, topicId]
+          );
+        }
+        const res = await client.query(
+          `SELECT t.id, t.name FROM user_topic_preferences utp
+           JOIN topics t ON utp.topic_id = t.id WHERE utp.user_id = $1 AND utp.type = 'proficient' ORDER BY t.name`,
+          [userId]
+        );
+        return res.rows;
+      } finally {
+        client.release();
+      }
+    },
+
+    // 难度偏好（tag id + name，仅 difficulty 分类）
+    getDifficultyPreferences: async (userId) => {
+      const result = await pool.query(
+        `SELECT t.id, t.name FROM user_difficulty_preferences udp
+         JOIN tags t ON udp.tag_id = t.id WHERE udp.user_id = $1 ORDER BY t.name`,
+        [userId]
+      );
+      return result.rows;
+    },
+
+    // 设置难度偏好（先删后插，tagIds 为 tags 中 difficulty 的 id）
+    setDifficultyPreferences: async (userId, tagIds) => {
+      const client = await pool.connect();
+      try {
+        await client.query('DELETE FROM user_difficulty_preferences WHERE user_id = $1', [userId]);
+        const validIds = (tagIds || []).filter(id => Number.isInteger(id) || !isNaN(parseInt(id))).map(id => parseInt(id));
+        for (const tagId of validIds) {
+          await client.query(
+            'INSERT INTO user_difficulty_preferences (user_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+            [userId, tagId]
+          );
+        }
+        const res = await client.query(
+          `SELECT t.id, t.name FROM user_difficulty_preferences udp
+           JOIN tags t ON udp.tag_id = t.id WHERE udp.user_id = $1 ORDER BY t.name`,
+          [userId]
+        );
+        return res.rows;
+      } finally {
+        client.release();
+      }
     }
   },
 
@@ -760,11 +1012,9 @@ const queries = {
       return result.rows[0];
     },
 
-    // 获取用户的结对列表
+    // 获取用户的结对列表（含对方用户信息 partner）
     getByUserId: async (userId) => {
     try {
-      console.log('获取用户结对列表，用户ID:', userId);
-    
       const result = await pool.query(
           `SELECT p.*, 
               CASE 
@@ -778,6 +1028,7 @@ const queries = {
            ORDER BY p.created_at DESC`,
           [userId]
       );
+      await attachPartnerProfileToPairs(result.rows, userId);
       return result.rows;
     } catch (err) {
       console.error('获取用户结对列表失败:', err);
@@ -951,6 +1202,10 @@ module.exports = {
   registerUser,
   findUserById,
   findUserByUsername,
+  getPublicUserProfile,
+  getTopics,
+  getDifficultyTags,
+  attachPartnerProfileToPairs,
   createQuestion,
   getQuestions,
   getUserQuestions,

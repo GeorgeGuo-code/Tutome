@@ -140,15 +140,120 @@ const getAvailableUsers = async (req, res) => {
     }
     res.status(500).json({ success: false, message: '服务器错误', error: error.message });
   }
-}
+};
 
+// 获取当前用户资料（需登录）
+const getMyProfile = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const profile = await queries.getPublicUserProfile(userId);
+    if (!profile) {
+      return res.status(404).json({ success: false, message: '用户不存在' });
+    }
+    res.json({ success: true, profile });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '服务器错误', error: error.message });
+  }
+};
+
+// 更新当前用户资料（需登录）：昵称、简介、头像、感兴趣学科、擅长学科、难度偏好（仅更新传入的字段）
+const updateMyProfile = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { nickname, bio, avatar_url, interested_topic_ids, proficient_topic_ids, difficulty_tag_ids } = req.body;
+
+    const user = await queries.findUserById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: '用户不存在' });
+    }
+
+    const profileUpdates = {};
+    if (req.body.hasOwnProperty('nickname')) {
+      profileUpdates.nickname = typeof nickname === 'string' && nickname.trim() ? nickname.trim() : null;
+    }
+    if (req.body.hasOwnProperty('bio')) {
+      profileUpdates.bio = bio === '' ? null : (bio != null ? String(bio) : null);
+    }
+    if (req.body.hasOwnProperty('avatar_url')) {
+      profileUpdates.avatar_url = avatar_url === '' ? null : (avatar_url != null ? String(avatar_url) : null);
+    }
+    if (Object.keys(profileUpdates).length > 0) {
+      const existing = await queries.user.getProfile(userId);
+      await queries.user.upsertProfile(userId, {
+        nickname: profileUpdates.nickname !== undefined ? profileUpdates.nickname : (existing && existing.nickname),
+        bio: profileUpdates.bio !== undefined ? profileUpdates.bio : (existing && existing.bio),
+        avatar_url: profileUpdates.avatar_url !== undefined ? profileUpdates.avatar_url : (existing && existing.avatar_url)
+      });
+    }
+
+    if (interested_topic_ids !== undefined) {
+      const ids = Array.isArray(interested_topic_ids) ? interested_topic_ids : [interested_topic_ids];
+      await queries.user.setInterestedTopics(userId, ids.filter(id => id != null));
+    }
+    if (proficient_topic_ids !== undefined) {
+      const ids = Array.isArray(proficient_topic_ids) ? proficient_topic_ids : [proficient_topic_ids];
+      await queries.user.setProficientTopics(userId, ids.filter(id => id != null));
+    }
+    if (difficulty_tag_ids !== undefined) {
+      const ids = Array.isArray(difficulty_tag_ids) ? difficulty_tag_ids : [difficulty_tag_ids];
+      await queries.user.setDifficultyPreferences(userId, ids.filter(id => id != null));
+    }
+
+    const profile = await queries.getPublicUserProfile(userId);
+    res.json({ success: true, message: '资料已更新', profile });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '服务器错误', error: error.message });
+  }
+};
+
+// 获取学科列表（用于结对、学科偏好等）
+const getTopics = async (req, res) => {
+  try {
+    const topics = await queries.getTopics();
+    res.json({ success: true, topics });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '服务器错误', error: error.message });
+  }
+};
+
+// 获取难度标签列表（用于难度偏好选择）
+const getDifficultyTags = async (req, res) => {
+  try {
+    const tags = await queries.getDifficultyTags();
+    res.json({ success: true, tags });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '服务器错误', error: error.message });
+  }
+};
+
+// 获取指定用户公开资料（id、昵称、简介、学科偏好等，不含密码）
+const getProfileByUserId = async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    if (isNaN(userId) || userId <= 0) {
+      return res.status(400).json({ success: false, message: '用户ID无效' });
+    }
+    const profile = await queries.getPublicUserProfile(userId);
+    if (!profile) {
+      return res.status(404).json({ success: false, message: '用户不存在' });
+    }
+    res.json({ success: true, profile });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '服务器错误', error: error.message });
+  }
+};
 
 module.exports = {
   loginUser,
   createUser,
   verifyUserToken,
   updatePassword,
-  getAvailableUsers
+  getAvailableUsers,
+  getTopics,
+  getDifficultyTags,
+  getMyProfile,
+  updateMyProfile,
+  getProfileByUserId
 }
 
 
