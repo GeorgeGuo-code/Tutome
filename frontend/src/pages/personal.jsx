@@ -1,14 +1,342 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "./personal.css";
 import FeatureTipModal from '../components/FeatureTipModal';
 import { userService } from '../services/apiService';
+
+// 自定义下拉多选组件
+const MultiSelectDropdown = ({ options, value, onChange, placeholder = "请选择" }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // 点击外部关闭下拉
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  // 获取选中的选项
+  const selectedOptions = options.filter(opt => value.includes(opt.id));
+
+  // 切换选中状态
+  const handleToggle = (optionId) => {
+    const newValue = value.includes(optionId)
+      ? value.filter(id => id !== optionId)
+      : [...value, optionId];
+    onChange(newValue);
+  };
+
+  // 移除选中项
+  const handleRemove = (optionId, event) => {
+    event.stopPropagation();
+    const newValue = value.filter(id => id !== optionId);
+    onChange(newValue);
+  };
+
+  // 显示已选标签
+  const renderSelectedTags = () => {
+    if (selectedOptions.length === 0) {
+      return <span className="dropdown-placeholder">{placeholder}</span>;
+    }
+
+    const displayCount = 3;
+    const displayOptions = selectedOptions.slice(0, displayCount);
+    const remainingCount = selectedOptions.length - displayCount;
+
+    return (
+      <>
+        {displayOptions.map(opt => (
+          <span key={opt.id} className="selected-tag">
+            {opt.name}
+            <button
+              type="button"
+              className="selected-tag-remove"
+              onClick={(e) => handleRemove(opt.id, e)}
+              disabled={isOpen}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        {remainingCount > 0 && (
+          <span className="selected-tag-more">+{remainingCount}</span>
+        )}
+      </>
+    );
+  };
+
+  return (
+    <div className="multi-select-dropdown" ref={dropdownRef}>
+      <div
+        className={`dropdown-trigger ${isOpen ? 'open' : ''}`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="dropdown-selected-tags">
+          {renderSelectedTags()}
+        </div>
+        <span className="dropdown-arrow">▼</span>
+      </div>
+
+      {isOpen && (
+        <div className="dropdown-options">
+          {options.length === 0 ? (
+            <div className="dropdown-option dropdown-option-empty">
+              暂无选项
+            </div>
+          ) : (
+            options.map(option => (
+              <div
+                key={option.id}
+                className={`dropdown-option ${value.includes(option.id) ? 'selected' : ''}`}
+                onClick={() => handleToggle(option.id)}
+              >
+                <span className="option-name">{option.name}</span>
+                {value.includes(option.id) && (
+                  <span className="option-checkmark">✓</span>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// 用户资料编辑弹窗组件
+const ProfileEditModal = ({ visible, onClose, onSave, currentProfile }) => {
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [topics, setTopics] = useState([]);
+  const [difficulties, setDifficulties] = useState([]);
+
+  // 表单数据
+  const [nickname, setNickname] = useState('');
+  const [bio, setBio] = useState('');
+  const [selectedInterestedTopics, setSelectedInterestedTopics] = useState([]);
+  const [selectedProficientTopics, setSelectedProficientTopics] = useState([]);
+  const [selectedDifficulties, setSelectedDifficulties] = useState([]);
+
+  // 加载选项数据
+  useEffect(() => {
+    if (visible) {
+      loadOptions();
+      // 初始化表单数据
+      setNickname(currentProfile?.nickname || '');
+      setBio(currentProfile?.bio || '');
+      setSelectedInterestedTopics(currentProfile?.interested_topics?.map(t => t.id) || []);
+      setSelectedProficientTopics(currentProfile?.proficient_topics?.map(t => t.id) || []);
+      setSelectedDifficulties(currentProfile?.difficulty_preferences?.map(d => d.id) || []);
+    }
+  }, [visible, currentProfile]);
+
+  const loadOptions = async () => {
+    setLoading(true);
+    try {
+      const [topicsResult, difficultiesResult] = await Promise.all([
+        userService.getTopics(),
+        userService.getDifficultyTags()
+      ]);
+
+      if (topicsResult.success && topicsResult.data) {
+        // 去重：使用 Map 按名称去重，保留第一个出现的
+        const uniqueTopics = Array.from(
+          new Map(topicsResult.data.topics.map(t => [t.name, t])).values()
+        );
+        setTopics(uniqueTopics);
+      }
+      if (difficultiesResult.success && difficultiesResult.data) {
+        setDifficulties(difficultiesResult.data.tags || []);
+      }
+    } catch (error) {
+      console.error('加载选项失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTopicChange = (type, value) => {
+    if (type === 'interested') {
+      setSelectedInterestedTopics(value);
+    } else {
+      setSelectedProficientTopics(value);
+    }
+  };
+
+  const handleDifficultyToggle = (difficultyId) => {
+    setSelectedDifficulties(prev => {
+      if (prev.includes(difficultyId)) {
+        return prev.filter(id => id !== difficultyId);
+      } else {
+        return [...prev, difficultyId];
+      }
+    });
+  };
+
+  const handleSubmit = async () => {
+    // 表单验证
+    if (nickname.length > 50) {
+      alert('昵称不能超过50个字符');
+      return;
+    }
+    if (bio.length > 500) {
+      alert('简介不能超过500个字符');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const data = {
+        nickname: nickname.trim() || null,
+        bio: bio.trim() || null,
+        interested_topic_ids: selectedInterestedTopics,
+        proficient_topic_ids: selectedProficientTopics,
+        difficulty_tag_ids: selectedDifficulties,
+      };
+
+      const result = await userService.updateMyProfile(data);
+
+      if (result.success) {
+        alert('资料更新成功！');
+        onSave();
+        onClose();
+      } else {
+        alert(result.data?.message || '更新失败，请稍后重试');
+      }
+    } catch (error) {
+      console.error('更新资料错误:', error);
+      alert('更新失败，请稍后重试');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!visible) return null;
+
+  return (
+    <div className="profile-edit-modal-mask" onClick={onClose}>
+      <div className="profile-edit-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="profile-edit-modal-header">
+          <h3 className="profile-edit-modal-title">编辑资料</h3>
+          <button className="profile-edit-modal-close" onClick={onClose} disabled={saving}>×</button>
+        </div>
+
+        <div className="profile-edit-modal-body">
+          {loading ? (
+            <div className="modal-loading">加载中...</div>
+          ) : (
+            <>
+              {/* 基本信息 */}
+              <div className="profile-form-section">
+                <h4 className="profile-form-section-title">基本信息</h4>
+                <div className="profile-form-item">
+                  <label className="profile-form-label">昵称</label>
+                  <input
+                    type="text"
+                    className="profile-form-input"
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    placeholder="请输入昵称（选填）"
+                    maxLength={50}
+                    disabled={saving}
+                  />
+                </div>
+                <div className="profile-form-item">
+                  <label className="profile-form-label">简介</label>
+                  <textarea
+                    className="profile-form-textarea"
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="请输入个人简介（选填）"
+                    maxLength={500}
+                    disabled={saving}
+                    rows={4}
+                  />
+                </div>
+              </div>
+
+              {/* 学科偏好 */}
+              <div className="profile-form-section">
+                <h4 className="profile-form-section-title">学科偏好</h4>
+                <div className="profile-form-item">
+                  <label className="profile-form-label">感兴趣学科</label>
+                  <MultiSelectDropdown
+                    options={topics}
+                    value={selectedInterestedTopics}
+                    onChange={setSelectedInterestedTopics}
+                    placeholder="选择感兴趣的学科"
+                  />
+                </div>
+                <div className="profile-form-item">
+                  <label className="profile-form-label">擅长学科</label>
+                  <MultiSelectDropdown
+                    options={topics}
+                    value={selectedProficientTopics}
+                    onChange={setSelectedProficientTopics}
+                    placeholder="选择擅长的学科"
+                  />
+                </div>
+              </div>
+
+              {/* 难度偏好 */}
+              <div className="profile-form-section">
+                <h4 className="profile-form-section-title">难度偏好</h4>
+                <div className="profile-form-checkbox-group">
+                  {difficulties.map(difficulty => (
+                    <label key={difficulty.id} className="profile-form-checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={selectedDifficulties.includes(difficulty.id)}
+                        onChange={() => handleDifficultyToggle(difficulty.id)}
+                        disabled={saving}
+                      />
+                      <span>{difficulty.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="profile-edit-modal-footer">
+          <button
+            className="profile-modal-btn profile-modal-btn-cancel"
+            onClick={onClose}
+            disabled={saving}
+          >
+            取消
+          </button>
+          <button
+            className="profile-modal-btn profile-modal-btn-save"
+            onClick={handleSubmit}
+            disabled={saving || loading}
+          >
+            {saving ? '保存中...' : '保存'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // 个人主页子组件
 const ProfileSection = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -27,6 +355,18 @@ const ProfileSection = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenEditModal = () => {
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+  };
+
+  const handleSaveProfile = () => {
+    fetchProfile();
   };
 
   if (loading) {
@@ -62,6 +402,14 @@ const ProfileSection = () => {
 
   return (
     <div className="profile-section">
+      {/* 个人主页头部 */}
+      <div className="profile-section-header">
+        <h2 className="profile-section-title">个人主页</h2>
+        <button className="profile-section-edit-btn" onClick={handleOpenEditModal}>
+          修改
+        </button>
+      </div>
+
       {/* 用户信息卡片 */}
       <div className="profile-header">
         <div className="profile-avatar">
@@ -86,9 +434,10 @@ const ProfileSection = () => {
 
       {/* 学科偏好 */}
       <div className="preferences-section">
+        <h3 className="preference-title">学科偏好</h3>
         <div className="preferences-grid">
           <div className="preference-column">
-            <h3 className="preference-title">感兴趣学科</h3>
+            <h4 className="preference-subtitle">感兴趣学科</h4>
             {profile.interested_topics && profile.interested_topics.length > 0 ? (
               <ul className="topic-list">
                 {profile.interested_topics.map((topic) => (
@@ -104,7 +453,7 @@ const ProfileSection = () => {
           </div>
 
           <div className="preference-column">
-            <h3 className="preference-title">擅长学科</h3>
+            <h4 className="preference-subtitle">擅长学科</h4>
             {profile.proficient_topics && profile.proficient_topics.length > 0 ? (
               <ul className="topic-list">
                 {profile.proficient_topics.map((topic) => (
@@ -136,6 +485,14 @@ const ProfileSection = () => {
           <p className="topic-empty">暂未设置</p>
         )}
       </div>
+
+      {/* 编辑弹窗 */}
+      <ProfileEditModal
+        visible={showEditModal}
+        onClose={handleCloseEditModal}
+        onSave={handleSaveProfile}
+        currentProfile={profile}
+      />
     </div>
   );
 };

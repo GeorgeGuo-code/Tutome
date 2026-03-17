@@ -135,6 +135,197 @@
   margin-bottom: 32px;
 }
 
+/* 个人主页头部 */
+.profile-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.profile-section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1F2937;
+  margin: 0;
+}
+
+.profile-section-edit-btn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.profile-section-edit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.profile-section-edit-btn:active {
+  transform: translateY(0);
+}
+
+/* 自定义下拉多选组件 */
+.multi-select-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.dropdown-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 44px;
+}
+
+.dropdown-trigger:hover {
+  border-color: #9CA3AF;
+}
+
+.dropdown-trigger.open {
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.dropdown-selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.dropdown-placeholder {
+  color: #9CA3AF;
+  font-size: 14px;
+}
+
+.selected-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.selected-tag-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.selected-tag-remove:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.selected-tag-remove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.selected-tag-more {
+  padding: 4px 8px;
+  background: #F3F4F6;
+  color: #6B7280;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+.dropdown-arrow {
+  color: #6B7280;
+  font-size: 12px;
+  margin-left: 8px;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.dropdown-trigger.open .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.dropdown-options {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.dropdown-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  color: #374151;
+}
+
+.dropdown-option:hover {
+  background: #F3F4F6;
+}
+
+.dropdown-option.selected {
+  background: #EFF6FF;
+  color: #1D4ED8;
+}
+
+.dropdown-option-empty {
+  padding: 12px;
+  text-align: center;
+  color: #9CA3AF;
+  font-size: 14px;
+}
+
+.option-name {
+  flex: 1;
+}
+
+.option-checkmark {
+  color: #3B82F6;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
 .profile-avatar {
   flex-shrink: 0;
   width: 100px;
@@ -799,4 +990,403 @@
     font-size: 10px;
     padding: 3px 8px;
   }
+}
+
+/* 编辑按钮样式 */
+.edit-btn {
+  padding: 8px 16px;
+  background: transparent;
+  color: #3B82F6;
+  border: 1px solid #3B82F6;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.edit-btn:hover {
+  background: #3B82F6;
+  color: white;
+}
+
+.edit-btn:active {
+  transform: scale(0.98);
+}
+
+/* 偏好区域头部 */
+.preferences-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.preferences-header .preference-title {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+/* 偏好子标题 */
+.preference-subtitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4B5563;
+  margin: 0 0 12px 0;
+}
+
+/* 编辑弹窗样式 */
+.profile-edit-modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.profile-edit-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-edit-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.profile-edit-modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1F2937;
+  margin: 0;
+}
+
+.profile-edit-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 28px;
+  color: #6B7280;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.profile-edit-modal-close:hover:not(:disabled) {
+  background: #F3F4F6;
+  color: #374151;
+}
+
+.profile-edit-modal-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.profile-edit-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6B7280;
+  font-size: 16px;
+}
+
+/* 表单样式 */
+.profile-form-section {
+  margin-bottom: 24px;
+}
+
+.profile-form-section:last-child {
+  margin-bottom: 0;
+}
+
+.profile-form-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1F2937;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #E5E7EB;
+}
+
+.profile-form-item {
+  margin-bottom: 16px;
+}
+
+.profile-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.profile-form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.profile-form-input,
+.profile-form-textarea,
+.profile-form-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1F2937;
+  background: white;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.profile-form-input:focus,
+.profile-form-textarea:focus,
+.profile-form-select:focus {
+  outline: none;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.profile-form-input:disabled,
+.profile-form-textarea:disabled,
+.profile-form-select:disabled {
+  background: #F9FAFB;
+  cursor: not-allowed;
+}
+
+.profile-form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.profile-form-select {
+  height: auto;
+  min-height: 120px;
+}
+
+.profile-form-hint {
+  font-size: 12px;
+  color: #6B7280;
+  margin: 6px 0 0 0;
+}
+
+/* 复选框组 */
+.profile-form-checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.profile-form-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  color: #4B5563;
+  font-weight: 500;
+}
+
+.profile-form-checkbox-label:hover {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+}
+
+.profile-form-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #3B82F6;
+}
+
+.profile-form-checkbox-label input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+}
+
+.profile-form-checkbox-label:has(input[type="checkbox"]:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 弹窗底部 */
+.profile-edit-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #E5E7EB;
+  background: #F9FAFB;
+}
+
+.profile-modal-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.profile-modal-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.profile-modal-btn-cancel {
+  background: white;
+  color: #6B7280;
+  border-color: #D1D5DB;
+}
+
+.profile-modal-btn-cancel:hover:not(:disabled) {
+  background: #F3F4F6;
+  color: #374151;
+}
+
+.profile-modal-btn-save {
+  background: #3B82F6;
+  color: white;
+  border-color: #2563EB;
+}
+
+.profile-modal-btn-save:hover:not(:disabled) {
+  background: #2563EB;
+  border-color: #1D4ED8;
+}
+
+.profile-modal-btn-save:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* 响应式设计 - 编辑弹窗 */
+@media (max-width: 768px) {
+  .profile-edit-modal-mask {
+    padding: 16px;
+  }
+
+  .profile-edit-modal {
+    max-width: 100%;
+    max-height: 95vh;
+  }
+
+  .profile-edit-modal-header {
+    padding: 16px 20px;
+  }
+
+  .profile-edit-modal-body {
+    padding: 20px;
+  }
+
+  .profile-edit-modal-footer {
+    padding: 12px 20px;
+  }
+
+  .profile-modal-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .profile-form-select {
+    min-height: 100px;
+  }
+
+  .profile-form-checkbox-group {
+    gap: 8px;
+  }
+
+  .profile-form-checkbox-label {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-edit-modal-mask {
+    padding: 12px;
+  }
+
+  .profile-edit-modal-header {
+    padding: 12px 16px;
+  }
+
+  .profile-edit-modal-title {
+    font-size: 16px;
+  }
+
+  .profile-edit-modal-body {
+    padding: 16px;
+  }
+
+  .profile-form-section-title {
+    font-size: 14px;
+  }
+
+  .profile-form-label {
+    font-size: 13px;
+  }
+
+  .profile-form-input,
+  .profile-form-textarea,
+  .profile-form-select {
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+
+  .profile-form-hint {
+    font-size: 11px;
+  }
+
+  .profile-edit-modal-footer {
+    padding: 10px 16px;
+  }
+
+  .profile-modal-btn {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+
+  .preferences-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .edit-btn {
+    width: 100%;
+  }
+}
 }

@@ -73,6 +73,30 @@ export const userService = {
     const data = await response.json();
     return { success: response.ok, data };
   },
+
+  // 更新我的资料
+  updateMyProfile: async (data) => {
+    const response = await request('/users/me/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    return { success: response.ok, data: result };
+  },
+
+  // 获取学科列表
+  getTopics: async () => {
+    const response = await request('/topics');
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 获取难度标签列表
+  getDifficultyTags: async () => {
+    const response = await request('/tags/difficulty');
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
 };
 
 export default authService;
