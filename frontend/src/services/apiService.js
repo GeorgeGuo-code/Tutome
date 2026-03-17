@@ -65,4 +65,14 @@ export const authService = {
   },
 };
 
+// 用户资料相关 API
+export const userService = {
+  // 获取我的资料
+  getMyProfile: async () => {
+    const response = await request('/users/me/profile');
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+};
+
 export default authService;
