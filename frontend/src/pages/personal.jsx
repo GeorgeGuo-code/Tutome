@@ -509,21 +509,7 @@ const HistorySection = ({ location }) => {
 
   useEffect(() => {
     fetchHistory();
-  }, [currentPage]);
-
-  // 监听 location.state，实现滚动到指定部分
-  useEffect(() => {
-    if (location.state?.scrollTo === 'in-progress') {
-      setTimeout(() => {
-        const sectionTitles = document.querySelectorAll('.history-section-title');
-        sectionTitles.forEach(title => {
-          if (title.textContent === '进行中') {
-            title.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        });
-      }, 300);
-    }
-  }, [location.state]);
+  }, []);
 
   // 更新可见页码
   useEffect(() => {
@@ -593,7 +579,7 @@ const HistorySection = ({ location }) => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:3000/api/questions/my-history?page=${currentPage}&limit=4`,
+        `http://localhost:3000/api/questions/my-history?page=1&limit=1000`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -644,15 +630,28 @@ const HistorySection = ({ location }) => {
     }
   };
 
-  // 根据结对状态分类问题
-  const inProgressQuestions = history.filter(item =>
-    item.pair_status === 'active' || item.pair_status === 'end_requested'
-  );
-  const unpairedQuestions = history.filter(item =>
-    item.pair_status === null
-  );
-  const completedQuestions = history.filter(item =>
-    item.pair_status === 'completed'
+  // 根据结对状态分类问题（先分类，再排序）
+  const inProgressQuestions = history
+    .filter(item => item.pair_status === 'active' || item.pair_status === 'end_requested')
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const unpairedQuestions = history
+    .filter(item => item.pair_status === null)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const completedQuestions = history
+    .filter(item => item.pair_status === 'completed')
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  // 按顺序合并所有分类（进行中 → 未结对 → 已结束）
+  const allQuestionsOrdered = [
+    ...inProgressQuestions,
+    ...unpairedQuestions,
+    ...completedQuestions
+  ];
+
+  // 前端分页：只显示当前页的数据
+  const paginatedHistory = allQuestionsOrdered.slice(
+    (currentPage - 1) * 4,
+    currentPage * 4
   );
 
   return (
@@ -663,124 +662,71 @@ const HistorySection = ({ location }) => {
         ) : history.length === 0 ? (
           <div className="empty">暂无足迹</div>
         ) : (
-          <>
-            {/* 进行中 */}
-            {inProgressQuestions.length > 0 && (
-              <>
-                <div className="history-section-title">进行中</div>
-                {inProgressQuestions.map((item) => (
-                  <div key={item.id} className="history-item history-card">
-                    <div className="history-header">
-                      <h3 className="history-title">{item.title}</h3>
-                      {item.tags && item.tags.length > 0 && (
-                        <div className="history-tags-inline">
-                          {item.tags.map((tag) => (
-                            <span key={tag.id} className="tag-small">{tag.name}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <p className="history-summary">
-                      {item.content.substring(0, 100)}...
-                    </p>
-                    <div className="history-meta">
-                      <span className="meta-item">
-                        {item.username || '未知用户'}
-                      </span>
-                      <span className="meta-item">
-                        {item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '未知时间'}
-                      </span>
-                    </div>
-                    <div className="history-actions">
-                      <Link to={`/question/${item.id}`} state={{ question: item, from: '/personal' }} className="view-details">
-                        查看详情
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </>
-            )}
+          paginatedHistory.map((item, index) => {
+            // 计算当前问题在整个有序列表中的位置
+            const itemIndex = (currentPage - 1) * 4 + index;
+            const currentItem = allQuestionsOrdered[itemIndex];
+            const prevItem = itemIndex > 0 ? allQuestionsOrdered[itemIndex - 1] : null;
 
-            {/* 未结对 */}
-            {unpairedQuestions.length > 0 && (
-              <>
-                <div className="history-section-title">未结对</div>
-                {unpairedQuestions.map((item) => (
-                  <div key={item.id} className="history-item history-card">
-                    <div className="history-header">
-                      <h3 className="history-title">{item.title}</h3>
-                      {item.tags && item.tags.length > 0 && (
-                        <div className="history-tags-inline">
-                          {item.tags.map((tag) => (
-                            <span key={tag.id} className="tag-small">{tag.name}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <p className="history-summary">
-                      {item.content.substring(0, 100)}...
-                    </p>
-                    <div className="history-meta">
-                      <span className="meta-item">
-                        {item.username || '未知用户'}
-                      </span>
-                      <span className="meta-item">
-                        {item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '未知时间'}
-                      </span>
-                    </div>
-                    <div className="history-actions">
+            // 判断当前问题的分类
+            const isInProgress = currentItem.pair_status === 'active' || currentItem.pair_status === 'end_requested';
+            const isUnpaired = currentItem.pair_status === null;
+            const isCompleted = currentItem.pair_status === 'completed';
+
+            // 判断前一个问题的分类
+            const prevIsInProgress = prevItem && (prevItem.pair_status === 'active' || prevItem.pair_status === 'end_requested');
+            const prevIsUnpaired = prevItem && prevItem.pair_status === null;
+            const prevIsCompleted = prevItem && prevItem.pair_status === 'completed';
+
+            // 判断是否需要显示分类标题
+            const showInProgressTitle = isInProgress && (index === 0 || !prevIsInProgress);
+            const showUnpairedTitle = isUnpaired && !prevIsUnpaired;
+            const showCompletedTitle = isCompleted && !prevIsCompleted;
+
+            return (
+              <React.Fragment key={item.id}>
+                {showInProgressTitle && <div className="history-section-title">进行中</div>}
+                {showUnpairedTitle && <div className="history-section-title">未结对</div>}
+                {showCompletedTitle && <div className="history-section-title">已结束</div>}
+                <div className="history-item history-card">
+                  <div className="history-header">
+                    <h3 className="history-title">{item.title}</h3>
+                    {item.tags && item.tags.length > 0 && (
+                      <div className="history-tags-inline">
+                        {item.tags.map((tag) => (
+                          <span key={tag.id} className="tag-small">{tag.name}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <p className="history-summary">
+                    {item.content.substring(0, 100)}...
+                  </p>
+                  <div className="history-meta">
+                    <span className="meta-item">
+                      {item.username || '未知用户'}
+                    </span>
+                    <span className="meta-item">
+                      {item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '未知时间'}
+                    </span>
+                  </div>
+                  <div className="history-actions">
+                    {isUnpaired && (
                       <button
                         className="delete-question-btn"
                         onClick={() => handleDeleteQuestion(item.id)}
                       >
                         删除问题
                       </button>
-                      <Link to={`/question/${item.id}`} state={{ question: item, from: '/personal' }} className="view-details">
-                        查看详情
-                      </Link>
-                    </div>
+                    )}
+                    <Link to={`/question/${item.id}`} state={{ question: item, from: '/personal' }} className="view-details">
+                      查看详情
+                    </Link>
                   </div>
-                ))}
-              </>
-            )}
-
-            {/* 已结束 */}
-            {completedQuestions.length > 0 && (
-              <>
-                <div className="history-section-title">已结束</div>
-                {completedQuestions.map((item) => (
-                  <div key={item.id} className="history-item history-card">
-                    <div className="history-header">
-                      <h3 className="history-title">{item.title}</h3>
-                      {item.tags && item.tags.length > 0 && (
-                        <div className="history-tags-inline">
-                          {item.tags.map((tag) => (
-                            <span key={tag.id} className="tag-small">{tag.name}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <p className="history-summary">
-                      {item.content.substring(0, 100)}...
-                    </p>
-                    <div className="history-meta">
-                      <span className="meta-item">
-                        {item.username || '未知用户'}
-                      </span>
-                      <span className="meta-item">
-                        {item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '未知时间'}
-                      </span>
-                    </div>
-                    <div className="history-actions">
-                      <Link to={`/question/${item.id}`} state={{ question: item, from: '/personal' }} className="view-details">
-                        查看详情
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </>
-            )}
-          </>
+                </div>
+              </React.Fragment>
+            );
+          })
         )}
       </div>
 
@@ -1174,6 +1120,21 @@ const Personal = () => {
       setShowTipModal(true);
     }
   }, []);
+
+  // 监听 location.state，实现滚动到指定部分
+  useEffect(() => {
+    if (location.state?.scrollTo === 'in-progress') {
+      setActiveTab('history');
+      setTimeout(() => {
+        const sectionTitles = document.querySelectorAll('.history-section-title');
+        sectionTitles.forEach(title => {
+          if (title.textContent === '进行中') {
+            title.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      }, 300);
+    }
+  }, [location.state]);
 
   const handleCloseModal = () => {
     setShowTipModal(false);
