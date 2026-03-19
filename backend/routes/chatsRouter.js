@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const chatsController = require('../controllers/chatsController');
 const { verifyJWT } = require('../middlewares/usersMiddleware');
+const queries = require('../models/queries');
 
 // 先检查 verifyJWT 是否存在
 console.log('verifyJWT 类型:', typeof verifyJWT);
@@ -16,6 +17,7 @@ if (typeof verifyJWT === 'function') {
 // 结对相关
 router.post('/api/pairs/apply', chatsController.applyPair);
 router.post('/api/pairs/accept', chatsController.acceptPair);
+router.post('/api/pairs/:pairId/reject', chatsController.rejectPair);
 router.get('/api/pairs', chatsController.getMyPairs);
 router.get('/api/pairs/:pairId', chatsController.getPairById);
 
@@ -24,6 +26,42 @@ router.get('/api/pairs/question/:questionId', chatsController.getPairByQuestionI
 
 // 自动关联结对到问题
 router.post('/api/pairs/:pairId/associate', verifyJWT, chatsController.associatePairWithQuestion);
+
+// 通知相关
+router.get('/api/notifications/pending', chatsController.getPendingNotifications);
+router.get('/api/notifications', async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { status, isRead, limit = 50, offset = 0 } = req.query;
+        const notifications = await queries.notification.getByUserId(userId, {
+            status,
+            isRead: isRead === 'true' ? true : (isRead === 'false' ? false : undefined),
+            limit: parseInt(limit),
+            offset: parseInt(offset)
+        });
+        res.json({ success: true, notifications });
+    } catch (err) {
+        res.status(500).json({ error: '获取通知失败' });
+    }
+});
+router.patch('/api/notifications/:notificationId/read', async (req, res) => {
+    try {
+        const { notificationId } = req.params;
+        const notification = await queries.notification.markAsRead(notificationId);
+        res.json({ success: true, notification });
+    } catch (err) {
+        res.status(500).json({ error: '操作失败' });
+    }
+});
+router.get('/api/notifications/unread-count', async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const count = await queries.notification.getUnreadCount(userId);
+        res.json({ success: true, count });
+    } catch (err) {
+        res.status(500).json({ error: '获取失败' });
+    }
+});
 
 // 聊天相关
 router.get('/api/chats/pending-requests', chatsController.getPendingEndRequests);

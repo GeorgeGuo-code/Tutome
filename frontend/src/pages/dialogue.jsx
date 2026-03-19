@@ -14,6 +14,7 @@ const Dialogue = () => {
   const [endRequestedBy, setEndRequestedBy] = useState(null); // 谁申请结束
   const [showEndConfirmModal, setShowEndConfirmModal] = useState(false); // 显示确认模态框
   const [showEndRequestModal, setShowEndRequestModal] = useState(false); // 显示收到申请的模态框
+  const [showTipModal, setShowTipModal] = useState(false); // 显示功能说明弹窗
   const currentUserId = parseInt(localStorage.getItem("userId")) || null;
   const messagesEndRef = useRef(null);
   const pollingIntervalRef = useRef(null); // 轮询定时器引用

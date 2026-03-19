@@ -816,27 +816,26 @@ const HistorySection = ({ location }) => {
 // 我的通知子组件
 const NotificationsSection = () => {
   const [notifications, setNotifications] = useState([]);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notificationLoading, setNotificationLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     fetchNotifications();
+    fetchUnreadCount();
   }, []);
 
   const fetchNotifications = async () => {
-    setNotificationLoading(true);
+    setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      console.log('[DEBUG] Fetching notifications with token:', token ? 'exists' : 'missing');
 
       if (!token) {
-        console.error('[ERROR] No authentication token found');
         setNotifications([]);
         return;
       }
 
       const response = await fetch(
-        "http://localhost:3000/api/chats/pending-requests",
+        "http://localhost:3000/api/notifications?status=pending&limit=50",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -844,36 +843,110 @@ const NotificationsSection = () => {
         }
       );
 
-      console.log('[DEBUG] Response status:', response.status);
       const data = await response.json();
-      console.log('[DEBUG] Response data:', data);
 
-      if (!response.ok) {
-        console.error('[ERROR] API request failed:', data);
-        if (response.status === 401) {
-          console.error('[ERROR] Authentication failed - token may be expired');
-        }
+      if (!response.ok || !data.success) {
         setNotifications([]);
         return;
       }
 
-      if (!data.success) {
-        console.error('[ERROR] API returned unsuccessful:', data);
-        setNotifications([]);
-        return;
-      }
-
-      console.log('[SUCCESS] Notifications received:', data.requests?.length || 0);
-      setNotifications(data.requests || []);
+      setNotifications(data.notifications || []);
     } catch (error) {
       console.error("[ERROR] Network error:", error);
       setNotifications([]);
     } finally {
-      setNotificationLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleAcceptEndRequest = async (pairId) => {
+  const fetchUnreadCount = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        setUnreadCount(0);
+        return;
+      }
+
+      const response = await fetch(
+        "http://localhost:3000/api/notifications/unread-count",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setUnreadCount(data.count);
+      }
+    } catch (error) {
+      console.error("[ERROR] Fetch unread count error:", error);
+    }
+  };
+
+  const handleAcceptPairApplication = async (notificationId, pairId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        "http://localhost:3000/api/pairs/accept",
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ pairId }),
+        }
+      );
+
+      if (response.ok) {
+        alert('已接受结对申请');
+        // 标记通知为已处理
+        await markNotificationAsRead(notificationId);
+        fetchNotifications();
+        fetchUnreadCount();
+      } else {
+        const errorData = await response.json();
+        alert(`操作失败：${errorData.message || errorData.error || '未知错误'}`);
+      }
+    } catch (error) {
+      console.error('接受结对申请错误:', error);
+      alert('操作失败，请稍后重试');
+    }
+  };
+
+  const handleRejectPairApplication = async (notificationId, pairId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:3000/api/pairs/${pairId}/reject`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        alert('已拒绝结对申请');
+        await markNotificationAsRead(notificationId);
+        fetchNotifications();
+        fetchUnreadCount();
+      } else {
+        const errorData = await response.json();
+        alert(`操作失败：${errorData.message || errorData.error || '未知错误'}`);
+      }
+    } catch (error) {
+      console.error('拒绝结对申请错误:', error);
+      alert('操作失败，请稍后重试');
+    }
+  };
+
+  const handleAcceptEndRequest = async (notificationId, pairId) => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
@@ -888,7 +961,9 @@ const NotificationsSection = () => {
 
       if (response.ok) {
         alert('已同意结束教学');
+        await markNotificationAsRead(notificationId);
         fetchNotifications();
+        fetchUnreadCount();
       } else {
         const errorData = await response.json();
         alert(`操作失败：${errorData.message || '未知错误'}`);
@@ -899,7 +974,7 @@ const NotificationsSection = () => {
     }
   };
 
-  const handleRejectEndRequest = async (pairId) => {
+  const handleRejectEndRequest = async (notificationId, pairId) => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
@@ -914,7 +989,9 @@ const NotificationsSection = () => {
 
       if (response.ok) {
         alert('已拒绝结束申请');
+        await markNotificationAsRead(notificationId);
         fetchNotifications();
+        fetchUnreadCount();
       } else {
         const errorData = await response.json();
         alert(`操作失败：${errorData.message || '未知错误'}`);
@@ -925,65 +1002,161 @@ const NotificationsSection = () => {
     }
   };
 
+  const markNotificationAsRead = async (notificationId) => {
+    try {
+      const token = localStorage.getItem("token");
+      await fetch(
+        `http://localhost:3000/api/notifications/${notificationId}/read`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+    } catch (error) {
+      console.error('标记通知已读错误:', error);
+    }
+  };
+
+  const renderNotificationItem = (notification) => {
+    switch (notification.type) {
+      case 'pair_application':
+        return (
+          <div key={notification.id} className="notification-item">
+            <div className="notification-content">
+              <div className="notification-title">{notification.title}</div>
+              <div className="notification-message">{notification.content}</div>
+              {notification.question_title && (
+                <div className="notification-question-info">
+                  <div className="notification-question-title">
+                    问题：{notification.question_title}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="notification-actions">
+              <button
+                className="notification-btn notification-btn-reject"
+                onClick={() => handleRejectPairApplication(notification.id, notification.related_id)}
+              >
+                拒绝
+              </button>
+              <button
+                className="notification-btn notification-btn-accept"
+                onClick={() => handleAcceptPairApplication(notification.id, notification.related_id)}
+              >
+                同意
+              </button>
+            </div>
+          </div>
+        );
+
+      case 'pair_accepted':
+        return (
+          <div key={notification.id} className="notification-item notification-processed">
+            <div className="notification-content">
+              <div className="notification-title">{notification.title}</div>
+              <div className="notification-message">{notification.content}</div>
+            </div>
+            <div className="notification-actions">
+              <button
+                className="notification-btn notification-btn-primary"
+                onClick={() => window.location.href = `/dialogue/${notification.related_id}`}
+              >
+                进入对话
+              </button>
+            </div>
+          </div>
+        );
+
+      case 'pair_rejected':
+        return (
+          <div key={notification.id} className="notification-item notification-processed">
+            <div className="notification-content">
+              <div className="notification-title">{notification.title}</div>
+              <div className="notification-message">{notification.content}</div>
+            </div>
+          </div>
+        );
+
+      case 'end_request':
+        return (
+          <div key={notification.id} className="notification-item">
+            <div className="notification-content">
+              <div className="notification-title">{notification.title}</div>
+              <div className="notification-question-info">
+                {notification.question_title && (
+                  <div className="notification-question-title">
+                    问题：{notification.question_title}
+                  </div>
+                )}
+                {notification.question_content && (
+                  <div className="notification-question-content">
+                    {notification.question_content.length > 50
+                      ? notification.question_content.substring(0, 50) + '...'
+                      : notification.question_content}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="notification-actions">
+              <button
+                className="notification-btn notification-btn-reject"
+                onClick={() => handleRejectEndRequest(notification.id, notification.related_id)}
+              >
+                拒绝
+              </button>
+              <button
+                className="notification-btn notification-btn-accept"
+                onClick={() => handleAcceptEndRequest(notification.id, notification.related_id)}
+              >
+                同意
+              </button>
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div key={notification.id} className="notification-item">
+            <div className="notification-content">
+              <div className="notification-title">{notification.title}</div>
+              <div className="notification-message">{notification.content || '暂无内容'}</div>
+            </div>
+          </div>
+        );
+    }
+  };
+
   return (
     <div className="notifications-section">
       <div className="notification-section">
         <div className="notification-header">
           <div className="notification-icon-wrapper">
             <span className="notification-bell">🔔</span>
-            {notifications.length > 0 && (
-              <span className="notification-badge">{notifications.length}</span>
+            {unreadCount > 0 && (
+              <span className="notification-badge">{unreadCount}</span>
             )}
           </div>
           <button
-            className="notification-toggle-btn"
-            onClick={() => setShowNotifications(!showNotifications)}
+            className="notification-refresh-btn"
+            onClick={fetchNotifications}
+            disabled={loading}
           >
-            {showNotifications ? '收起' : '展开'}
+            {loading ? '刷新中...' : '刷新'}
           </button>
         </div>
 
-        {showNotifications && (
-          <div className="notification-list">
-            {notificationLoading ? (
-              <div className="notification-loading">加载中...</div>
-            ) : notifications.length > 0 ? (
-              notifications.map((notification) => (
-                <div key={notification.pair_id} className="notification-item">
-                  <div className="notification-content">
-                    <div className="notification-title">对话结束申请</div>
-                    <div className="notification-question-info">
-                      <div className="notification-question-title">
-                        问题：{notification.question_title}
-                      </div>
-                      <div className="notification-question-content">
-                        {notification.question_content && notification.question_content.length > 50
-                          ? notification.question_content.substring(0, 50) + '...'
-                          : notification.question_content || '无内容'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="notification-actions">
-                    <button
-                      className="notification-btn notification-btn-reject"
-                      onClick={() => handleRejectEndRequest(notification.pair_id)}
-                    >
-                      拒绝
-                    </button>
-                    <button
-                      className="notification-btn notification-btn-accept"
-                      onClick={() => handleAcceptEndRequest(notification.pair_id)}
-                    >
-                      同意
-                    </button>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="notification-empty">暂无待处理消息</div>
-            )}
-          </div>
-        )}
+        <div className="notification-list">
+          {loading ? (
+            <div className="notification-loading">加载中...</div>
+          ) : notifications.length > 0 ? (
+            notifications.map(notification => renderNotificationItem(notification))
+          ) : (
+            <div className="notification-empty">暂无待处理消息</div>
+          )}
+        </div>
       </div>
     </div>
   );

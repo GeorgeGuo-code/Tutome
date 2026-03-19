@@ -167,11 +167,11 @@ const Match = () => {
   };
 
   const handleSelectQuestion = async (question) => {
-    setMessage(`正在与 ${selectedUser.username} 结对...`);
-
+    setMessage(`正在向 ${selectedUser.username} 发送结对申请...`);
+  
     try {
       const token = localStorage.getItem("token");
-
+  
       // 根据问题的标签获取对应的 topicId
       let topicId = 10; // 默认为"其他"
       if (question.tags && question.tags.length > 0) {
@@ -196,7 +196,7 @@ const Match = () => {
           }
         }
       }
-
+  
       const response = await fetch("http://localhost:3000/api/pairs/apply", {
         method: "POST",
         headers: {
@@ -209,10 +209,10 @@ const Match = () => {
           role,
         }),
       });
-
+  
       const data = await response.json();
       console.log('Response:', data);
-
+  
       if (response.ok) {
         // 关联问题到结对
         if (question.id) {
@@ -227,16 +227,18 @@ const Match = () => {
             }),
           });
         }
-
+  
+        // 修改：不直接进入对话，显示等待提示
         setMessage(
           <div>
-            <div>成功与 {selectedUser.username} 结对！</div>
-            <div className="pair-info">结对 ID: {data.id}</div>
+            <div>✅ 已向 {selectedUser.username} 发起结对申请</div>
+            <div className="pair-info">申请 ID: {data.id}</div>
+            <div className="waiting-tip">请前往"个人中心"的"我的通知"查看对方是否同意</div>
             <button
-              className="enter-dialogue-btn"
-              onClick={() => window.location.href = `/dialogue/${data.id}`}
+              className="go-to-personal-btn"
+              onClick={() => window.location.href = '/personal'}
             >
-              进入对话
+              前往个人中心
             </button>
           </div>
         );
@@ -248,7 +250,6 @@ const Match = () => {
       console.error("Error:", error);
     }
   };
-
   const handleToggleExpand = (questionId) => {
     setExpandedQuestionId(expandedQuestionId === questionId ? null : questionId);
   };

@@ -992,11 +992,11 @@ const queries = {
       };
     },
 
-    // 创建结对申请
+    // 创建结对申请（修改为 pending 状态）
     create: async (teacherId, studentId, topicId, questionId = null) => {
       const result = await pool.query(
-        `INSERT INTO pairs (teacher_id, student_id, topic_id, status, started_at, question_id) 
-         VALUES ($1, $2, $3, 'active', NOW(), $4) RETURNING *`,
+        `INSERT INTO pairs (teacher_id, student_id, topic_id, status, question_id) 
+         VALUES ($1, $2, $3, 'pending', $4) RETURNING *`,
         [teacherId, studentId, topicId, questionId]
       );
       return result.rows[0];
@@ -1168,6 +1168,15 @@ const queries = {
         [userId]
       );
       return result.rows;
+    },
+
+    // 删除结对
+    delete: async (pairId) => {
+      const result = await pool.query(
+        `DELETE FROM pairs WHERE id = $1 RETURNING *`,
+        [pairId]
+      );
+      return result.rows[0];
     }
   },
 
@@ -1194,6 +1203,129 @@ const queries = {
         [pairId]
       );
       return result.rows;
+    }
+  },
+
+  // 通知相关查询
+  notification: {
+    // 创建通知
+    create: async (userId, type, relatedId, title, content, status = 'pending') => {
+      const result = await pool.query(
+        `INSERT INTO notifications (user_id, type, related_id, title, content, status) 
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [userId, type, relatedId, title, content, status]
+      );
+      return result.rows[0];
+    },
+
+    // 获取用户的所有通知（支持分页和筛选）
+    getByUserId: async (userId, options = {}) => {
+      const { type, status, isRead, limit = 50, offset = 0 } = options;
+      let query = `
+        SELECT n.*, 
+               p.teacher_id,
+               p.student_id,
+               p.question_id,
+               q.title as question_title,
+               q.content as question_content,
+               CASE 
+                 WHEN n.type = 'pair_application' THEN 
+                   CASE 
+                     WHEN p.teacher_id = $1 THEN u_student.username
+                     ELSE u_teacher.username
+                   END
+                 WHEN n.type = 'end_request' THEN 
+                   CASE 
+                     WHEN p.end_requested_by = u_teacher.id THEN u_teacher.username
+                     ELSE u_student.username
+                   END
+                 ELSE NULL
+               END as actor_username
+        FROM notifications n
+        LEFT JOIN pairs p ON n.related_id = p.id
+        LEFT JOIN users u_teacher ON p.teacher_id = u_teacher.id
+        LEFT JOIN users u_student ON p.student_id = u_student.id
+        LEFT JOIN questions q ON p.question_id = q.id
+        WHERE n.user_id = $1
+      `;
+      const params = [userId];
+      let paramIndex = 2;
+
+      if (type) {
+        query += ` AND n.type = $${paramIndex}`;
+        params.push(type);
+        paramIndex++;
+      }
+
+      if (status) {
+        query += ` AND n.status = $${paramIndex}`;
+        params.push(status);
+        paramIndex++;
+      }
+
+      if (isRead !== undefined) {
+        query += ` AND n.is_read = $${paramIndex}`;
+        params.push(isRead);
+        paramIndex++;
+      }
+
+      query += ` ORDER BY n.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+      params.push(limit, offset);
+
+      const result = await pool.query(query, params);
+      return result.rows;
+    },
+
+    // 标记通知为已读
+    markAsRead: async (notificationId) => {
+      const result = await pool.query(
+        `UPDATE notifications SET is_read = TRUE, updated_at = NOW() 
+         WHERE id = $1 RETURNING *`,
+        [notificationId]
+      );
+      return result.rows[0];
+    },
+
+    // 批量标记通知为已读
+    markMultipleAsRead: async (notificationIds) => {
+      if (!notificationIds || notificationIds.length === 0) return [];
+      const placeholders = notificationIds.map((_, idx) => `$${idx + 1}`).join(',');
+      const result = await pool.query(
+        `UPDATE notifications SET is_read = TRUE, updated_at = NOW() 
+         WHERE id IN (${placeholders}) RETURNING *`,
+        notificationIds
+      );
+      return result.rows;
+    },
+
+    // 更新通知状态
+    updateStatus: async (notificationId, status) => {
+      const result = await pool.query(
+        `UPDATE notifications SET status = $1, updated_at = NOW() 
+         WHERE id = $2 RETURNING *`,
+        [status, notificationId]
+      );
+      return result.rows[0];
+    },
+
+    // 删除通知（软删除：归档）
+    archive: async (notificationId) => {
+      const result = await pool.query(
+        `UPDATE notifications SET status = 'archived', updated_at = NOW() 
+         WHERE id = $1 RETURNING *`,
+        [notificationId]
+      );
+      return result.rows[0];
+    },
+
+    // 获取未读通知数量
+    getUnreadCount: async (userId) => {
+      const result = await pool.query(
+        `SELECT COUNT(*) as count FROM notifications 
+         WHERE user_id = $1 AND is_read = FALSE`,
+        [userId]
+      );
+      return parseInt(result.rows[0].count);
     }
   }
 };
