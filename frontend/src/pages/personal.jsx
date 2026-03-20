@@ -969,7 +969,7 @@ const NotificationsSection = () => {
     switch (notification.type) {
       case 'pair_application':
         return (
-          <div key={notification.id} className="notification-item">
+          <div key={notification.id} className="notification-item pair-application">
             <div className="notification-content">
               <div className="notification-title">{notification.title}</div>
               <div className="notification-message">{notification.content}</div>
@@ -1028,7 +1028,7 @@ const NotificationsSection = () => {
 
       case 'end_request':
         return (
-          <div key={notification.id} className="notification-item">
+          <div key={notification.id} className="notification-item end-request">
             <div className="notification-content">
               <div className="notification-title">{notification.title}</div>
               <div className="notification-question-info">

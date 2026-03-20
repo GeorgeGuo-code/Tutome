@@ -802,16 +802,46 @@
 }
 
 .notification-item {
-  border: 2px solid #EF4444;
+  border: 2px solid #E5E7EB;
   border-radius: 8px;
   padding: 16px 20px;
   margin: 12px;
-  background: #FEF2F2;
+  background: #FFFFFF;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
   animation: slideIn 0.3s ease;
+}
+
+/* 结对申请 - 浅蓝背景 + 蓝边框 + 蓝字 */
+.notification-item.pair-application {
+  background: #ECF5FF;
+  border: 1px solid #409EFF;
+}
+
+.notification-item.pair-application .notification-title {
+  color: #409EFF;
+}
+
+/* 结束申请 - 红色边框 + 红色背景 + 红字 */
+.notification-item.end-request {
+  border: 2px solid #EF4444;
+  background: #FEF2F2;
+}
+
+.notification-item.end-request .notification-title {
+  color: #DC2626;
+}
+
+/* 已处理通知 - 灰色样式 */
+.notification-item.notification-processed {
+  border: 1px solid #9CA3AF;
+  background: #F9FAFB;
+}
+
+.notification-item.notification-processed .notification-title {
+  color: #6B7280;
 }
 
 @keyframes slideIn {

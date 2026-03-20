@@ -1,4 +1,5 @@
 const queries = require('../models/queries');
+const onlineStatusService = require('../services/onlineStatusService');
 
 // 发送结对申请
 const applyPair = async (req, res) => {
@@ -53,7 +54,7 @@ const applyPair = async (req, res) => {
         const notificationTitle = role === 'teacher' ? '收到老师申请' : '收到学生申请';
         const notificationContent = `${applicant.username} 想要与您结对`;
 
-        await queries.notification.create(
+        const newNotification = await queries.notification.create(
             targetUserId,  // 通知接收者
             'pair_application',  // 通知类型
             newPair.id,  // related_id = pair_id
@@ -61,6 +62,16 @@ const applyPair = async (req, res) => {
             notificationContent,
             'pending'  // 状态
         );
+
+        // 推送实时通知
+        onlineStatusService.sendNotificationToUser(targetUserId, {
+            id: newNotification.id,
+            type: 'pair_application',
+            title: notificationTitle,
+            content: notificationContent,
+            relatedId: newPair.id,
+            applicantUsername: applicant.username
+        });
 
         // 在返回结果中添加角色信息
         const result = {
@@ -404,7 +415,7 @@ const requestEndTeaching = async (req, res) => {
         // 创建结束申请通知
         const currentUser = await queries.findUserById(userId);
 
-        await queries.notification.create(
+        const newNotification = await queries.notification.create(
             partnerId,  // 通知对方
             'end_request',  // 通知类型
             pairId,  // related_id = pair_id
@@ -412,6 +423,16 @@ const requestEndTeaching = async (req, res) => {
             `${currentUser.username} 申请结束教学`,
             'pending'  // 待处理状态
         );
+
+        // 推送实时通知
+        onlineStatusService.sendNotificationToUser(partnerId, {
+            id: newNotification.id,
+            type: 'end_request',
+            title: '收到结束教学申请',
+            content: `${currentUser.username} 申请结束教学`,
+            relatedId: pairId,
+            applicantUsername: currentUser.username
+        });
 
         res.json({
             success: true,
@@ -544,7 +565,7 @@ const rejectEndRequest = async (req, res) => {
         const requesterId = pair.end_requested_by;
         const currentUser = await queries.findUserById(userId);
 
-        await queries.notification.create(
+        const newNotification = await queries.notification.create(
             requesterId,  // 通知申请者
             'end_rejected',  // 通知类型
             pairId,  // related_id = pair_id
@@ -552,6 +573,16 @@ const rejectEndRequest = async (req, res) => {
             `${currentUser.username} 已拒绝结束教学，继续教学`,
             'processed'  // 已处理状态
         );
+
+        // 推送实时通知
+        onlineStatusService.sendNotificationToUser(requesterId, {
+            id: newNotification.id,
+            type: 'end_rejected',
+            title: '结束申请已拒绝',
+            content: `${currentUser.username} 已拒绝结束教学，继续教学`,
+            relatedId: pairId,
+            rejecterUsername: currentUser.username
+        });
 
         // 更新原申请通知的状态为已处理
         const originalNotifications = await queries.notification.getByUserId(userId, {

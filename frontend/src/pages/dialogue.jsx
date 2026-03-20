@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import "./dialogue.css";
 import FeatureTipModal from '../components/FeatureTipModal';
+import socketService from '../services/socketService';
 
 const Dialogue = () => {
   const { pairId } = useParams();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(true);
@@ -76,12 +78,24 @@ const Dialogue = () => {
       fetchPairStatus(); // 检查结对状态
     }, 3000);
 
-    // 清理函数：组件卸载时停止轮询
+    // 监听 Socket.IO 通知
+    const handleNotification = (notification) => {
+      if (notification.type === 'end_rejected' && notification.relatedId === parseInt(pairId)) {
+        alert('对方拒绝结束教学');
+        setPairStatus('active');
+        setEndRequestedBy(null);
+      }
+    };
+
+    socketService.on('notification', handleNotification);
+
+    // 清理函数：组件卸载时停止轮询和移除监听
     return () => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
       }
+      socketService.off('notification', handleNotification);
     };
   }, [pairId]);
 
@@ -283,8 +297,12 @@ const Dialogue = () => {
       if (response.ok) {
         setShowEndRequestModal(false);
         setPairStatus('completed');
-        alert("已同意结束教学");
-        // 可以在这里跳转到其他页面
+        alert("对话已结束");
+
+        // 延迟2秒后自动跳转到个人中心
+        setTimeout(() => {
+          navigate('/personal');
+        }, 2000);
       } else {
         alert(data.error || data.message || "操作失败");
       }
