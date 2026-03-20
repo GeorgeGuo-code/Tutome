@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./match.css";
 import FeatureTipModal from '../components/FeatureTipModal';
+import socketService from '../services/socketService';
 
 const Match = () => {
   const [subject, setSubject] = useState("");
@@ -10,10 +11,10 @@ const Match = () => {
   const [message, setMessage] = useState("");
   const [showUsers, setShowUsers] = useState(false);
   const [availableUsers, setAvailableUsers] = useState([]);
+  const [onlineUserIds, setOnlineUserIds] = useState([]); // 在线用户 ID 集合
   const [selectedUser, setSelectedUser] = useState(null);
   const [userQuestions, setUserQuestions] = useState([]);
   const [showQuestions, setShowQuestions] = useState(false);
-  const [expandedQuestionId, setExpandedQuestionId] = useState(null);
   const [showTipModal, setShowTipModal] = useState(false);
 
   useEffect(() => {
@@ -27,6 +28,42 @@ const Match = () => {
     setShowTipModal(false);
     localStorage.setItem('hasSeenMatchTip', 'true');
   };
+
+  // Socket.IO 连接和事件监听
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // 连接到 Socket.IO 服务器
+    socketService.connect(token);
+
+    // 监听用户上线事件
+    socketService.on('user-online', (data) => {
+      console.log('用户上线:', data.userId);
+      setOnlineUserIds(prev => new Set([...prev, data.userId]));
+    });
+
+    // 监听用户下线事件
+    socketService.on('user-offline', (data) => {
+      console.log('用户下线:', data.userId);
+      setOnlineUserIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(data.userId);
+        return newSet;
+      });
+    });
+
+    // 监听在线用户列表更新
+    socketService.on('online-users', (data) => {
+      console.log('在线用户列表:', data.users);
+      setOnlineUserIds(new Set(data.users));
+    });
+
+    // 组件卸载时断开连接
+    return () => {
+      socketService.disconnect();
+    };
+  }, []);
 
   const matchFeatures = [
     '根据你发布的问题/擅长的技术标签匹配解答者',
@@ -250,10 +287,6 @@ const Match = () => {
       console.error("Error:", error);
     }
   };
-  const handleToggleExpand = (questionId) => {
-    setExpandedQuestionId(expandedQuestionId === questionId ? null : questionId);
-  };
-
   const handleBack = () => {
     setShowUsers(false);
     setMessage("");
@@ -302,15 +335,9 @@ const Match = () => {
                       <div key={question.id} className="question-card">
                         <div className="question-content">
                           <h3 className="question-title">{question.title}</h3>
+                          <p className="question-content-text">{question.content}</p>
                         </div>
                         <div className="question-actions">
-                          <button
-                            className="expand-icon"
-                            onClick={() => handleToggleExpand(question.id)}
-                            title={expandedQuestionId === question.id ? "收起" : "展开"}
-                          >
-                            {expandedQuestionId === question.id ? "▲" : "▼"}
-                          </button>
                           <button
                             className="select-btn"
                             onClick={() => handleSelectQuestion(question)}
@@ -318,11 +345,6 @@ const Match = () => {
                             选择
                           </button>
                         </div>
-                        {expandedQuestionId === question.id && (
-                          <div className="question-expanded-content">
-                            <p className="question-content-text">{question.content}</p>
-                          </div>
-                        )}
                       </div>
                     ));
                   })()
@@ -336,21 +358,40 @@ const Match = () => {
               <button className="back-btn" onClick={handleBack}>
                 ←
               </button>
+              <div className="online-legend">
+                <span className="legend-item">
+                  <span className="legend-dot online"></span>
+                  <span className="legend-text">在线</span>
+                </span>
+                <span className="legend-item">
+                  <span className="legend-dot offline"></span>
+                  <span className="legend-text">离线</span>
+                </span>
+              </div>
 
               <div className="users-list">
-                {availableUsers.map((user) => (
-                  <div key={user.id} className="user-card">
-                    <div className="user-info">
-                      <h3 className="user-name">{user.username}</h3>
+                {availableUsers.map((user) => {
+                  // 判断用户是否在线（使用 Socket.IO 实时状态）
+                  const isOnline = onlineUserIds.has(user.id);
+                  console.log(`用户 ${user.username} (${user.id}) 在线状态:`, isOnline);
+
+                  return (
+                    <div key={user.id} className="user-card">
+                      <div className="online-indicator">
+                        <div className={`online-dot ${isOnline ? 'online' : 'offline'}`}></div>
+                      </div>
+                      <div className="user-info">
+                        <h3 className="user-name">{user.username}</h3>
+                      </div>
+                      <button
+                        className="select-btn"
+                        onClick={() => handleViewUserDetails(user)}
+                      >
+                        详情
+                      </button>
                     </div>
-                    <button
-                      className="select-btn"
-                      onClick={() => handleViewUserDetails(user)}
-                    >
-                      详情
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}

@@ -818,7 +818,7 @@ const queries = {
     // 获取所有可用用户（排除当前用户，只返回有问题的用户；含昵称）
     getAvailableUsers: async (currentUserId) => {
       const result = await pool.query(
-        `SELECT DISTINCT u.id, u.username, u.created_at, up.nickname
+        `SELECT DISTINCT u.id, u.username, u.created_at, u.last_active, up.nickname
          FROM users u
          INNER JOIN questions q ON u.id = q.user_id
          LEFT JOIN user_profiles up ON u.id = up.user_id
@@ -827,6 +827,15 @@ const queries = {
         [currentUserId]
       );
       return result.rows;
+    },
+
+    // 更新用户最后活跃时间
+    updateLastActive: async (userId) => {
+      const result = await pool.query(
+        'UPDATE users SET last_active = CURRENT_TIMESTAMP WHERE id = $1 RETURNING last_active',
+        [userId]
+      );
+      return result.rows[0];
     },
 
     // 获取用户资料（仅 profile 表，可能为空）
@@ -1322,7 +1331,7 @@ const queries = {
     getUnreadCount: async (userId) => {
       const result = await pool.query(
         `SELECT COUNT(*) as count FROM notifications 
-         WHERE user_id = $1 AND is_read = FALSE`,
+         WHERE user_id = $1 AND status = 'pending'`,
         [userId]
       );
       return parseInt(result.rows[0].count);
@@ -1342,6 +1351,7 @@ module.exports = {
   getQuestions,
   getUserQuestions,
   getUserHistory,
+  user: queries.user,
   getAvailableTags,
   getQuestionsByTagId,
   getQuestionWithTags,

@@ -382,6 +382,37 @@ const requestEndTeaching = async (req, res) => {
         }
 
         const updatedPair = await queries.pair.requestEnd(pairId, userId);
+
+        // 检查是否已存在相同的待处理通知
+        const partnerId = pair.teacher_id === userId ? pair.student_id : pair.teacher_id;
+        const existingNotifications = await queries.notification.getByUserId(partnerId, {
+            type: 'end_request',
+            relatedId: pairId,
+            status: 'pending'
+        });
+
+        if (existingNotifications.length > 0) {
+            return res.status(400).json({ 
+                error: '已存在待处理的结束申请',
+                details: {
+                    existingNotificationId: existingNotifications[0].id,
+                    createdAt: existingNotifications[0].created_at
+                }
+            });
+        }
+
+        // 创建结束申请通知
+        const currentUser = await queries.findUserById(userId);
+
+        await queries.notification.create(
+            partnerId,  // 通知对方
+            'end_request',  // 通知类型
+            pairId,  // related_id = pair_id
+            '收到结束教学申请',
+            `${currentUser.username} 申请结束教学`,
+            'pending'  // 待处理状态
+        );
+
         res.json({
             success: true,
             message: '已申请结束教学，等待对方确认',
@@ -415,10 +446,49 @@ const acceptEndRequest = async (req, res) => {
         }
 
         if (pair.status !== 'end_requested' || pair.end_request_status !== 'pending') {
-            return res.status(400).json({ error: '没有待确认的结束申请' });
+            console.error('结对状态验证失败 (accept):', {
+                pairId,
+                currentStatus: pair.status,
+                requiredStatus: 'end_requested',
+                currentEndStatus: pair.end_request_status,
+                requiredEndStatus: 'pending'
+            });
+            return res.status(400).json({ 
+                error: '没有待确认的结束申请',
+                details: {
+                    currentStatus: pair.status,
+                    currentEndStatus: pair.end_request_status
+                }
+            });
         }
 
         const updatedPair = await queries.pair.acceptEndRequest(pairId);
+
+        // 创建同意结束通知
+        const requesterId = pair.end_requested_by;
+        const currentUser = await queries.findUserById(userId);
+
+        await queries.notification.create(
+            requesterId,  // 通知申请者
+            'end_accepted',  // 通知类型
+            pairId,  // related_id = pair_id
+            '结束申请已接受',
+            `${currentUser.username} 已同意结束教学`,
+            'processed'  // 已处理状态
+        );
+
+        // 更新原申请通知的状态为已处理
+        const originalNotifications = await queries.notification.getByUserId(userId, {
+            type: 'end_request',
+            relatedId: pairId,
+            status: 'pending'
+        });
+
+        if (originalNotifications.length > 0) {
+            await queries.notification.updateStatus(originalNotifications[0].id, 'processed');
+            console.log('已更新原申请通知状态为已处理, 通知ID:', originalNotifications[0].id);
+        }
+
         res.json({
             success: true,
             message: '已同意结束教学',
@@ -452,10 +522,49 @@ const rejectEndRequest = async (req, res) => {
         }
 
         if (pair.status !== 'end_requested' || pair.end_request_status !== 'pending') {
-            return res.status(400).json({ error: '没有待确认的结束申请' });
+            console.error('结对状态验证失败 (reject):', {
+                pairId,
+                currentStatus: pair.status,
+                requiredStatus: 'end_requested',
+                currentEndStatus: pair.end_request_status,
+                requiredEndStatus: 'pending'
+            });
+            return res.status(400).json({ 
+                error: '没有待确认的结束申请',
+                details: {
+                    currentStatus: pair.status,
+                    currentEndStatus: pair.end_request_status
+                }
+            });
         }
 
         const updatedPair = await queries.pair.rejectEndRequest(pairId);
+
+        // 创建拒绝结束通知
+        const requesterId = pair.end_requested_by;
+        const currentUser = await queries.findUserById(userId);
+
+        await queries.notification.create(
+            requesterId,  // 通知申请者
+            'end_rejected',  // 通知类型
+            pairId,  // related_id = pair_id
+            '结束申请已拒绝',
+            `${currentUser.username} 已拒绝结束教学，继续教学`,
+            'processed'  // 已处理状态
+        );
+
+        // 更新原申请通知的状态为已处理
+        const originalNotifications = await queries.notification.getByUserId(userId, {
+            type: 'end_request',
+            relatedId: pairId,
+            status: 'pending'
+        });
+
+        if (originalNotifications.length > 0) {
+            await queries.notification.updateStatus(originalNotifications[0].id, 'processed');
+            console.log('已更新原申请通知状态为已处理, 通知ID:', originalNotifications[0].id);
+        }
+
         res.json({
             success: true,
             message: '已拒绝结束申请，继续教学',

@@ -22,7 +22,7 @@ const loginUser = async (username, password, res) => {
     }
 
     // 密码正确，返回成功消息或生成 token
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET_KEY, { expiresIn: '6h' });
     res.json({ token });
   });
 };
@@ -243,6 +243,17 @@ const getProfileByUserId = async (req, res) => {
   }
 };
 
+// 更新用户最后活跃时间（心跳接口）
+const updateHeartbeat = async (req, res) => {
+  try {
+    const userId = req.userId; // 从 JWT token 中获取用户ID
+    const result = await queries.user.updateLastActive(userId);
+    res.json({ success: true, last_active: result.last_active });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '服务器错误', error: error.message });
+  }
+};
+
 module.exports = {
   loginUser,
   createUser,
@@ -253,7 +264,8 @@ module.exports = {
   getDifficultyTags,
   getMyProfile,
   updateMyProfile,
-  getProfileByUserId
+  getProfileByUserId,
+  updateHeartbeat
 }
 
 

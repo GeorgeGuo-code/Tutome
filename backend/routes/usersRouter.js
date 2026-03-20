@@ -34,4 +34,7 @@ usersRouter.get('/api/users/me/profile', verifyJWT, usersController.getMyProfile
 usersRouter.patch('/api/users/me/profile', verifyJWT, usersController.updateMyProfile);
 usersRouter.get('/api/users/:userId/profile', usersController.getProfileByUserId);
 
+// 心跳接口（需要JWT验证）
+usersRouter.post('/api/users/heartbeat', verifyJWT, usersController.updateHeartbeat);
+
 module.exports = usersRouter;
