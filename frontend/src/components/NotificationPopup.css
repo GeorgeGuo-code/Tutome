@@ -1,0 +1,105 @@
+/* 通知弹窗容器 */
+.notification-popup-container {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 350px;
+}
+
+/* 单个通知弹窗 */
+.notification-popup-item {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 16px 20px;
+  animation: slideIn 0.3s ease-out;
+  border-left: 4px solid #409eff;
+}
+
+.notification-popup-item.removing {
+  animation: slideOut 0.3s ease-out forwards;
+}
+
+/* 通知内容 */
+.notification-popup-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 通知文字 */
+.notification-popup-text {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.6;
+  flex: 1;
+}
+
+/* 用户名 */
+.notification-username {
+  font-weight: 600;
+  color: #333;
+}
+
+/* 结对申请 - 蓝色 */
+.notification-pair {
+  color: #409eff;
+  font-weight: 600;
+}
+
+/* 结束申请 - 红色 */
+.notification-end {
+  color: #f56c6c;
+  font-weight: 600;
+}
+
+/* 关闭按钮 */
+.notification-popup-close {
+  background: transparent;
+  border: none;
+  color: #999;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  text-align: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.notification-popup-close:hover {
+  background: #f5f5f5;
+  color: #666;
+}
+
+/* 滑入动画 */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* 滑出动画 */
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
