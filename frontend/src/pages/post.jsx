@@ -237,8 +237,9 @@ const Post = () => {
         });
 
         if (associateResponse.ok) {
-          // 显示等待提示，不直接跳转
+          // 显示等待提示并跳转到浏览页面
           alert(`✅ 已向 ${question.username || question.user_name} 发起结对申请\n\n请前往"个人中心"的"我的通知"查看对方是否同意`);
+          window.location.href = '/browse';
         } else {
           alert('结对创建成功，但关联问题失败，请重试');
         }

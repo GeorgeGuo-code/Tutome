@@ -781,7 +781,7 @@ const NotificationsSection = () => {
       }
 
       const response = await fetch(
-        "http://localhost:3000/api/notifications?status=pending&limit=50",
+        "http://localhost:3000/api/notifications?limit=50",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -854,6 +854,8 @@ const NotificationsSection = () => {
         await markNotificationAsRead(notificationId);
         fetchNotifications();
         fetchUnreadCount();
+        // 跳转到对话页面
+        window.location.href = `/dialogue/${pairId}`;
       } else {
         const errorData = await response.json();
         alert(`操作失败：${errorData.message || errorData.error || '未知错误'}`);
@@ -965,6 +967,12 @@ const NotificationsSection = () => {
     }
   };
 
+  const handleMarkAsRead = async (notificationId) => {
+    await markNotificationAsRead(notificationId);
+    fetchNotifications();
+    fetchUnreadCount();
+  };
+
   const renderNotificationItem = (notification) => {
     switch (notification.type) {
       case 'pair_application':
@@ -1000,17 +1008,23 @@ const NotificationsSection = () => {
 
       case 'pair_accepted':
         return (
-          <div key={notification.id} className="notification-item notification-processed">
+          <div key={notification.id} className="notification-item notification-pair-accepted">
             <div className="notification-content">
               <div className="notification-title">{notification.title}</div>
               <div className="notification-message">{notification.content}</div>
             </div>
-            <div className="notification-actions">
+            <div className="notification-actions notification-actions-vertical">
               <button
                 className="notification-btn notification-btn-primary"
                 onClick={() => window.location.href = `/dialogue/${notification.related_id}`}
               >
-                进入对话
+                进入
+              </button>
+              <button
+                className="notification-btn notification-btn-know"
+                onClick={() => handleMarkAsRead(notification.id)}
+              >
+                知道了
               </button>
             </div>
           </div>

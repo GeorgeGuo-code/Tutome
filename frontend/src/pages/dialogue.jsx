@@ -80,10 +80,17 @@ const Dialogue = () => {
 
     // 监听 Socket.IO 通知
     const handleNotification = (notification) => {
-      if (notification.type === 'end_rejected' && notification.relatedId === parseInt(pairId)) {
+      if (notification.type === 'end_rejected' && notification.relatedId === pairId) {
         alert('对方拒绝结束教学');
         setPairStatus('active');
         setEndRequestedBy(null);
+      }
+      if (notification.type === 'end_accepted' && notification.relatedId === pairId) {
+        alert('对方已同意结束教学');
+        setPairStatus('completed');
+        setTimeout(() => {
+          navigate('/personal');
+        }, 2000);
       }
     };
 

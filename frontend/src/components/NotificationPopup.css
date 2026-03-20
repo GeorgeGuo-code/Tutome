@@ -20,14 +20,21 @@
 }
 
 /* 结对申请 - 浅蓝底 + 蓝边框 + 蓝字 */
-.notification-popup-item.pair-application {
+.notification-popup-item.notification-pair_application {
   background: #ecf5ff;
   border: 1px solid #409eff;
   border-left: 4px solid #409eff;
 }
 
+/* 结对已接受 - 浅绿底 + 绿边框 + 绿字 */
+.notification-popup-item.notification-pair_accepted {
+  background: #f0f9ff;
+  border: 1px solid #67c23a;
+  border-left: 4px solid #67c23a;
+}
+
 /* 结束申请 - 红色左边框 */
-.notification-popup-item.end-request {
+.notification-popup-item.notification-end_request {
   border-left: 4px solid #f56c6c;
 }
 

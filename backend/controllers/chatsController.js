@@ -120,32 +120,71 @@ const acceptPair = async (req, res) => {
     const { pairId } = req.body;
     const userId = req.user.userId;
 
+    console.log('=== 接受结对申请开始 ===');
+    console.log('当前用户ID:', userId);
+    console.log('结对ID:', pairId);
+
     try {
         const pair = await queries.pair.getById(pairId);
-        
+
+        console.log('结对信息:', {
+            id: pair.id,
+            teacher_id: pair.teacher_id,
+            student_id: pair.student_id,
+            status: pair.status,
+            question_id: pair.question_id
+        });
+
         if (!pair) {
             return res.status(404).json({ error: '结对不存在' });
         }
-        
-        if (pair.student_id !== userId || pair.status !== 'pending') {
+
+        if ((pair.teacher_id !== userId && pair.student_id !== userId) || pair.status !== 'pending') {
+            console.log('权限验证失败');
             return res.status(403).json({ error: '无权操作或状态错误' });
         }
 
         const updatedPair = await queries.pair.accept(pairId);
 
-        // 创建接受通知
-        const partnerId = pair.teacher_id;
+        // 判断谁是申请者（对方才是申请者，需要通知对方）
+        const partnerId = pair.teacher_id === userId ? pair.student_id : pair.teacher_id;
         const partnerUser = await queries.findUserById(partnerId);
         const currentUser = await queries.findUserById(userId);
 
-        await queries.notification.create(
-            partnerId,  // 通知原申请者
+        console.log('申请者信息:', {
+            partnerId,
+            partnerUsername: partnerUser?.username,
+            currentUserId: userId,
+            currentUserUsername: currentUser?.username,
+            role: pair.teacher_id === userId ? 'teacher' : 'student'
+        });
+
+        const newNotification = await queries.notification.create(
+            partnerId,  // 通知申请者
             'pair_accepted',  // 通知类型
             pairId,  // related_id = pair_id
             '结对申请已接受',
             `${currentUser.username} 已接受您的结对申请`,
             'processed'  // 已处理状态
         );
+
+        console.log('通知已创建，准备推送:', {
+            notificationId: newNotification.id,
+            recipientId: partnerId,
+            type: 'pair_accepted'
+        });
+
+        // 推送实时通知给申请者
+        onlineStatusService.sendNotificationToUser(partnerId, {
+            id: newNotification.id,
+            type: 'pair_accepted',
+            title: '结对申请已接受',
+            content: `${currentUser.username} 已接受您的结对申请`,
+            relatedId: pairId,
+            acceptedUsername: currentUser.username
+        });
+
+        console.log('=== 接受结对申请完成 ===');
 
         // 更新原申请通知的状态为已处理
         const notifications = await queries.notification.getByUserId(userId, {
@@ -180,7 +219,7 @@ const acceptPair = async (req, res) => {
                     return res.status(404).json({ error: '结对不存在' });
                 }
         
-                if (pair.student_id !== userId || pair.status !== 'pending') {
+                if ((pair.teacher_id !== userId && pair.student_id !== userId) || pair.status !== 'pending') {
                     return res.status(403).json({ error: '无权操作或状态错误' });
                 }
         
@@ -199,8 +238,8 @@ const acceptPair = async (req, res) => {
                             'processed'  // 已处理状态
                         );
                 
-                        // 删除结对记录
-                        await queries.pair.delete(pairId);
+                        // 更新结对状态为已拒绝（而不是删除）
+                        await queries.pair.updateStatus(pairId, 'rejected');
                 
                         // 更新原申请通知的状态为已处理
                 const notifications = await queries.notification.getByUserId(userId, {
@@ -273,6 +312,13 @@ const associatePairWithQuestion = async (req, res) => {
         // 检查结对是否已有问题
         if (pair.question_id) {
             return res.status(400).json({ error: '该结对已关联其他问题' });
+        }
+
+        // 检查问题是否已有已拒绝的结对记录，如果有则删除
+        const rejectedPair = await queries.pair.getRejectedPairForQuestion(questionId);
+        if (rejectedPair) {
+            console.log(`删除问题 ${questionId} 的已拒绝结对记录 ${rejectedPair.id}`);
+            await queries.pair.delete(rejectedPair.id);
         }
 
         // 更新结对的问题 ID
@@ -489,7 +535,7 @@ const acceptEndRequest = async (req, res) => {
         const requesterId = pair.end_requested_by;
         const currentUser = await queries.findUserById(userId);
 
-        await queries.notification.create(
+        const newNotification = await queries.notification.create(
             requesterId,  // 通知申请者
             'end_accepted',  // 通知类型
             pairId,  // related_id = pair_id
@@ -497,6 +543,16 @@ const acceptEndRequest = async (req, res) => {
             `${currentUser.username} 已同意结束教学`,
             'processed'  // 已处理状态
         );
+
+        // 推送实时通知给申请者
+        onlineStatusService.sendNotificationToUser(requesterId, {
+            id: newNotification.id,
+            type: 'end_accepted',
+            title: '结束申请已接受',
+            content: `${currentUser.username} 已同意结束教学`,
+            relatedId: pairId,
+            acceptedUsername: currentUser.username
+        });
 
         // 更新原申请通知的状态为已处理
         const originalNotifications = await queries.notification.getByUserId(userId, {

@@ -265,18 +265,26 @@ const Match = () => {
           });
         }
   
-        // 修改：不直接进入对话，显示等待提示
+        // 修改：显示等待提示并跳转到浏览页面
         setMessage(
           <div>
             <div>✅ 已向 {selectedUser.username} 发起结对申请</div>
             <div className="pair-info">申请 ID: {data.id}</div>
             <div className="waiting-tip">请前往"个人中心"的"我的通知"查看对方是否同意</div>
-            <button
-              className="go-to-personal-btn"
-              onClick={() => window.location.href = '/personal'}
-            >
-              前往个人中心
-            </button>
+            <div style={{ marginTop: '10px' }}>
+              <button
+                className="go-to-personal-btn"
+                onClick={() => window.location.href = '/browse'}
+              >
+                返回浏览页面
+              </button>
+              <button
+                className="go-to-personal-btn"
+                onClick={() => window.location.href = '/personal'}
+              >
+                前往个人中心
+              </button>
+            </div>
           </div>
         );
       } else {

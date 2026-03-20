@@ -1149,6 +1149,15 @@ const queries = {
       return result.rows[0];
     },
 
+    // 更新结对状态
+    updateStatus: async (pairId, status) => {
+      const result = await pool.query(
+        `UPDATE pairs SET status = $1 WHERE id = $2 RETURNING *`,
+        [status, pairId]
+      );
+      return result.rows[0];
+    },
+
     // 获取用户的待处理结束申请
     getPendingEndRequests: async (userId) => {
       const result = await pool.query(
@@ -1177,6 +1186,18 @@ const queries = {
         [userId]
       );
       return result.rows;
+    },
+
+    // 获取问题已拒绝的结对
+    getRejectedPairForQuestion: async (questionId) => {
+      const result = await pool.query(
+        `SELECT * FROM pairs
+         WHERE question_id = $1
+         AND status = 'rejected'
+         LIMIT 1`,
+        [questionId]
+      );
+      return result.rows[0] || null;
     },
 
     // 删除结对
