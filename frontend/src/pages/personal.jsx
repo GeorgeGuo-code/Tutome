@@ -825,6 +825,8 @@ const NotificationsSection = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [pairIdToNavigate, setPairIdToNavigate] = useState(null);
 
   useEffect(() => {
     fetchNotifications();
@@ -911,13 +913,13 @@ const NotificationsSection = () => {
       );
 
       if (response.ok) {
-        alert('已接受结对申请');
         // 标记通知为已处理
         await markNotificationAsRead(notificationId);
         fetchNotifications();
         fetchUnreadCount();
-        // 跳转到对话页面
-        window.location.href = `/dialogue/${pairId}`;
+        // 显示成功弹窗
+        setSuccessMessage('结对成功！');
+        setPairIdToNavigate(pairId);
       } else {
         const errorData = await response.json();
         alert(`操作失败：${errorData.message || errorData.error || '未知错误'}`);
@@ -1195,6 +1197,39 @@ const NotificationsSection = () => {
             <div className="notification-empty">暂无待处理消息</div>
           )}
         </div>
+
+        {/* 成功提示弹窗 */}
+        {successMessage && (
+          <div className="success-modal-mask" onClick={() => {}}>
+            <div className="success-modal">
+              <div className="success-modal-icon">✓</div>
+              <div className="success-modal-message">{successMessage}</div>
+              <div className="success-modal-actions">
+                <button
+                  className="success-modal-btn"
+                  onClick={() => {
+                    setSuccessMessage(null);
+                    if (pairIdToNavigate) {
+                      window.location.href = `/dialogue/${pairIdToNavigate}`;
+                      setPairIdToNavigate(null);
+                    }
+                  }}
+                >
+                  好的，去对话
+                </button>
+                <button
+                  className="success-modal-btn success-modal-btn-secondary"
+                  onClick={() => {
+                    setSuccessMessage(null);
+                    setPairIdToNavigate(null);
+                  }}
+                >
+                  返回
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
