@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import ReactDOM from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import "./personal.css";
 import FeatureTipModal from '../components/FeatureTipModal';
@@ -7,18 +8,34 @@ import { userService } from '../services/apiService';
 // 自定义下拉多选组件
 const MultiSelectDropdown = ({ options, value, onChange, placeholder = "请选择" }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const dropdownRef = useRef(null);
+  const optionsRef = useRef(null);
+
+  // 计算下拉菜单位置
+  const updateDropdownPosition = () => {
+    if (dropdownRef.current) {
+      const rect = dropdownRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width
+      });
+    }
+  };
 
   // 点击外部关闭下拉
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
+          optionsRef.current && !optionsRef.current.contains(event.target)) {
         setIsOpen(false);
       }
     };
 
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      updateDropdownPosition();
     }
 
     return () => {
@@ -88,8 +105,18 @@ const MultiSelectDropdown = ({ options, value, onChange, placeholder = "请选�
         <span className="dropdown-arrow">▼</span>
       </div>
 
-      {isOpen && (
-        <div className="dropdown-options">
+      {isOpen && ReactDOM.createPortal(
+        <div
+          ref={optionsRef}
+          className="dropdown-options dropdown-options-portal"
+          style={{
+            position: 'fixed',
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+            width: `${dropdownPosition.width}px`,
+            zIndex: 9999
+          }}
+        >
           {options.length === 0 ? (
             <div className="dropdown-option dropdown-option-empty">
               暂无选项
@@ -108,7 +135,8 @@ const MultiSelectDropdown = ({ options, value, onChange, placeholder = "请选�
               </div>
             ))
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
