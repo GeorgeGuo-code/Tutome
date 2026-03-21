@@ -344,12 +344,18 @@ const ProfileSection = () => {
   const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
+    // 组件挂载时先重置状态
+    setProfile(null);
+    setLoading(true);
+    setError(null);
     fetchProfile();
   }, []);
 
   const fetchProfile = async () => {
     try {
+      console.log('正在获取用户资料...');
       const result = await userService.getMyProfile();
+      console.log('获取到的用户资料:', result);
       if (result.success && result.data) {
         setProfile(result.data.profile);
       } else {
@@ -1152,6 +1158,7 @@ const Personal = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('profile');
   const [showTipModal, setShowTipModal] = useState(false);
+  const currentToken = localStorage.getItem('token'); // 获取当前 token
 
   useEffect(() => {
     const hasSeenPersonalTip = localStorage.getItem('hasSeenPersonalTip');
@@ -1174,6 +1181,14 @@ const Personal = () => {
       }, 300);
     }
   }, [location.state]);
+
+  // 当切换到 profile tab 时，强制重新获取用户资料
+  useEffect(() => {
+    if (activeTab === 'profile') {
+      // 触发 ProfileSection 重新挂载，通过改变 key
+      // 这会确保每次切换到 profile tab 时都重新获取数据
+    }
+  }, [activeTab, currentToken]);
 
   const handleCloseModal = () => {
     setShowTipModal(false);
@@ -1225,7 +1240,7 @@ const Personal = () => {
 
         {/* 右侧内容区 */}
         <div className="personal-content">
-          {activeTab === 'profile' && <ProfileSection />}
+          {activeTab === 'profile' && <ProfileSection key={currentToken} />}
           {activeTab === 'history' && <HistorySection location={location} />}
           {activeTab === 'notifications' && <NotificationsSection />}
         </div>

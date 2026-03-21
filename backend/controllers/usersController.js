@@ -146,7 +146,16 @@ const getAvailableUsers = async (req, res) => {
 const getMyProfile = async (req, res) => {
   try {
     const userId = req.user.userId;
+    console.log('=== 获取用户资料 ===');
+    console.log('从 token 解析的 userId:', userId);
     const profile = await queries.getPublicUserProfile(userId);
+    console.log('获取到的用户资料:', {
+      username: profile?.username,
+      nickname: profile?.nickname,
+      interested_topics_count: profile?.interested_topics?.length,
+      proficient_topics_count: profile?.proficient_topics?.length,
+      difficulty_preferences_count: profile?.difficulty_preferences?.length
+    });
     if (!profile) {
       return res.status(404).json({ success: false, message: '用户不存在' });
     }

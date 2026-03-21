@@ -27,6 +27,12 @@ const Login = () => {
         const data = await response.json();
         setMessage(isLogin ? "登录成功!" : "注册成功!");
         if (isLogin && data.token) {
+          // 清除旧的登录信息
+          localStorage.removeItem("token");
+          localStorage.removeItem("username");
+          localStorage.removeItem("userId");
+
+          // 设置新的登录信息
           localStorage.setItem("token", data.token);
           localStorage.setItem("username", username);
 
