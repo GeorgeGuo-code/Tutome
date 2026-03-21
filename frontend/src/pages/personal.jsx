@@ -157,7 +157,12 @@ const ProfileEditModal = ({ visible, onClose, onSave, currentProfile }) => {
         setTopics(uniqueTopics);
       }
       if (difficultiesResult.success && difficultiesResult.data) {
-        setDifficulties(difficultiesResult.data.tags || []);
+        // 按照指定顺序排序：简单，中等，偏难，极难
+        const difficultyOrder = ['简单', '中等', '偏难', '极难'];
+        const sortedDifficulties = (difficultiesResult.data.tags || []).sort((a, b) => {
+          return difficultyOrder.indexOf(a.name) - difficultyOrder.indexOf(b.name);
+        });
+        setDifficulties(sortedDifficulties);
       }
     } catch (error) {
       console.error('加载选项失败:', error);
@@ -442,7 +447,6 @@ const ProfileSection = () => {
               <ul className="topic-list">
                 {profile.interested_topics.map((topic) => (
                   <li key={topic.id} className="topic-item">
-                    <span className="topic-icon">📚</span>
                     {topic.name}
                   </li>
                 ))}
@@ -458,7 +462,6 @@ const ProfileSection = () => {
               <ul className="topic-list">
                 {profile.proficient_topics.map((topic) => (
                   <li key={topic.id} className="topic-item">
-                    <span className="topic-icon">⭐</span>
                     {topic.name}
                   </li>
                 ))}
@@ -475,11 +478,16 @@ const ProfileSection = () => {
         <h3 className="preference-title">难度偏好</h3>
         {profile.difficulty_preferences && profile.difficulty_preferences.length > 0 ? (
           <div className="difficulty-tags">
-            {profile.difficulty_preferences.map((difficulty) => (
-              <span key={difficulty.id} className="difficulty-tag">
-                {difficulty.name}
-              </span>
-            ))}
+            {profile.difficulty_preferences
+              .sort((a, b) => {
+                const difficultyOrder = ['简单', '中等', '偏难', '极难'];
+                return difficultyOrder.indexOf(a.name) - difficultyOrder.indexOf(b.name);
+              })
+              .map((difficulty) => (
+                <span key={difficulty.id} className="difficulty-tag">
+                  {difficulty.name}
+                </span>
+              ))}
           </div>
         ) : (
           <p className="topic-empty">暂未设置</p>
@@ -781,7 +789,7 @@ const NotificationsSection = () => {
       }
 
       const response = await fetch(
-        "http://localhost:3000/api/notifications?limit=50",
+        "http://localhost:3000/api/notifications?status=pending&limit=50",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -796,6 +804,7 @@ const NotificationsSection = () => {
         return;
       }
 
+      console.log('获取到的通知:', data.notifications);
       setNotifications(data.notifications || []);
     } catch (error) {
       console.error("[ERROR] Network error:", error);
@@ -859,6 +868,10 @@ const NotificationsSection = () => {
       } else {
         const errorData = await response.json();
         alert(`操作失败：${errorData.message || errorData.error || '未知错误'}`);
+        // 操作失败时标记通知为已读，并刷新列表
+        await markNotificationAsRead(notificationId);
+        fetchNotifications();
+        fetchUnreadCount();
       }
     } catch (error) {
       console.error('接受结对申请错误:', error);
@@ -887,6 +900,10 @@ const NotificationsSection = () => {
       } else {
         const errorData = await response.json();
         alert(`操作失败：${errorData.message || errorData.error || '未知错误'}`);
+        // 操作失败时标记通知为已读，并刷新列表
+        await markNotificationAsRead(notificationId);
+        fetchNotifications();
+        fetchUnreadCount();
       }
     } catch (error) {
       console.error('拒绝结对申请错误:', error);
@@ -915,6 +932,10 @@ const NotificationsSection = () => {
       } else {
         const errorData = await response.json();
         alert(`操作失败：${errorData.message || '未知错误'}`);
+        // 操作失败时标记通知为已读，并刷新列表
+        await markNotificationAsRead(notificationId);
+        fetchNotifications();
+        fetchUnreadCount();
       }
     } catch (error) {
       console.error('同意结束申请错误:', error);
@@ -943,6 +964,10 @@ const NotificationsSection = () => {
       } else {
         const errorData = await response.json();
         alert(`操作失败：${errorData.message || '未知错误'}`);
+        // 操作失败时标记通知为已读，并刷新列表
+        await markNotificationAsRead(notificationId);
+        fetchNotifications();
+        fetchUnreadCount();
       }
     } catch (error) {
       console.error('拒绝结束申请错误:', error);
@@ -991,16 +1016,16 @@ const NotificationsSection = () => {
             </div>
             <div className="notification-actions">
               <button
-                className="notification-btn notification-btn-reject"
-                onClick={() => handleRejectPairApplication(notification.id, notification.related_id)}
-              >
-                拒绝
-              </button>
-              <button
                 className="notification-btn notification-btn-accept"
                 onClick={() => handleAcceptPairApplication(notification.id, notification.related_id)}
               >
                 同意
+              </button>
+              <button
+                className="notification-btn notification-btn-reject"
+                onClick={() => handleRejectPairApplication(notification.id, notification.related_id)}
+              >
+                拒绝
               </button>
             </div>
           </div>
@@ -1062,16 +1087,16 @@ const NotificationsSection = () => {
             </div>
             <div className="notification-actions">
               <button
-                className="notification-btn notification-btn-reject"
-                onClick={() => handleRejectEndRequest(notification.id, notification.related_id)}
-              >
-                拒绝
-              </button>
-              <button
                 className="notification-btn notification-btn-accept"
                 onClick={() => handleAcceptEndRequest(notification.id, notification.related_id)}
               >
                 同意
+              </button>
+              <button
+                className="notification-btn notification-btn-reject"
+                onClick={() => handleRejectEndRequest(notification.id, notification.related_id)}
+              >
+                拒绝
               </button>
             </div>
           </div>
@@ -1181,21 +1206,18 @@ const Personal = () => {
               className={`sidebar-item ${activeTab === 'profile' ? 'active' : ''}`}
               onClick={() => setActiveTab('profile')}
             >
-              <span className="sidebar-icon">🏠</span>
               <span className="sidebar-text">个人主页</span>
             </button>
             <button
               className={`sidebar-item ${activeTab === 'history' ? 'active' : ''}`}
               onClick={() => setActiveTab('history')}
             >
-              <span className="sidebar-icon">👣</span>
               <span className="sidebar-text">我的足迹</span>
             </button>
             <button
               className={`sidebar-item ${activeTab === 'notifications' ? 'active' : ''}`}
               onClick={() => setActiveTab('notifications')}
             >
-              <span className="sidebar-icon">🔔</span>
               <span className="sidebar-text">我的通知</span>
             </button>
           </nav>

@@ -1250,22 +1250,22 @@ const queries = {
 
     // 获取用户的所有通知（支持分页和筛选）
     getByUserId: async (userId, options = {}) => {
-      const { type, status, isRead, limit = 50, offset = 0 } = options;
+      const { type, status, isRead, relatedId, limit = 50, offset = 0 } = options;
       let query = `
-        SELECT n.*, 
+        SELECT n.*,
                p.teacher_id,
                p.student_id,
                p.question_id,
                q.title as question_title,
                q.content as question_content,
-               CASE 
-                 WHEN n.type = 'pair_application' THEN 
-                   CASE 
+               CASE
+                 WHEN n.type = 'pair_application' THEN
+                   CASE
                      WHEN p.teacher_id = $1 THEN u_student.username
                      ELSE u_teacher.username
                    END
-                 WHEN n.type = 'end_request' THEN 
-                   CASE 
+                 WHEN n.type = 'end_request' THEN
+                   CASE
                      WHEN p.end_requested_by = u_teacher.id THEN u_teacher.username
                      ELSE u_student.username
                    END
@@ -1299,6 +1299,12 @@ const queries = {
         paramIndex++;
       }
 
+      if (relatedId) {
+        query += ` AND n.related_id = $${paramIndex}`;
+        params.push(relatedId);
+        paramIndex++;
+      }
+
       query += ` ORDER BY n.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
       params.push(limit, offset);
 
@@ -1309,7 +1315,7 @@ const queries = {
     // 标记通知为已读
     markAsRead: async (notificationId) => {
       const result = await pool.query(
-        `UPDATE notifications SET is_read = TRUE, updated_at = NOW() 
+        `UPDATE notifications SET is_read = TRUE, status = 'processed', updated_at = NOW()
          WHERE id = $1 RETURNING *`,
         [notificationId]
       );

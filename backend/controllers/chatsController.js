@@ -192,8 +192,17 @@ const acceptPair = async (req, res) => {
             relatedId: pairId,
             status: 'pending'
         });
+        console.log('查找待处理的结对申请通知:', {
+            userId,
+            pairId,
+            found: notifications.length,
+            notifications: notifications.map(n => ({ id: n.id, type: n.type, status: n.status }))
+        });
         if (notifications.length > 0) {
-            await queries.notification.updateStatus(notifications[0].id, 'processed');
+            const updated = await queries.notification.updateStatus(notifications[0].id, 'processed');
+            console.log('通知状态已更新:', updated);
+        } else {
+            console.log('未找到待处理的通知');
         }
 
         res.json({
@@ -240,15 +249,24 @@ const acceptPair = async (req, res) => {
                 
                         // 更新结对状态为已拒绝（而不是删除）
                         await queries.pair.updateStatus(pairId, 'rejected');
-                
+
                         // 更新原申请通知的状态为已处理
                 const notifications = await queries.notification.getByUserId(userId, {
                     type: 'pair_application',
                     relatedId: pairId,
                     status: 'pending'
                 });
+                console.log('查找待处理的结对申请通知:', {
+                    userId,
+                    pairId,
+                    found: notifications.length,
+                    notifications: notifications.map(n => ({ id: n.id, type: n.type, status: n.status }))
+                });
                 if (notifications.length > 0) {
-                    await queries.notification.updateStatus(notifications[0].id, 'processed');
+                    const updated = await queries.notification.updateStatus(notifications[0].id, 'processed');
+                    console.log('通知状态已更新:', updated);
+                } else {
+                    console.log('未找到待处理的通知');
                 }
         
                 res.json({

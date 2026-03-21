@@ -420,16 +420,27 @@
   list-style: none;
   padding: 0;
   margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .topic-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 0;
-  color: #4B5563;
+  display: inline-block;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
   font-size: 14px;
-  border-bottom: 1px solid #E5E7EB;
+  font-weight: 500;
+  border-radius: 20px;
+  margin: 4px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.topic-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .topic-item:last-child {
@@ -788,6 +799,33 @@
   color: #374151;
 }
 
+.notification-refresh-btn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.notification-refresh-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.notification-refresh-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.notification-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .notification-list {
   max-height: 500px;
   overflow-y: auto;
@@ -912,22 +950,21 @@
 }
 
 .notification-btn-reject {
-  background: #F3F4F6;
-  color: #6B7280;
+  background: #F87171;
+  color: white;
 }
 
 .notification-btn-reject:hover {
-  background: #E5E7EB;
-  color: #374151;
+  background: #EF4444;
 }
 
 .notification-btn-accept {
-  background: #EF4444;
+  background: #34D399;
   color: white;
 }
 
 .notification-btn-accept:hover {
-  background: #DC2626;
+  background: #10B981;
 }
 
 /* 进入按钮 - 蓝绿色 */
