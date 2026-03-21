@@ -8,17 +8,17 @@ const loginUser = async (username, password, res) => {
   const user = await queries.findUserByUsername(username);
 
   if (!user) {
-    return res.status(400).send("用户名或密码错误");
+    return res.status(400).json({ message: "用户名或密码错误" });
   }
 
   // 验证密码
   bcrypt.compare(password, user.password, (err, result) => {
     if (err) {
-      return res.status(500).send("密码验证时发生错误");
+      return res.status(500).json({ message: "密码验证时发生错误" });
     }
 
     if (!result) {
-      return res.status(400).send("用户名或密码错误");
+      return res.status(400).json({ message: "用户名或密码错误" });
     }
 
     // 密码正确，返回成功消息或生成 token
