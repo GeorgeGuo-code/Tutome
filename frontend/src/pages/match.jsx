@@ -16,6 +16,9 @@ const Match = () => {
   const [userQuestions, setUserQuestions] = useState([]);
   const [showQuestions, setShowQuestions] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [targetPage, setTargetPage] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const hasSeenMatchTip = localStorage.getItem('hasSeenMatchTip');
@@ -204,6 +207,9 @@ const Match = () => {
   };
 
   const handleSelectQuestion = async (question) => {
+    if (isSubmitting) return; // 防止重复提交
+    
+    setIsSubmitting(true);
     setMessage(`正在向 ${selectedUser.username} 发送结对申请...`);
   
     try {
@@ -265,34 +271,18 @@ const Match = () => {
           });
         }
   
-        // 修改：显示等待提示并跳转到浏览页面
-        setMessage(
-          <div>
-            <div>✅ 已向 {selectedUser.username} 发起结对申请</div>
-            <div className="pair-info">申请 ID: {data.id}</div>
-            <div className="waiting-tip">请前往"个人中心"的"我的通知"查看对方是否同意</div>
-            <div style={{ marginTop: '10px' }}>
-              <button
-                className="go-to-personal-btn"
-                onClick={() => window.location.href = '/browse'}
-              >
-                返回浏览页面
-              </button>
-              <button
-                className="go-to-personal-btn"
-                onClick={() => window.location.href = '/personal'}
-              >
-                前往个人中心
-              </button>
-            </div>
-          </div>
-        );
+        // 清空message，显示成功弹窗
+        setMessage("");
+        setSuccessMessage(`✅ 已向 ${selectedUser.username} 发起结对申请\n\n请前往"个人中心"的"我的通知"查看对方是否同意`);
+        setTargetPage('personal'); // 用于"前往个人中心"按钮
       } else {
         setMessage(data.message || data.error || "申请失败");
       }
     } catch (error) {
       setMessage("服务器错误,请稍后重试");
       console.error("Error:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
   const handleBack = () => {
@@ -349,8 +339,9 @@ const Match = () => {
                           <button
                             className="select-btn"
                             onClick={() => handleSelectQuestion(question)}
+                            disabled={isSubmitting}
                           >
-                            选择
+                            {isSubmitting ? '申请中...' : '选择'}
                           </button>
                         </div>
                       </div>
@@ -406,6 +397,40 @@ const Match = () => {
 
           {message && <p className="message">{message}</p>}
         </div>
+
+        {/* 成功提示弹窗 */}
+        {successMessage && (
+          <div className="success-modal-mask" onClick={() => {}}>
+            <div className="success-modal">
+              <div className="success-modal-icon">✓</div>
+              <div className="success-modal-message">{successMessage}</div>
+              <div className="success-modal-actions">
+                <button
+                  className="success-modal-btn"
+                  onClick={() => {
+                    setSuccessMessage(null);
+                    if (targetPage) {
+                      window.location.href = '/' + targetPage;
+                      setTargetPage(null);
+                    }
+                  }}
+                >
+                  前往个人中心
+                </button>
+                <button
+                  className="success-modal-btn success-modal-btn-secondary"
+                  onClick={() => {
+                    setSuccessMessage(null);
+                    setTargetPage(null);
+                    window.location.href = '/browse';
+                  }}
+                >
+                  返回浏览界面
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -488,13 +513,47 @@ const Match = () => {
           </button>
         </form>
       </div>
-            <FeatureTipModal
+      <FeatureTipModal
         visible={showTipModal}
         title="匹配板块使用说明"
         features={matchFeatures}
         notes={matchNotes}
         onClose={handleCloseModal}
       />
+
+      {/* 成功提示弹窗 */}
+      {successMessage && (
+        <div className="success-modal-mask" onClick={() => {}}>
+          <div className="success-modal">
+            <div className="success-modal-icon">✓</div>
+            <div className="success-modal-message">{successMessage}</div>
+            <div className="success-modal-actions">
+              <button
+                className="success-modal-btn"
+                onClick={() => {
+                  setSuccessMessage(null);
+                  if (targetPage) {
+                    window.location.href = '/' + targetPage;
+                    setTargetPage(null);
+                  }
+                }}
+              >
+                前往个人中心
+              </button>
+              <button
+                className="success-modal-btn success-modal-btn-secondary"
+                onClick={() => {
+                  setSuccessMessage(null);
+                  setTargetPage(null);
+                  window.location.href = '/browse';
+                }}
+              >
+                返回浏览界面
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
