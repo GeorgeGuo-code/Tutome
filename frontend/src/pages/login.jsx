@@ -42,6 +42,14 @@ const Login = () => {
           setTimeout(() => {
             window.location.href = "/";
           }, 1000);
+        } else if (!isLogin) {
+          // 注册成功后1秒后自动跳转到登录界面
+          setTimeout(() => {
+            setIsLogin(true);
+            setMessage("");
+            setUsername("");
+            setPassword("");
+          }, 1000);
         }
       } else {
         // 尝试解析 JSON，如果失败则使用文本
