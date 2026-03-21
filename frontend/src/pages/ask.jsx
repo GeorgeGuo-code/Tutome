@@ -39,6 +39,8 @@ const Ask = () => {
   const [content, setContent] = useState("");
   const [role, setRole] = useState("student"); // 新增：提问者身份，默认为"学生"
   const [message, setMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [targetPage, setTargetPage] = useState(null);
 
   // 学科到标签 ID 的映射
   const subjectToTagId = {
@@ -103,20 +105,23 @@ const Ask = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage("发布成功!");
-        setTimeout(() => {
-          setTitle("");
-          setContent("");
-          setSubject("");
-          setDifficulty("");
-          setProgress("");
-          setMessage("");
-        }, 2000);
+        // 清空表单
+        setTitle("");
+        setContent("");
+        setSubject("");
+        setDifficulty("");
+        setProgress("");
+        setMessage("");
+        // 显示成功弹窗
+        setSuccessMessage("✅ 提问发布成功！");
+        setTargetPage("/browse");
       } else {
-        setMessage(data.message || "发布失败");
+        setSuccessMessage(data.message || "发布失败");
+        setTargetPage(null);
       }
     } catch (error) {
-      setMessage("服务器错误,请稍后重试");
+      setSuccessMessage("服务器错误，请稍后重试");
+      setTargetPage(null);
       console.error("Error:", error);
     }
   };
@@ -231,6 +236,39 @@ const Ask = () => {
         notes={askNotes}
         onClose={handleCloseModal}
       />
+
+      {/* 成功提示弹窗 */}
+      {successMessage && (
+        <div className="success-modal-mask" onClick={() => {}}>
+          <div className="success-modal">
+            <div className="success-modal-icon">✓</div>
+            <div className="success-modal-message">{successMessage}</div>
+            <div className="success-modal-actions">
+              <button
+                className="success-modal-btn"
+                onClick={() => {
+                  setSuccessMessage(null);
+                  if (targetPage) {
+                    window.location.href = targetPage;
+                    setTargetPage(null);
+                  }
+                }}
+              >
+                好的
+              </button>
+              <button
+                className="success-modal-btn success-modal-btn-secondary"
+                onClick={() => {
+                  setSuccessMessage(null);
+                  setTargetPage(null);
+                }}
+              >
+                返回
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
