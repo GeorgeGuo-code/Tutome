@@ -559,17 +559,31 @@ const HistorySection = ({ location }) => {
   useEffect(() => {
     const maxPagesToShow = 5;
 
-    console.log('Page update - currentPage:', currentPage, 'totalPages:', totalPages, 'prevTotalPages:', prevTotalPages, 'visiblePages:', visiblePages, 'isInitialized:', isInitialized);
+    // 计算实际显示的总页数（基于过滤后的数量）
+    const inProgressQuestions = history
+      .filter(item => item.pair_status === 'active' || item.pair_status === 'end_requested');
+    const unpairedQuestions = history
+      .filter(item => item.pair_status === null);
+    const completedQuestions = history
+      .filter(item => item.pair_status === 'completed');
+    const allQuestionsOrdered = [
+      ...inProgressQuestions,
+      ...unpairedQuestions,
+      ...completedQuestions
+    ];
+    const actualTotalPages = Math.ceil(allQuestionsOrdered.length / 4) || 1;
 
-    const totalPagesChanged = totalPages !== prevTotalPages;
+    console.log('Page update - currentPage:', currentPage, 'actualTotalPages:', actualTotalPages, 'prevTotalPages:', prevTotalPages, 'visiblePages:', visiblePages, 'isInitialized:', isInitialized, 'history.length:', history.length, 'allQuestionsOrdered.length:', allQuestionsOrdered.length);
+
+    const totalPagesChanged = actualTotalPages !== prevTotalPages;
     if (totalPagesChanged) {
-      console.log('Total pages changed from', prevTotalPages, 'to', totalPages, '- recalculating');
-      setPrevTotalPages(totalPages);
+      console.log('Total pages changed from', prevTotalPages, 'to', actualTotalPages, '- recalculating');
+      setPrevTotalPages(actualTotalPages);
     }
 
-    if (totalPages < maxPagesToShow) {
+    if (actualTotalPages < maxPagesToShow) {
       const allPages = [];
-      for (let i = 1; i <= totalPages; i++) {
+      for (let i = 1; i <= actualTotalPages; i++) {
         allPages.push(i);
       }
       console.log('Setting visible pages (total < 5):', allPages);
@@ -583,8 +597,8 @@ const HistorySection = ({ location }) => {
       if (shouldRecalculate) {
         startPage = Math.max(1, currentPage - 2);
         endPage = startPage + maxPagesToShow - 1;
-        if (endPage > totalPages) {
-          endPage = totalPages;
+        if (endPage > actualTotalPages) {
+          endPage = actualTotalPages;
           startPage = Math.max(1, endPage - maxPagesToShow + 1);
         }
         console.log('Recalculating visible pages (shouldRecalculate=true):', startPage, 'to', endPage);
@@ -592,14 +606,14 @@ const HistorySection = ({ location }) => {
         const lastVisiblePage = visiblePages[visiblePages.length - 1];
         const firstVisiblePage = visiblePages[0];
 
-        if (currentPage === lastVisiblePage && currentPage < totalPages) {
-          endPage = Math.min(totalPages, currentPage + 2);
+        if (currentPage === lastVisiblePage && currentPage < actualTotalPages) {
+          endPage = Math.min(actualTotalPages, currentPage + 2);
           startPage = Math.max(1, endPage - maxPagesToShow + 1);
           console.log('Moving window right:', startPage, 'to', endPage);
         }
         else if (currentPage === firstVisiblePage && currentPage > 1) {
           startPage = Math.max(1, currentPage - 2);
-          endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+          endPage = Math.min(actualTotalPages, startPage + maxPagesToShow - 1);
           console.log('Moving window left:', startPage, 'to', endPage);
         } else {
           startPage = firstVisiblePage;
@@ -616,7 +630,7 @@ const HistorySection = ({ location }) => {
       setVisiblePages(newVisiblePages);
       setIsInitialized(true);
     }
-  }, [currentPage, totalPages]);
+  }, [currentPage, history]);
 
   const fetchHistory = async () => {
     setLoading(true);
@@ -691,6 +705,9 @@ const HistorySection = ({ location }) => {
     ...unpairedQuestions,
     ...completedQuestions
   ];
+
+  // 计算实际显示的总页数（基于过滤后的数量）
+  const actualTotalPages = Math.ceil(allQuestionsOrdered.length / 4) || 1;
 
   // 前端分页：只显示当前页的数据
   const paginatedHistory = allQuestionsOrdered.slice(
@@ -793,8 +810,8 @@ const HistorySection = ({ location }) => {
         ))}
         <button
           className="page-btn"
-          onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage(Math.min(actualTotalPages, currentPage + 1))}
+          disabled={currentPage === actualTotalPages}
         >
           &gt;
         </button>

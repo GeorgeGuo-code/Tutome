@@ -16,7 +16,7 @@ const applyPair = async (req, res) => {
 
     try {
         // 检查发起方的结对数量
-        const MAX_PAIRS = 5;
+        const MAX_PAIRS = 10;
         const initiatorLimit = await queries.pair.checkUserPairLimit(userId, MAX_PAIRS);
         if (!initiatorLimit.canCreate) {
             return res.status(400).json({

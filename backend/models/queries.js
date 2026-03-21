@@ -477,15 +477,16 @@ async function getUserHistory(userId, page = 1, limit = 20) {
         const tagsResult = await pool.query(tagsQuery, [question.id]);
         question.tags = tagsResult.rows;
 
-        // 获取结对状态
+        // 获取结对状态（确保只返回当前用户参与的结对）
         const pairQuery = `
           SELECT p.status, p.ended_at
           FROM pairs p
           WHERE p.question_id = $1
+          AND (p.teacher_id = $2 OR p.student_id = $2)
           ORDER BY p.created_at DESC
           LIMIT 1
         `;
-        const pairResult = await pool.query(pairQuery, [question.id]);
+        const pairResult = await pool.query(pairQuery, [question.id, userId]);
         if (pairResult.rows.length > 0) {
           question.pair_status = pairResult.rows[0].status;
           question.pair_ended_at = pairResult.rows[0].ended_at;
