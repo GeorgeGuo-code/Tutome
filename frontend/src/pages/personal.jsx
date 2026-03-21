@@ -203,12 +203,14 @@ const ProfileEditModal = ({ visible, onClose, onSave, currentProfile }) => {
     setSaving(true);
     try {
       const data = {
-        nickname: nickname.trim() || null,
-        bio: bio.trim() || null,
+        nickname: nickname.trim() === '' ? null : nickname.trim(),
+        bio: bio.trim() === '' ? null : bio.trim(),
         interested_topic_ids: selectedInterestedTopics,
         proficient_topic_ids: selectedProficientTopics,
         difficulty_tag_ids: selectedDifficulties,
       };
+
+      console.log('提交的更新数据:', data);
 
       const result = await userService.updateMyProfile(data);
 

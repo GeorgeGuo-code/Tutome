@@ -853,12 +853,12 @@ const queries = {
         `INSERT INTO user_profiles (user_id, nickname, bio, avatar_url)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (user_id) DO UPDATE SET
-           nickname = COALESCE(EXCLUDED.nickname, user_profiles.nickname),
-           bio = COALESCE(EXCLUDED.bio, user_profiles.bio),
-           avatar_url = COALESCE(EXCLUDED.avatar_url, user_profiles.avatar_url),
+           nickname = EXCLUDED.nickname,
+           bio = EXCLUDED.bio,
+           avatar_url = EXCLUDED.avatar_url,
            updated_at = CURRENT_TIMESTAMP
          RETURNING id, user_id, nickname, bio, avatar_url, created_at, updated_at`,
-        [userId, nickname || null, bio || null, avatar_url || null]
+        [userId, nickname, bio, avatar_url]
       );
       return result.rows[0];
     },

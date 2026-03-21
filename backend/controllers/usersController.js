@@ -171,6 +171,18 @@ const updateMyProfile = async (req, res) => {
     const userId = req.user.userId;
     const { nickname, bio, avatar_url, interested_topic_ids, proficient_topic_ids, difficulty_tag_ids } = req.body;
 
+    console.log('收到更新资料请求:', {
+      userId,
+      nickname,
+      nicknameType: typeof nickname,
+      bio,
+      bioType: typeof bio,
+      avatar_url,
+      interested_topic_ids,
+      proficient_topic_ids,
+      difficulty_tag_ids
+    });
+
     const user = await queries.findUserById(userId);
     if (!user) {
       return res.status(404).json({ success: false, message: '用户不存在' });
@@ -179,20 +191,25 @@ const updateMyProfile = async (req, res) => {
     const profileUpdates = {};
     if (req.body.hasOwnProperty('nickname')) {
       profileUpdates.nickname = typeof nickname === 'string' && nickname.trim() ? nickname.trim() : null;
+      console.log('处理后的 nickname:', profileUpdates.nickname, '原始 nickname:', nickname, '类型:', typeof nickname);
     }
     if (req.body.hasOwnProperty('bio')) {
       profileUpdates.bio = bio === '' ? null : (bio != null ? String(bio) : null);
+      console.log('处理后的 bio:', profileUpdates.bio, '原始 bio:', bio, '类型:', typeof bio);
     }
     if (req.body.hasOwnProperty('avatar_url')) {
       profileUpdates.avatar_url = avatar_url === '' ? null : (avatar_url != null ? String(avatar_url) : null);
     }
     if (Object.keys(profileUpdates).length > 0) {
       const existing = await queries.user.getProfile(userId);
-      await queries.user.upsertProfile(userId, {
-        nickname: profileUpdates.nickname !== undefined ? profileUpdates.nickname : (existing && existing.nickname),
-        bio: profileUpdates.bio !== undefined ? profileUpdates.bio : (existing && existing.bio),
-        avatar_url: profileUpdates.avatar_url !== undefined ? profileUpdates.avatar_url : (existing && existing.avatar_url)
-      });
+      console.log('现有资料:', existing);
+      const updateData = {
+        nickname: profileUpdates.nickname !== undefined ? profileUpdates.nickname : existing?.nickname,
+        bio: profileUpdates.bio !== undefined ? profileUpdates.bio : existing?.bio,
+        avatar_url: profileUpdates.avatar_url !== undefined ? profileUpdates.avatar_url : existing?.avatar_url
+      };
+      console.log('准备更新的数据:', updateData);
+      await queries.user.upsertProfile(userId, updateData);
     }
 
     if (interested_topic_ids !== undefined) {
