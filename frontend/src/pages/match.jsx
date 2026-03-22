@@ -376,11 +376,11 @@ const Match = () => {
 
                   return (
                     <div key={user.id} className="user-card">
-                      <div className="online-indicator">
-                        <div className={`online-dot ${isOnline ? 'online' : 'offline'}`}></div>
-                      </div>
                       <div className="user-info">
-                        <h3 className="user-name">{user.username}</h3>
+                        <h3 className="user-name">
+                          {user.username}
+                          <span className={`online-dot ${isOnline ? 'online' : 'offline'}`}></span>
+                        </h3>
                       </div>
                       <button
                         className="select-btn"
