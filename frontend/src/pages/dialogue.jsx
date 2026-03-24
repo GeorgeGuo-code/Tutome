@@ -19,7 +19,9 @@ const Dialogue = () => {
   const [showTipModal, setShowTipModal] = useState(false); // 显示功能说明弹窗
   const currentUserId = parseInt(localStorage.getItem("userId")) || null;
   const messagesEndRef = useRef(null);
+  const messagesAreaRef = useRef(null);
   const pollingIntervalRef = useRef(null); // 轮询定时器引用
+  const previousMessagesLengthRef = useRef(0); // 跟踪之前的消息数量
   // 新增：首次进入对话页面触发弹窗
   useEffect(() => {
     // 专属 localStorage key，避免和其他板块冲突
@@ -107,7 +109,24 @@ const Dialogue = () => {
   }, [pairId]);
 
   useEffect(() => {
-    scrollToBottom();
+    // 首次加载时总是滚动到底部
+    if (previousMessagesLengthRef.current === 0 && messages.length > 0) {
+      scrollToBottom();
+    }
+    // 只有在消息数量增加时才考虑滚动
+    else if (messages.length > previousMessagesLengthRef.current) {
+      // 检查用户是否在底部
+      if (messagesAreaRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = messagesAreaRef.current;
+        const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+
+        if (isAtBottom) {
+          scrollToBottom();
+        }
+      }
+    }
+
+    previousMessagesLengthRef.current = messages.length;
   }, [messages]);
 
   const fetchMessages = async (isInitialLoad = false) => {
@@ -383,7 +402,7 @@ const Dialogue = () => {
         )}
       </div>
 
-      <div className="messages-area">
+      <div className="messages-area" ref={messagesAreaRef}>
         {loading ? (
           <div className="loading">加载中...</div>
         ) : error ? (
@@ -411,15 +430,15 @@ const Dialogue = () => {
                 msg.sender_id === currentUserId ? "right" : "left"
               }`}
             >
-              <span className="message-avatar">
-                {msg.sender_id === currentUserId ? "👤" : "👥"}
-              </span>
-              <div className="message-wrapper">
+              <div className="message-header">
+                <span className="message-avatar">
+                  {msg.sender_id === currentUserId ? "👤" : "👥"}
+                </span>
                 <span className="message-sender">
                   {msg.sender_nickname || (msg.sender_id === currentUserId ? "我" : "对方")}
                 </span>
-                <span className="message-content">{msg.content}</span>
               </div>
+              <span className="message-content">{msg.content}</span>
             </div>
           ))
         )}
