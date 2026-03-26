@@ -14,7 +14,7 @@
 .notification-popup-item {
   background: white;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px #00000026;
   padding: 16px 20px;
   animation: slideIn 0.3s ease-out;
 }
@@ -22,20 +22,20 @@
 /* 结对申请 - 浅蓝底 + 蓝边框 + 蓝字 */
 .notification-popup-item.notification-pair_application {
   background: #ecf5ff;
-  border: 1px solid #409eff;
-  border-left: 4px solid #409eff;
+  border: 1px solid #6b7280;
+  border-left: 4px solid #6b7280
 }
 
 /* 结对已接受 - 浅绿底 + 绿边框 + 绿字 */
 .notification-popup-item.notification-pair_accepted {
   background: #f0f9ff;
-  border: 1px solid #67c23a;
-  border-left: 4px solid #67c23a;
+  border: 1px solid #6b7280;
+  border-left: 4px solid #6b7280
 }
 
 /* 结束申请 - 红色左边框 */
 .notification-popup-item.notification-end_request {
-  border-left: 4px solid #f56c6c;
+  border-left: 4px solid #1f2937;
 }
 
 .notification-popup-item.removing {

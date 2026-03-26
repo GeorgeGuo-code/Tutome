@@ -264,9 +264,9 @@
 .end-dialogue-btn {
   margin-left: auto;
   padding: 8px 16px;
-  border: 1px solid #EF4444;
-  background: white;
-  color: #EF4444;
+  border: 1px solid #64748b;
+  background: #fff;
+  color: #64748b;
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
@@ -277,10 +277,9 @@
 
 .end-dialogue-btn:hover {
   background: #FEF2F2;
-  border-color: #DC2626;
-  color: #DC2626;
+  border-color: #e2e8f0;
+  color: #e2e8f0;
 }
-
 .end-dialogue-btn:active {
   transform: scale(0.98);
 }
@@ -370,12 +369,12 @@
 }
 
 .btn-confirm {
-  background: #EF4444;
-  color: white;
+    background: #64748b;
+    color: #fff
 }
 
 .btn-confirm:hover {
-  background: #DC2626;
+    background: #1f2937
 }
 
 .btn-reject {
