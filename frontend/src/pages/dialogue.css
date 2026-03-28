@@ -142,6 +142,7 @@
   color: #333;
   word-wrap: break-word;
   border: 1px solid #E5E7EB;
+  white-space: pre-wrap;
 }
 
 .message-bubble.left .message-content {
