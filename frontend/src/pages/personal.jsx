@@ -4,9 +4,10 @@ import { Link, useLocation } from "react-router-dom";
 import "./personal.css";
 import FeatureTipModal from '../components/FeatureTipModal';
 import { userService } from '../services/apiService';
+import { HistoryIcon, NotificationIcon, HomeIcon } from '../components/icons';
 
 // 自定义下拉多选组件
-const MultiSelectDropdown = ({ options, value, onChange, placeholder = "请选择" }) => {
+function MultiSelectDropdown({ options, value, onChange, placeholder = "请选择" }) {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const dropdownRef = useRef(null);
@@ -28,7 +29,7 @@ const MultiSelectDropdown = ({ options, value, onChange, placeholder = "请选�
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
-          optionsRef.current && !optionsRef.current.contains(event.target)) {
+        optionsRef.current && !optionsRef.current.contains(event.target)) {
         setIsOpen(false);
       }
     };
@@ -140,7 +141,7 @@ const MultiSelectDropdown = ({ options, value, onChange, placeholder = "请选�
       )}
     </div>
   );
-};
+}
 
 // 用户资料编辑弹窗组件
 const ProfileEditModal = ({ visible, onClose, onSave, currentProfile }) => {
@@ -1290,7 +1291,7 @@ const Personal = () => {
   ];
 
   return (
-    <div className="personal-container">
+    <><div className="personal-container">
       <div className="personal-header">
         <span className="breadcrumb-text">个人中心</span>
       </div>
@@ -1303,40 +1304,42 @@ const Personal = () => {
               className={`sidebar-item ${activeTab === 'profile' ? 'active' : ''}`}
               onClick={() => setActiveTab('profile')}
             >
-              <span className="sidebar-text">个人主页</span>
-            </button>
-            <button
-              className={`sidebar-item ${activeTab === 'history' ? 'active' : ''}`}
-              onClick={() => setActiveTab('history')}
-            >
-              <span className="sidebar-text">我的足迹</span>
-            </button>
-            <button
-              className={`sidebar-item ${activeTab === 'notifications' ? 'active' : ''}`}
-              onClick={() => setActiveTab('notifications')}
-            >
-              <span className="sidebar-text">我的通知</span>
-            </button>
-          </nav>
-        </div>
-
-        {/* 右侧内容区 */}
-        <div className="personal-content">
-          {activeTab === 'profile' && <ProfileSection key={currentToken} />}
-          {activeTab === 'history' && <HistorySection location={location} />}
-          {activeTab === 'notifications' && <NotificationsSection />}
-        </div>
+            <HomeIcon />
+            <span className="sidebar-text">个人主页</span>
+          </button>
+          <button
+            className={`sidebar-item ${activeTab === 'history' ? 'active' : ''}`}
+            onClick={() => setActiveTab('history')}
+          >
+            <HistoryIcon />
+            <span className="sidebar-text">我的足迹</span>
+          </button>
+          <button
+            className={`sidebar-item ${activeTab === 'notifications' ? 'active' : ''}`}
+            onClick={() => setActiveTab('notifications')}
+          >
+            <NotificationIcon />
+            <span className="sidebar-text">我的通知</span>
+          </button>
+        </nav>
       </div>
 
-      <FeatureTipModal
+      {/* 右侧内容区 */}
+      <div className="personal-content">
+        {activeTab === 'profile' && <ProfileSection key={currentToken} />}
+        {activeTab === 'history' && <HistorySection location={location} />}
+        {activeTab === 'notifications' && <NotificationsSection />}
+      </div>
+    </div><FeatureTipModal
         visible={showTipModal}
         title="个人中心使用说明"
         features={personalFeatures}
         notes={personalNotes}
-        onClose={handleCloseModal}
+        onClose={handleCloseModal} 
       />
     </div>
+  </>
   );
-};
+}
 
 export default Personal;
