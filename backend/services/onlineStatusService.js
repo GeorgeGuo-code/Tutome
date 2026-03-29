@@ -1,5 +1,8 @@
 const queries = require('../models/queries');
 const jwt = require('jsonwebtoken');
+const RoundDetectorClass = require('./roundDetector');
+const RoundDetector = new RoundDetectorClass();
+const RoundReviewService = require('./roundReviewService');
 
 // 在线用户集合：Map<userId, { socketId, lastHeartbeat }>
 const onlineUsers = new Map();
@@ -96,22 +99,72 @@ module.exports = function(io) {
         }
       });
 
-      socket.on('disconnect', () => {
-        console.log(`用户 ${userId} 断开连接，Socket ID: ${socket.id}`);
+      // 监听新消息事件（用于轮次即时审查）
+      socket.on('new-message', async (data) => {
+        try {
+          // 1. 获取最新消息和结对信息
+          const lastMessage = await queries.message.getLastByPairId(data.pairId);
+          if (!lastMessage) return;
 
-        // 从在线用户集合中移除
-        onlineUsers.delete(userId);
+          const pair = await queries.pair.getById(data.pairId);
+          if (!pair) return;
 
-        // 清除心跳定时器
-        clearInterval(heartbeatInterval);
+          console.log(`[轮次检测] 收到消息 ${lastMessage.id}，发送者: ${lastMessage.sender_id}`);
 
-        // 广播用户下线
-        io.emit('user-offline', { userId, timestamp: new Date() });
+          // 2. 只在学生提问时才触发上一轮的审查
+          if (RoundDetector.isRoundStart(lastMessage, pair)) {
+            console.log(`[轮次检测] 学生提问，检查上一轮是否完成`);
+
+            // 3. 获取所有消息和轮次
+            const messages = await queries.message.getByPairId(data.pairId);
+            if (!messages || messages.length < 3) return; // 至少需要2轮对话
+
+            const rounds = RoundDetector.detectRounds(messages, pair);
+            if (rounds.length < 2) return; // 至少有2轮才审查上一轮
+
+            // 获取上一轮（倒数第二轮，因为最后一轮刚开始）
+            const prevRound = rounds[rounds.length - 2];
+
+            // 4. 异步审查上一轮（不阻塞聊天）
+            if (prevRound && prevRound.complete && prevRound.id) {
+              console.log(`[轮次审查] 开始审查轮次 ${prevRound.id}（异步）`);
+
+              RoundReviewService.reviewRound(prevRound, pair)
+                .then(result => {
+                  console.log(`[轮次审查] 轮次 ${prevRound.id} 审查完成，发现错误: ${result.judgment?.hasError}`);
+
+                  // 5. 通过 Socket.IO 推送审查结果给学生
+                  io.to(`user:${pair.student_id}`).emit('round-review', {
+                    roundId: prevRound.id,
+                    judgment: result.judgment
+                  });
+
+                  // 6. 如果发现错误，通知老师
+                  if (result.judgment && result.judgment.hasError) {
+                    console.log(`[轮次审查] 发现 ${result.judgment.errorDetails.length} 个错误，通知老师`);
+                    io.to(`user:${pair.teacher_id}`).emit('student-error-detected', {
+                      roundId: prevRound.id,
+                      errorCount: result.judgment.errorDetails.length,
+                      summary: result.judgment.summary
+                    });
+                  }
+                })
+                .catch(error => {
+                  console.error(`[轮次审查] 轮次 ${prevRound.id} 审查失败:`, error);
+
+                  // 通知学生审查失败
+                  io.to(`user:${pair.student_id}`).emit('round-review-error', {
+                    roundId: prevRound.id,
+                    error: error.message
+                  });
+                });
+            }
+          }
+        } catch (error) {
+          console.error('[轮次检测] 处理失败:', error);
+        }
       });
 
-      socket.on('error', (error) => {
-        console.error(`Socket ${socket.id} 错误:`, error);
-      });
 
     } catch (error) {
       console.error(`处理用户 ${userId} 连接失败:`, error);
@@ -119,7 +172,9 @@ module.exports = function(io) {
     }
   });
 
-  // 定期清理过期用户（每分钟）
+  /**
+   * 定期清理过期用户（每分钟）
+   */
   setInterval(() => {
     const now = Date.now();
     for (const [userId, user] of onlineUsers.entries()) {
@@ -149,9 +204,6 @@ function isUserOnline(userId) {
   return onlineUsers.has(userId);
 }
 
-module.exports.getOnlineUsers = getOnlineUsers;
-module.exports.isUserOnline = isUserOnline;
-
 /**
  * 向特定用户推送通知
  * @param {number} userId - 接收通知的用户 ID
@@ -168,4 +220,6 @@ function sendNotificationToUser(userId, notification) {
   console.log(`已向用户 ${userId} 推送通知:`, notification.title);
 }
 
+module.exports.getOnlineUsers = getOnlineUsers;
+module.exports.isUserOnline = isUserOnline;
 module.exports.sendNotificationToUser = sendNotificationToUser;

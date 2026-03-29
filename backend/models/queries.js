@@ -1234,6 +1234,20 @@ const queries = {
         [pairId]
       );
       return result.rows;
+    },
+
+    // 获取结对最后一条消息
+    getLastByPairId: async (pairId) => {
+      const result = await pool.query(
+        `SELECT m.*, u.username as sender_nickname
+         FROM messages m
+         JOIN users u ON m.sender_id = u.id
+         WHERE m.pair_id = $1
+         ORDER BY m.created_at DESC
+         LIMIT 1`,
+        [pairId]
+      );
+      return result.rows[0];
     }
   },
 
