@@ -161,7 +161,7 @@
 
 .select-btn {
   padding: 8px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #a3bff4 0%, #b1ceef 100%);
   color: white;
   font-size: 14px;
   font-weight: 500;
@@ -185,7 +185,7 @@
 .enter-dialogue-btn {
   margin-top: 16px;
   padding: 12px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #a3bff4 0%, #b1ceef 100%);
   color: white;
   font-size: 14px;
   font-weight: 600;
@@ -252,7 +252,7 @@
 }
 
 .expand-icon:hover {
-  color: #2563EB;
+  color: #a6bdf0;
   background-color: #F8FAFC;
   border-radius: 4px;
 }
@@ -460,7 +460,7 @@
 
 .success-modal-btn {
   padding: 12px 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #a3bff4 0%, #b1ceef 100%);
   color: white;
   border: none;
   border-radius: 8px;

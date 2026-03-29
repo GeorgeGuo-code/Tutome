@@ -5,7 +5,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.5);
+  background: #00000080;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -18,7 +18,7 @@
   max-width: 90vw;
   background: #fff;
   border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 12px #0000001a;
   overflow: hidden;
 }
 
@@ -77,7 +77,7 @@
 }
 
 .note-section {
-  color: #f56c6c;
+  color: #6b7280;
 }
 
 /* 弹窗底部 */
@@ -98,5 +98,5 @@
 }
 
 .confirm-btn:hover {
-  background: #66b1ff;
+  background: #6b7280;
 }
