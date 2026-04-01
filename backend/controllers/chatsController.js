@@ -1,5 +1,6 @@
 const queries = require('../models/queries');
 const onlineStatusService = require('../services/onlineStatusService');
+const asyncRoundReviewer = require('../services/asyncRoundReviewer');
 
 // 发送结对申请
 const applyPair = async (req, res) => {
@@ -385,20 +386,33 @@ const sendMessage = async (req, res) => {
 
     try {
         const pair = await queries.pair.getById(pairId);
-        
+
         if (!pair) {
             return res.status(404).json({ error: '结对不存在' });
         }
-        
+
         if (pair.status !== 'active') {
             return res.status(400).json({ error: '结对未激活或已结束' });
         }
-        
+
         if (pair.teacher_id !== senderId && pair.student_id !== senderId) {
             return res.status(403).json({ error: '无权发送消息' });
         }
 
         const newMessage = await queries.message.create(pairId, senderId, content);
+
+        // 判断是否需要触发轮次审查（学生发送且上一条是老师）
+        const messages = await queries.message.getByPairId(pairId);
+        const lastMessage = messages.length > 1 ? messages[messages.length - 2] : null;
+        const shouldTriggerReview =
+            senderId !== pair.teacher_id && // 发送者是学生
+            lastMessage && lastMessage.sender_id === pair.teacher_id; // 上一条是老师
+
+        if (shouldTriggerReview) {
+            // 异步触发轮次审查（不阻塞响应）
+            asyncRoundReviewer.triggerRoundReview(pairId, senderId);
+        }
+
         res.status(201).json(newMessage);
     } catch (err) {
         console.error('发送消息失败:', err);
@@ -428,6 +442,10 @@ const endTeaching = async (req, res) => {
         }
 
         const endedPair = await queries.pair.end(pairId);
+
+        // 触发对话总总结（异步，不阻塞响应）
+        asyncRoundReviewer.generateConversationSummaryAsync(pairId);
+
         res.json(endedPair);
     } catch (err) {
         console.error('结束教学失败:', err);
@@ -547,7 +565,7 @@ const acceptEndRequest = async (req, res) => {
             });
         }
 
-        const updatedPair = await queries.pair.acceptEndRequest(pairId);
+               const updatedPair = await queries.pair.acceptEndRequest(pairId);
 
         // 创建同意结束通知
         const requesterId = pair.end_requested_by;

@@ -1216,11 +1216,20 @@ const queries = {
     // 创建消息
     create: async (pairId, senderId, content) => {
       const result = await pool.query(
-        `INSERT INTO messages (pair_id, sender_id, content) 
+        `INSERT INTO messages (pair_id, sender_id, content)
          VALUES ($1, $2, $3) RETURNING *`,
         [pairId, senderId, content]
       );
       return result.rows[0];
+    },
+
+    // 根据 ID 获取消息
+    getById: async (messageId) => {
+      const result = await pool.query(
+        'SELECT * FROM messages WHERE id = $1',
+        [messageId]
+      );
+      return result.rows[0] || null;
     },
 
     // 获取结对的聊天记录
@@ -1372,11 +1381,243 @@ const queries = {
     // 获取未读通知数量
     getUnreadCount: async (userId) => {
       const result = await pool.query(
-        `SELECT COUNT(*) as count FROM notifications 
+        `SELECT COUNT(*) as count FROM notifications
          WHERE user_id = $1 AND status = 'pending'`,
         [userId]
       );
       return parseInt(result.rows[0].count);
+    }
+  },
+
+  // 轮次审查结果相关查询
+  roundReviews: {
+    // 创建或更新轮次审查结果
+    createOrUpdate: async (pairId, roundId, studentMessageId, teacherMessageId, judgment, reviewedBy) => {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        // 准备 error_details 和 key_points JSONB
+        const errorDetails = JSON.stringify(judgment.errorDetails || []);
+        const keyPoints = JSON.stringify(judgment.keyPoints || []);
+
+        // 检查是否已存在
+        const checkResult = await client.query(
+          'SELECT id FROM round_reviews WHERE round_id = $1',
+          [roundId]
+        );
+
+        if (checkResult.rows.length > 0) {
+          // 更新现有记录
+          const updateResult = await client.query(
+            `UPDATE round_reviews
+             SET has_error = $1,
+                 error_details = $2::jsonb,
+                 overall_confidence = $3,
+                 summary = $4,
+                 raw_response = $5,
+                 reviewed_by = $6,
+                 reviewed_at = NOW(),
+                 key_points = $7::jsonb
+             WHERE round_id = $8
+             RETURNING *`,
+            [
+              judgment.hasError || false,
+              errorDetails,
+              judgment.overallConfidence || 0,
+              judgment.summary || null,
+              JSON.stringify(judgment),
+              reviewedBy,
+              keyPoints,
+              roundId
+            ]
+          );
+          await client.query('COMMIT');
+          return updateResult.rows[0];
+        } else {
+          // 插入新记录
+          const insertResult = await client.query(
+            `INSERT INTO round_reviews (
+               pair_id, round_id, round_student_message_id, round_teacher_message_id,
+               has_error, error_details, overall_confidence, summary, raw_response, reviewed_by, key_points
+             ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, $11::jsonb)
+             RETURNING *`,
+            [
+              pairId,
+              roundId,
+              studentMessageId || null,
+              teacherMessageId || null,
+              judgment.hasError || false,
+              errorDetails,
+              judgment.overallConfidence || 0,
+              judgment.summary || null,
+              JSON.stringify(judgment),
+              reviewedBy,
+              keyPoints
+            ]
+          );
+          await client.query('COMMIT');
+          return insertResult.rows[0];
+        }
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+
+    // 获取结对的所有轮次审查结果
+    getByPairId: async (pairId) => {
+      console.log(`[roundReviews.getByPairId] 开始查询 pairId=${pairId}`);
+      const result = await pool.query(
+        `SELECT * FROM round_reviews
+         WHERE pair_id = $1
+         ORDER BY reviewed_at ASC`,
+        [pairId]
+      );
+      console.log(`[roundReviews.getByPairId] 查询结果: ${result.rows.length} 条记录`);
+      return result.rows;
+    },
+
+    // 获取指定轮次的审查结果
+    getByRoundId: async (roundId) => {
+      const result = await pool.query(
+        'SELECT * FROM round_reviews WHERE round_id = $1',
+        [roundId]
+      );
+      return result.rows[0] || null;
+    },
+
+    // 获取有错误的轮次
+    getWithErrorByPairId: async (pairId) => {
+      const result = await pool.query(
+        `SELECT * FROM round_reviews
+         WHERE pair_id = $1 AND has_error = true
+         ORDER BY reviewed_at ASC`,
+        [pairId]
+      );
+      return result.rows;
+    },
+
+    // 删除结对的所有审查结果
+    deleteByPairId: async (pairId) => {
+      const result = await pool.query(
+        'DELETE FROM round_reviews WHERE pair_id = $1 RETURNING *',
+        [pairId]
+      );
+      return result.rows;
+    },
+
+    // 获取指定审查结果
+    getById: async (reviewId) => {
+      const result = await pool.query(
+        'SELECT * FROM round_reviews WHERE id = $1',
+        [reviewId]
+      );
+      return result.rows[0] || null;
+    }
+  },
+
+  // 对话总结相关查询
+  conversationSummaries: {
+    // 保存或更新总结结果
+    saveOrUpdate: async (pairId, summaryData, roundId = null) => {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        // 检查是否已存在（同时考虑 pair_id 和 round_id）
+        const checkResult = await client.query(
+          'SELECT id FROM conversation_summaries WHERE pair_id = $1 AND round_id IS NOT DISTINCT FROM $2',
+          [pairId, roundId]
+        );
+
+        if (checkResult.rows.length > 0) {
+          // 更新现有记录
+          const updateResult = await client.query(
+            `UPDATE conversation_summaries
+             SET summary_text = $1,
+                 key_learnings = $2::jsonb,
+                 problem_count = $3,
+                 problem_summary = $4::jsonb,
+                 related_links = $5::jsonb,
+                 overall_rating = $6,
+                 statistics = $7::jsonb,
+                 round_id = $8,
+                 generated_at = NOW()
+             WHERE pair_id = $9 AND round_id IS NOT DISTINCT FROM $8
+             RETURNING *`,
+            [
+              summaryData.summary_text || null,
+              JSON.stringify(summaryData.key_learnings || []),
+              summaryData.problem_count || 0,
+              JSON.stringify(summaryData.problem_summary || []),
+              JSON.stringify(summaryData.related_links || []),
+              summaryData.overall_rating || null,
+              JSON.stringify(summaryData.statistics || {}),
+              roundId,
+              pairId
+            ]
+          );
+          await client.query('COMMIT');
+          return updateResult.rows[0];
+        } else {
+          // 插入新记录
+          const insertResult = await client.query(
+            `INSERT INTO conversation_summaries (
+               pair_id, summary_text, key_learnings, problem_count, problem_summary,
+               related_links, overall_rating, statistics, round_id
+             ) VALUES ($1, $2, $3::jsonb, $4, $5::jsonb, $6::jsonb, $7, $8::jsonb, $9)
+             RETURNING *`,
+            [
+              pairId,
+              summaryData.summary_text || null,
+              JSON.stringify(summaryData.key_learnings || []),
+              summaryData.problem_count || 0,
+              JSON.stringify(summaryData.problem_summary || []),
+              JSON.stringify(summaryData.related_links || []),
+              summaryData.overall_rating || null,
+              JSON.stringify(summaryData.statistics || {}),
+              roundId
+            ]
+          );
+          await client.query('COMMIT');
+          return insertResult.rows[0];
+        }
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+
+    // 获取结对的总结结果
+    getByPairId: async (pairId) => {
+      const result = await pool.query(
+        'SELECT * FROM conversation_summaries WHERE pair_id = $1',
+        [pairId]
+      );
+      return result.rows;
+    },
+
+    // 获取总结结果数组
+    getAllByPairId: async (pairId) => {
+      const result = await pool.query(
+        'SELECT * FROM conversation_summaries WHERE pair_id = $1 ORDER BY generated_at ASC',
+        [pairId]
+      );
+      return result.rows;
+    },
+
+    // 删除结对的总结结果
+    deleteByPairId: async (pairId) => {
+      const result = await pool.query(
+        'DELETE FROM conversation_summaries WHERE pair_id = $1 RETURNING *',
+        [pairId]
+      );
+      return result.rows[0] || null;
     }
   }
 };
@@ -1400,5 +1641,7 @@ module.exports = {
   getTagsByCategory,
   searchByMultipleTags,
   getQuestionById,
-  deleteQuestion
+  deleteQuestion,
+  roundReviews: queries.roundReviews,
+  conversationSummaries: queries.conversationSummaries
 };

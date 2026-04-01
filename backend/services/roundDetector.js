@@ -13,32 +13,60 @@ class RoundDetector {
     const rounds = [];
     let currentRound = null;
 
-    for (const msg of messages) {
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
       const isTeacher = msg.sender_id === pair.teacher_id;
 
       if (!isTeacher) {
-        // 学生提问：如果上一轮存在，先结束上一轮
-        if (currentRound) {
-          // 只有当学生开始新提问时，上一轮才真正完成
+        // 学生发送消息：检查上一条消息是否来自老师
+        let lastMessage = null;
+        if (i > 0) {
+          lastMessage = messages[i - 1];
+        }
+
+        const lastIsTeacher = lastMessage && lastMessage.sender_id === pair.teacher_id;
+
+        if (lastIsTeacher && currentRound) {
+          // 上一条是老师，结束上一轮，开始新轮次
           currentRound.complete = true;
           currentRound.hasTeacherReply = !!currentRound.teacherReply;
           rounds.push(currentRound);
-        }
 
-        // 开始新一轮
-        currentRound = {
-          id: `round_${msg.id}`,
-          studentQuestion: msg,
-          studentMessageId: msg.id,
-          teacherReplies: [], // 支持多条老师回复
-          teacherReply: null, // 保留兼容性，使用第一条回复
-          teacherMessageId: null, // 保留兼容性
-          timestamp: msg.created_at,
-          complete: false, // 新轮次默认未完成
-          hasTeacherReply: false
-        };
+          // 开始新一轮
+          currentRound = {
+            id: `round_${msg.id}`,
+            studentQuestion: msg,
+            studentMessages: [msg], // 支持多条学生追问
+            studentMessageId: msg.id,
+            teacherReplies: [],
+            teacherReply: null,
+            teacherMessageId: null,
+            timestamp: msg.created_at,
+            complete: false,
+            hasTeacherReply: false,
+            roundTriggered: false // 标记是否已触发审查
+          };
+        } else if (currentRound) {
+          // 上一条是学生（或第一条），追加到当前轮次（追问）
+          currentRound.studentMessages.push(msg);
+        } else {
+          // 第一条消息（学生），开始新轮次
+          currentRound = {
+            id: `round_${msg.id}`,
+            studentQuestion: msg,
+            studentMessages: [msg],
+            studentMessageId: msg.id,
+            teacherReplies: [],
+            teacherReply: null,
+            teacherMessageId: null,
+            timestamp: msg.created_at,
+            complete: false,
+            hasTeacherReply: false,
+            roundTriggered: false
+          };
+        }
       } else if (isTeacher && currentRound) {
-        // 老师回答：追加到当前轮次（不结束轮次，支持老师连续回答）
+        // 老师回答：追加到当前轮次
         currentRound.teacherReplies.push(msg);
 
         // 保留兼容性：如果没有设置过 teacherReply，则设置
@@ -46,15 +74,11 @@ class RoundDetector {
           currentRound.teacherReply = msg;
           currentRound.teacherMessageId = msg.id;
         }
-
-        // 注意：这里不设置 complete，只有学生开始新提问时才设置
       }
     }
 
     // 处理最后一轮（如果有）
     if (currentRound) {
-      // 最后一轮的状态保持不变（不会在内部遍历时设置）
-      // 但需要设置 teacherReply 相关标志
       currentRound.complete = !!currentRound.teacherReply;
       currentRound.hasTeacherReply = !!currentRound.teacherReply;
       rounds.push(currentRound);

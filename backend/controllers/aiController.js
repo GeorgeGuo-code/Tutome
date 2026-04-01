@@ -4,6 +4,7 @@ const DomainDetector = require('../services/domainDetector');
 const RoundDetectorClass = require('../services/roundDetector');
 const RoundDetector = new RoundDetectorClass();
 const RoundReviewService = require('../services/roundReviewService');
+const asyncRoundReviewer = require('../services/asyncRoundReviewer');
 require('dotenv').config({ path: './config/.env' });
 
 // 初始化 OpenAI 客户端
@@ -593,10 +594,233 @@ const judgeConversation = async (req, res) => {
   }
 };
 
-// ==================== 预留：对话总结功能 ====================
+// ==================== 对话总结功能 ====================
+
+// 总结系统提示词
+const SUMMARY_SYSTEM_PROMPT = `你是一个教学教学助手的助手，负责总结一对师生的教学对话。
+
+## 你的核心职责
+1. **理解教学场景**：分析对话轮次中的互动质量
+2. **鼓励与引导**：识别教学中的闪光点和良好实践
+3. **指出改进方向**：基于审查结果，提供建设性的改进建议
+4. **生成学习要点**：提炼关键知识点和可取之处
+
+## 输入格式
+你会收到以下 JSON 格式的轮次审查数据：
+{
+  "rounds": [
+    {
+      "roundId": "轮次ID",
+      "hasError": "是否有错误",
+      "errorDetails": [
+        {
+          "speaker": "teacher" | "student",
+          "errorType": "错误类型",
+          "content": "问题内容",
+          "correction": "正确实现"
+        }
+      ]
+    }
+  ],
+  "pairInfo": {
+    "pairId": "结对ID",
+    "totalRounds": "总轮次数"
+  }
+}
+
+## 输出格式（严格 JSON）
+{
+  "summary": "教学场景整体描述（3-5句话）",
+  "highlights": [
+    {
+      "category": "互动质量|知识讲解|问题引导|学习氛围",
+      "description": "具体描述"
+    }
+  ],
+  "improvements": [
+    {
+      "type": "教学技巧|知识准确|沟通方式|时间管理",
+      "suggestion": "具体建议"
+    }
+  ],
+  "keyLearnings": ["核心知识点1", "核心知识点2"],
+  "overallRating": "excellent|good|fair|needs_improvement"
+}
+
+## 总结语气和重点
+- 使用鼓励、积极的语气
+- 优先指出做得好的地方
+- 对于问题，提供建设性而非批评性的建议
+- 总结要简洁明了，适合教学场景
+`;
+
+/**
+ * 构建总结上下文
+ * @param {Array} roundReviews - 轮次审查结果
+ * @param {number} pairId - 结对ID
+ * @returns {Array} OpenAI 消息上下文
+ */
+function buildSummaryContext(roundReviews, pairId) {
+  const context = [];
+
+  // 1. 添加系统提示词
+  context.push({ role: 'system', content: SUMMARY_SYSTEM_PROMPT });
+
+  // 2. 添加统计信息
+  const stats = {
+    totalRounds: roundReviews.length,
+    roundsWithError: roundReviews.filter(r => r.has_error).length,
+    errorCount: roundReviews.reduce((sum, r) =>
+      sum + (r.error_details && Array.isArray(r.error_details) ? r.error_details.length : 0), 0),
+    averageConfidence: roundReviews.length > 0
+      ? roundReviews.reduce((sum, r) => sum + (parseFloat(r.overall_confidence) || 0), 0) / roundReviews.length
+      : 0
+  };
+
+  context.push({
+    role: 'system',
+    content: `对话统计：共${stats.totalRounds}轮，${stats.roundsWithError}轮发现错误，总共${stats.errorCount}个错误，平均置信度${(stats.averageConfidence * 100).toFixed(1)}%`
+  });
+
+  // 3. 构建轮次数据输入
+  const roundData = {
+    rounds: roundReviews.map((review) => {
+      const errorDetails = review.error_details || [];
+      return {
+        roundId: review.round_id,
+        hasError: review.has_error,
+        errorDetails: errorDetails.map(err => ({
+          speaker: err.speaker || 'teacher',
+          errorType: err.errorType || err.error_type || '未知',
+          content: err.content || '',
+          correction: err.correction || ''
+        }))
+      };
+    }),
+    pairInfo: {
+      pairId: pairId,
+      totalRounds: stats.totalRounds,
+      roundsWithError: stats.roundsWithError,
+      errorCount: stats.errorCount
+    }
+  };
+
+  context.push({
+    role: 'user',
+    content: `请基于以下轮次审查数据生成教学总结：\n\n${JSON.stringify(roundData, null, 2)}`
+  });
+
+  return context;
+}
+
+/**
+ * 调用 AI 生成总结
+ * @param {Array} context - 消息上下文
+ * @returns {Object} 总结结果
+ */
+async function callAIForSummary(context) {
+  const model = process.env.AI_MODEL || 'deepseek-chat';
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: model,
+      messages: context,
+      temperature: 0.5,
+      max_tokens: 1500
+    });
+
+    const content = response.choices[0].message.content;
+
+    // 尝试解析 JSON 响应
+    try {
+      let jsonContent = content.trim();
+
+      // 移除可能的 markdown 代码块标记
+      if (jsonContent.startsWith('```json')) {
+        jsonContent = jsonContent.slice(7);
+      } else if (jsonContent.startsWith('```')) {
+        jsonContent = jsonContent.slice(3);
+      }
+      if (jsonContent.endsWith('```')) {
+        jsonContent = jsonContent.slice(0, -3);
+      }
+
+      const parsed = JSON.parse(jsonContent.trim());
+      return {
+        success: true,
+        data: parsed
+      };
+    } catch (parseError) {
+      console.error('[总结] AI 响应解析失败:', parseError);
+      return {
+        success: false,
+        error: 'AI 响应解析失败',
+        rawResponse: content
+      };
+    }
+  } catch (error) {
+    console.error('[总结] AI 调用失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 对同一结对的所有轮次对话进行总结（使用新的基于完整对话的总结方法）
+ * POST /api/ai/summary
+ * 请求体: { pairId: number }
+ */
 const summarizeConversation = async (req, res) => {
-  // TODO: 实现对话总结功能
-  res.status(501).json({ error: '功能暂未实现' });
+  try {
+    const { pairId } = req.body;
+    const userId = req.user?.userId;
+
+    // 1. 参数验证
+    if (!pairId) {
+      return res.status(400).json({ error: '缺少 pairId 参数' });
+    }
+
+    // 2. 获取结对信息
+    const pair = await queries.pair.getById(pairId);
+    if (!pair) {
+      return res.status(404).json({ error: '结对不存在' });
+    }
+
+    // 3. 权限检查
+    if (userId && pair.teacher_id !== userId && pair.student_id !== userId) {
+      return res.status(403).json({ error: '无权总结此对话' });
+    }
+
+    // 4. 调用新的异步总结方法（基于完整对话和轮次关键点）
+    console.log(`[总结] 使用新的滑动窗口总结方法总结结对 ${pairId}`);
+    const result = await asyncRoundReviewer.generateConversationSummaryAsync(pairId);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: result.error || result.reason || '总结生成失败'
+      });
+    }
+
+    // 5. 返回结果
+    return res.json({
+      success: true,
+      data: {
+        summary_text: result.data.summary_text,
+        highlights: result.data.highlights,
+        improvements: result.data.improvements,
+        key_learnings: result.data.key_learnings,
+        overall_rating: result.data.overall_rating,
+        statistics: result.data.statistics,
+        generated_at: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('[总结] 生成失败:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
 };
 
 // ==================== 轮次即时审查功能 ====================
@@ -644,7 +868,7 @@ const reviewRound = async (req, res) => {
     };
 
     // 6. 调用审查服务
-    const result = await RoundReviewService.reviewRound(round, pair);
+    const result = await RoundReviewService.reviewRound(round, pair, userId);
 
     // 7. 返回结果
     res.json({
@@ -690,17 +914,35 @@ const getRoundReviews = async (req, res) => {
     // 检测轮次
     const rounds = RoundDetector.detectRounds(messages, pair);
 
-    // TODO: 这里可以添加从缓存读取已审查结果
-    // 暂时返回空结果列表（实际应该从缓存获取）
-    res.json({
-      success: true,
-      rounds: rounds.map(r => ({
+    // 从数据库读取已审查结果
+    const savedReviews = await queries.roundReviews.getByPairId(pairId);
+    const reviewsMap = new Map(savedReviews.map(r => [r.round_id, r]));
+
+    // 合并轮次和审查结果
+    const roundsWithReviews = rounds.map(r => {
+      const review = reviewsMap.get(r.id);
+      return {
         id: r.id,
         studentMessageId: r.studentMessageId,
         teacherMessageId: r.teacherMessageId,
-        complete: r.complete
-      })),
-      cached: false
+        complete: r.complete,
+        reviewed: !!review,
+        review: review ? {
+          has_error: review.has_error,
+          error_details: review.error_details,
+          overall_confidence: review.overall_confidence,
+          summary: review.summary,
+          reviewed_at: review.reviewed_at
+        } : null
+      };
+    });
+
+    res.json({
+      success: true,
+      rounds: roundsWithReviews,
+      cached: savedReviews.length > 0,
+      totalRounds: rounds.length,
+      reviewedRounds: savedReviews.length
     });
 
   } catch (error) {

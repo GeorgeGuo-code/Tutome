@@ -17,6 +17,10 @@ const Dialogue = () => {
   const [showEndConfirmModal, setShowEndConfirmModal] = useState(false); // 显示确认模态框
   const [showEndRequestModal, setShowEndRequestModal] = useState(false); // 显示收到申请的模态框
   const [showTipModal, setShowTipModal] = useState(false); // 显示功能说明弹窗
+  const [isReviewing, setIsReviewing] = useState(false); // 是否正在进行轮次审查
+  const [isSummarizing, setIsSummarizing] = useState(false); // 是否正在生成总结
+  const [summary, setSummary] = useState(null); // 总结的容
+  const [showSummaryModal, setShowSummaryModal] = useState(false); // 显示总结弹窗
   const currentUserId = parseInt(localStorage.getItem("userId")) || null;
   const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
@@ -88,11 +92,10 @@ const Dialogue = () => {
         setEndRequestedBy(null);
       }
       if (notification.type === 'end_accepted' && notification.relatedId === pairId) {
-        alert('对方已同意结束教学');
+        alert('对方已同意结束教学，正在生成总结...');
         setPairStatus('completed');
-        setTimeout(() => {
-          navigate('/personal');
-        }, 2000);
+        // 执行结束后的处理流程（轮次审查 + 生成
+        handleDialogueEnd();
       }
     };
 
@@ -323,12 +326,10 @@ const Dialogue = () => {
       if (response.ok) {
         setShowEndRequestModal(false);
         setPairStatus('completed');
-        alert("对话已结束");
+        alert("对话已结束，正在生成总结...");
 
-        // 延迟2秒后自动跳转到个人中心
-        setTimeout(() => {
-          navigate('/personal');
-        }, 2000);
+        // 执行结束后的处理流程（轮次审查 + 生成总结）
+        await handleDialogueEnd();
       } else {
         alert(data.error || data.message || "操作失败");
       }
@@ -386,6 +387,135 @@ const Dialogue = () => {
       setPairStatus(pairData.status);
       setEndRequestedBy(pairData.end_requested_by);
     }
+  };
+
+  // 进行轮次审查
+  const reviewRounds = async () => {
+    try {
+      setIsReviewing(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("未找到 token");
+        return;
+      }
+
+      // 获取所有轮次
+      const roundsResponse = await fetch(
+        `http://localhost:3000/api/ai/rounds/${pairId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!roundsResponse.ok) {
+        const errorData = await roundsResponse.json().catch(() => ({}));
+        console.error('获取轮次失败:', errorData);
+        return;
+      }
+
+      const roundsData = await roundsResponse.json();
+      const rounds = roundsData.rounds || [];
+
+      console.log(`[轮次审查] 开始审查 ${rounds.length} 个轮次`);
+
+      // 对每个未审查的轮次进行审查
+      for (const round of rounds) {
+        if (!round.reviewed && round.studentMessageId) {
+          try {
+            const reviewResponse = await fetch(
+              `http://localhost:3000/api/ai/round/round_${round.studentMessageId}`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            if (reviewResponse.ok) {
+              const reviewResult = await reviewResponse.json();
+              console.log(`[轮次审查] 轮次 ${round.id} 审查完成`, reviewResult);
+            }
+          } catch (error) {
+            console.error(`[轮次审查] 轮次 ${round.id} 审查失败:`, error);
+          }
+        }
+      }
+
+      console.log('[轮次审查] 所有轮次审查完成');
+      return true;
+    } catch (error) {
+      console.error('轮次审查失败:', error);
+      return false;
+    } finally {
+      setIsReviewing(false);
+    }
+  };
+
+  // 生成对话总结
+  const generateSummary = async () => {
+    try {
+      setIsSummarizing(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("未找到 token");
+        return;
+      }
+
+      console.log('[总结] 开始生成对话总结');
+
+      const response = await fetch(
+        'http://localhost:3000/api/ai/summary',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            pairId: parseInt(pairId),
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('生成总结失败:', errorData);
+        alert(errorData.error || errorData.message || '生成总结失败');
+        return;
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        console.log('[总结] 总结生成成功', data.data);
+        setSummary(data.data);
+        setShowSummaryModal(true);
+      } else {
+        console.error('[总结] 总结生成失败', data);
+        alert(data.message || '生成总结失败');
+      }
+    } catch (error) {
+      console.error('生成总结失败:', error);
+      alert('生成总结失败，请稍后重试');
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
+
+  // 处理对话结束（生成总结）
+  const handleDialogueEnd = async () => {
+    console.log('[对话结束] 开始处理对话结束流程');
+
+    // 1. 生成对话总结（轮次审查已在消息发送时自动触发）
+    await generateSummary();
+
+    // 2. 跳转到个人中心
+    console.log('[对话结束] 跳转到个人中心');
+    navigate('/personal');
   };
 
   return (
@@ -514,6 +644,147 @@ const Dialogue = () => {
                 同意
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 总结模态框 */}
+      {showSummaryModal && summary && (
+        <div className="modal-overlay">
+          <div className="modal-content summary-modal">
+            <h3 className="modal-title">教学对话总结</h3>
+
+            {/* 整体评价 */}
+            {summary.summary_text && (
+              <div className="summary-section">
+                <h4 className="summary-section-title">整体评价</h4>
+                <p className="summary-text">{summary.summary_text}</p>
+              </div>
+            )}
+
+            {/* 亮点 */}
+            {summary.highlights && summary.highlights.length > 0 && (
+              <div className="summary-section">
+                <h4 className="summary-section-title">🌟 教学亮点</h4>
+                <ul className="summary-list">
+                  {summary.highlights.map((highlight, index) => (
+                    <li key={index} className="summary-item">
+                      <span className="highlight-category">{highlight.category}:</span>
+                      <span className="highlight-description">{highlight.description}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 改进建议 */}
+            {summary.improvements && summary.improvements.length > 0 && (
+              <div className="summary-section">
+                <h4 className="summary-section-title">💡 改进建议</h4>
+                <ul className="summary-list">
+                  {summary.improvements.map((improvement, index) => (
+                    <li key={index} className="summary-item">
+                      <span className="improvement-type">{improvement.type}:</span>
+                      <span className="improvement-suggestion">{improvement.suggestion}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 核心知识点 */}
+            {summary.key_learnings && summary.key_learnings.length > 0 && (
+              <div className="summary-section">
+                <h4 className="summary-section-title">📚 核心知识点</h4>
+                <ul className="summary-list">
+                  {summary.key_learnings.map((learning, index) => (
+                    <li key={index} className="summary-item learning-item">
+                      {learning}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 统计信息 */}
+            {summary.statistics && (
+              <div className="summary-section summary-stats">
+                <h4 className="summary-section-title">📊 对话统计</h4>
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <span className="stat-label">总轮次数</span>
+                    <span className="stat-value">{summary.statistics.totalRounds || 0}</span>
+                  </div>
+                  {summary.statistics.roundsWithError > 0 && (
+                    <div className="stat-item">
+                      <span className="stat-label">发现错误的轮次</span>
+                      <span className="stat-value stat-value-warning">{summary.statistics.roundsWithError}</span>
+                    </div>
+                  )}
+                  {summary.statistics.errorCount > 0 && (
+                    <div className="stat-item">
+                      <span className="stat-label">错误总数</span>
+                      <span className="stat-value stat-value-error">{summary.statistics.errorCount}</span>
+                    </div>
+                  )}
+                  {summary.statistics.averageConfidence > 0 && (
+                    <div className="stat-item">
+                      <span className="stat-label">平均置信度</span>
+                      <span className="stat-value">
+                        {(summary.statistics.averageConfidence * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 整体评级 */}
+            {summary.overall_rating && (
+              <div className="summary-rating">
+                <span className="rating-label">整体评级：</span>
+                <span className={`rating-badge rating-${summary.overall_rating}`}>
+                  {summary.overall_rating === 'excellent' && '优秀'}
+                  {summary.overall_rating === 'good' && '良好'}
+                  {summary.overall_rating === 'fair' && '一般'}
+                  {summary.overall_rating === 'needs_improvement' && '需要改进'}
+                </span>
+              </div>
+            )}
+
+            <div className="modal-buttons">
+              <button
+                className="btn-confirm"
+                onClick={() => {
+                  setShowSummaryModal(false);
+                  setSummary(null);
+                }}
+              >
+                完成
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 轮次审查中提示 */}
+      {isReviewing && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="loading-spinner">⏳</div>
+            <h3 className="modal-title">正在进行轮次审查...</h3>
+            <p className="modal-message">正在分析对话内容，请稍候</p>
+          </div>
+        </div>
+      )}
+
+      {/* 生成总结中提示 */}
+      {isSummarizing && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="loading-spinner">⏳</div>
+            <h3 className="modal-title">正在生成总结...</h3>
+            <p className="modal-message">正在分析对话并生成教学总结，请稍候</p>
           </div>
         </div>
       )}

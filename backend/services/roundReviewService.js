@@ -49,7 +49,8 @@ const BASE_SYSTEM_PROMPT = `你是一个专业的代码审查助手，专门审�
     }
   ],
   "overallConfidence": number (0-1),
-  "summary": "整体审查总结，列出发现的问题类型和数量"
+  "summary": "整体审查总结，列出发现的问题类型和数量",
+  "keyPoints": ["本轮涉及的核心知识点1", "知识点2", ...]
 }
 
 ## 严重程度定义
@@ -68,11 +69,16 @@ const BASE_SYSTEM_PROMPT = `你是一个专业的代码审查助手，专门审�
 
 ## 重点审查领域
 - **认证与授权**：JWT token获取方式、Header处理、Token验证流程
-- **HTTP协议****：状态码使用、Header格式、请求/响应结构
+- **HTTP协议**：状态码使用、Header格式、请求/响应结构
 - **框架特定**：Express、Koa等框架的正确使用方式
 - **数据库操作**：SQL注入防护、连接管理、查询优化
 - **错误处理**：try-catch使用、错误传播、用户友好错误消息
 - **安全性**：输入验证、敏感信息保护、常见安全面洞
+
+## 重要职责
+- **不要概括内容**：你的核心任务是"检测错误"和"提取知识点"，而不是总结对话内容
+- **提取关键知识点**：在 keyPoints 字段中列出本轮涉及的核心技术概念、知识点（2-5个）
+- **保持简洁**：keyPoints 应该是简短的知识点关键词或短语
 `;
 
 class RoundReviewService {
@@ -80,19 +86,68 @@ class RoundReviewService {
    * 审查单个轮次
    * @param {Object} round - 轮次对象
    * @param {Object} pair - 结对信息
+   * @param {number} userId - 触发审查的用户ID
    * @returns {Object} 审查结果
    */
-  async reviewRound(round, pair) {
+  async reviewRound(round, pair, userId) {
     try {
+      console.log(`[轮次审查] ==================================================`);
       console.log(`[轮次审查] 开始审查轮次 ${round.id}`);
+      console.log(`[轮次审查] 结对 ID: ${pair.id}`);
+      console.log(`[轮次审查] 学生消息 ID: ${round.studentMessageId}`);
+      console.log(`[轮次审查] 老师消息 ID: ${round.teacherMessageId}`);
 
       // 构建简化的上下文（只包含当前轮）
       const context = this.buildRoundContext(round, pair);
 
       // 调用 AI 审查
+      console.log(`[轮次审查] 开始调用 AI...`);
       const judgment = await this.callAIForReview(context);
 
-      console.log(`[轮次审查] 轮次 ${round.id} 审查完成，发现错误: ${judgment.hasError}`);
+      console.log(`[轮次审查] 轮次 ${round.id} 审查完成`);
+      console.log(`[轮次审查] ─────────────────────────────────`);
+      console.log(`[轮次审查] 是否发现错误: ${judgment.hasError ? '是' : '否'}`);
+      console.log(`[轮次审查] 整体置信度: ${judgment.overallConfidence?.toFixed(2) || 'N/A'}`);
+      console.log(`[轮次审查] 审查总结: ${judgment.summary || '无'}`);
+      console.log(`[轮次审查] 关键知识点: ${(judgment.keyPoints || []).join(', ') || '无'}`);
+
+      // 详细输出错误信息
+      if (judgment.hasError && judgment.errorDetails && judgment.errorDetails.length > 0) {
+        console.log(`[轮次审查] 发现 ${judgment.errorDetails.length} 个错误：`);
+        judgment.errorDetails.forEach((error, index) => {
+          console.log(`[轮次审查]   错误 ${index + 1}:`);
+          console.log(`[轮次审查]     发言者: ${error.speaker === 'teacher' ? '老师' : (error.speaker === 'student' ? '学生' : error.speaker)}`);
+          const errorType = error.errorType || error.error_type || '未知';
+          const errorContent = error.content || error.issue || '';
+          const errorCorrection = error.correction || error.correct_implementation || '';
+          const errorExplanation = error.explanation || '';
+
+          console.log(`[轮次审查]     错误类型: ${errorType}`);
+          console.log(`[轮次审查]     问题内容: ${errorContent.substring(0, 100) || '无'}${errorContent.length > 100 ? '...' : ''}`);
+          console.log(`[轮次审查]     修正建议: ${errorCorrection.substring(0, 100) || '无'}${errorCorrection.length > 100 ? '...' : ''}`);
+          if (errorExplanation) {
+            console.log(`[轮次审查]     详细说明: ${errorExplanation.substring(0, 150) || '无'}${errorExplanation.length > 150 ? '...' : ''}`);
+          }
+          console.log(`[轮次审查]     严重程度: ${error.severity || '未定义'}`);
+          console.log(`[轮次审查]     置信度: ${error.confidence?.toFixed(2) || 'N/A'}`);
+          console.log(`[轮次审查]     ────`);
+        });
+      } else if (!judgment.hasError) {
+        console.log(`[轮次审查] ✅ 本轮次未发现明显错误`);
+      }
+
+      // 存储审查结果到数据库
+      console.log(`[轮次审查] 正在保存到数据库...`);
+      await queries.roundReviews.createOrUpdate(
+        pair.id,
+        round.id,
+        round.studentMessageId || null,
+        round.teacherMessageId || null,
+        judgment,
+        userId
+      );
+      console.log(`[轮次审查] ✅ 保存成功`);
+      console.log(`[轮次审查] ==================================================`);
 
       return {
         roundId: round.id,
@@ -102,6 +157,7 @@ class RoundReviewService {
       };
     } catch (error) {
       console.error(`[轮次审查] 轮次 ${round.id} 审查失败:`, error);
+      console.error(`[轮次审查] 错误堆栈:`, error.stack);
       return {
         roundId: round.id,
         success: false,
@@ -113,7 +169,7 @@ class RoundReviewService {
 
   /**
    * 构建轮次审查的简化上下文
-   * 只包含当前轮次的学生提问和老师回答
+   * 包含当前轮次的所有学生消息和老师回复（支持连续追问和连续回答）
    */
   buildRoundContext(round, pair) {
     const context = [];
@@ -121,17 +177,29 @@ class RoundReviewService {
     // 添加系统提示词
     context.push({ role: 'system', content: BASE_SYSTEM_PROMPT });
 
+    // 构建完整的学生提问（所有学生消息拼接）
+    const studentContent = round.studentMessages && round.studentMessages.length > 0
+      ? round.studentMessages.map(m => m.content).join('\n')
+      : (round.studentQuestion?.content || '');
+
+    // 构建完整的老师回答（所有老师回复拼接）
+    const teacherContent = round.teacherReplies && round.teacherReplies.length > 0
+      ? round.teacherReplies.map(m => m.content).join('\n')
+      : (round.teacherReply?.content || '');
+
     // 添加学生提问
-    context.push({
-      role: 'user',
-      content: `[student]: ${round.studentQuestion.content}`
-    });
+    if (studentContent) {
+      context.push({
+        role: 'user',
+        content: `[student]: ${studentContent}`
+      });
+    }
 
     // 如果有老师回答，添加到上下文
-    if (round.teacherReply) {
+    if (teacherContent) {
       context.push({
         role: 'assistant',
-        content: `[teacher]: ${round.teacherReply.content}`
+        content: `[teacher]: ${teacherContent}`
       });
     } else {
       // 老师未回答，添加提示
@@ -140,6 +208,57 @@ class RoundReviewService {
         content: '注意：老师尚未回答这个问题，请重点审查学生提问内容中可能存在的问题。'
       });
     }
+
+    return context;
+  }
+
+  /**
+   * 构建带滑动窗口上下文的轮次审查
+   * 包含当前轮次以及前 N 轮作为上下文
+   * @param {Object} round - 当前轮次对象
+   * @param {Object} pair - 结对信息
+   * @param {Array} allRounds - 所有轮次数组
+   * @returns {Array} 审查上下文数组
+   */
+  buildRoundContextWithWindow(round, pair, allRounds) {
+    const context = [];
+    context.push({ role: 'system', content: BASE_SYSTEM_PROMPT });
+
+    // 获取当前轮次的索引
+    const currentIndex = allRounds.findIndex(r => r.id === round.id);
+
+    // 获取前 5 轮作为上下文
+    const windowSize = 5;
+    const startIndex = Math.max(0, currentIndex - windowSize);
+    const previousRounds = allRounds.slice(startIndex, currentIndex);
+
+    // 添加前几轮的简要上下文
+    if (previousRounds.length > 0) {
+      const contextSummary = previousRounds.map((r, i) => {
+        const studentText = r.studentMessages?.map(m => m.content).join('\n') || r.studentQuestion?.content || '';
+        const teacherText = r.teacherReplies?.map(m => m.content).join('\n') || r.teacherReply?.content || '';
+        return `[前几轮-${i+1}]\n学生: ${studentText}\n老师: ${teacherText}`;
+      }).join('\n\n');
+
+      context.push({
+        role: 'system',
+        content: `## 最近的 ${previousRounds.length} 轮对话（上下文参考）\n${contextSummary}`
+      });
+    }
+
+    // 添加当前轮次的完整内容（审查目标）
+    const studentContent = round.studentMessages?.map(m => m.content).join('\n') || round.studentQuestion?.content || '';
+    const teacherContent = round.teacherReplies?.map(m => m.content).join('\n') || round.teacherReply?.content || '';
+
+    context.push({ role: 'user', content: `[student]: ${studentContent}` });
+    if (teacherContent) {
+      context.push({ role: 'assistant', content: `[teacher]: ${teacherContent}` });
+    }
+
+    context.push({
+      role: 'system',
+      content: '## 当前任务\n请重点审查上述最新一轮对话，检测错误并提取关键知识点。'
+    });
 
     return context;
   }
