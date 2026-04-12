@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const queries = require('../models/queries')
 const jwt = require('jsonwebtoken');
 const pool = require("../models/pool")
+const matchingService = require('../services/matchingService');
 
 // 用户登录的功能
 const loginUser = async (username, password, res) => {
@@ -131,6 +132,54 @@ const getAvailableUsers = async (req, res) => {
       success: true,
       users: availableUsers
     });
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ success: false, message: '无效的认证令牌' });
+    }
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ success: false, message: '认证令牌已过期' });
+    }
+    res.status(500).json({ success: false, message: '服务器错误', error: error.message });
+  }
+};
+
+/**
+ * GET /api/users/matching
+ * 按学习偏好、在线状态筛选可结对人，并为每人附带「适合与 TA 结对的、我的未结对问题」列表。
+ * Query: seeking=teacher|student, onlineOnly=true|false, requireMatchingQuestions, minPreferenceScore
+ */
+const getMatchingPartners = async (req, res) => {
+  try {
+    const token = req.headers['authorization']?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ success: false, message: '未提供认证令牌' });
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    const currentUserId = decoded.userId;
+
+    const seeking = req.query.seeking === 'student' ? 'student' : 'teacher';
+    const onlineOnly =
+      req.query.onlineOnly === 'true' ||
+      req.query.onlineOnly === '1' ||
+      req.query.online_only === 'true';
+    const requireMatchingQuestions =
+      req.query.requireMatchingQuestions === 'true' ||
+      req.query.requireMatchingQuestions === '1';
+    const minPreferenceScore = req.query.minPreferenceScore != null
+      ? parseFloat(String(req.query.minPreferenceScore), 10)
+      : 0;
+
+    const result = await matchingService.findMatchingPartners(currentUserId, {
+      seeking,
+      onlineOnly,
+      requireMatchingQuestions,
+      minPreferenceScore: Number.isNaN(minPreferenceScore) ? 0 : minPreferenceScore,
+    });
+
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+    res.json(result);
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({ success: false, message: '无效的认证令牌' });
@@ -286,6 +335,7 @@ module.exports = {
   verifyUserToken,
   updatePassword,
   getAvailableUsers,
+  getMatchingPartners,
   getTopics,
   getDifficultyTags,
   getMyProfile,

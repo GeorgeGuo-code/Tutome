@@ -1621,6 +1621,149 @@ const queries = {
     }
   }
 };
+
+/** 至少有一条问题的用户 id（排除自己），用于结对匹配候选人池 */
+async function getCandidateMatcherUserIds(excludeUserId) {
+  const r = await pool.query(
+    `SELECT DISTINCT u.id FROM users u
+     INNER JOIN questions q ON q.user_id = u.id
+     WHERE u.id != $1`,
+    [excludeUserId]
+  );
+  return r.rows.map((row) => row.id);
+}
+
+/**
+ * 批量加载用户的匹配相关资料：基本信息 + 感兴趣/擅长学科 + 难度偏好
+ * @returns {Map<number, object>} userId -> profile
+ */
+async function getBatchUserMatchingProfiles(userIds) {
+  if (!userIds.length) return new Map();
+  const ph = userIds.map((_, i) => `$${i + 1}`).join(',');
+  const [usersRes, interestedRes, proficientRes, difficultyRes] = await Promise.all([
+    pool.query(
+      `SELECT u.id, u.username, u.last_active, up.nickname
+       FROM users u
+       LEFT JOIN user_profiles up ON up.user_id = u.id
+       WHERE u.id IN (${ph})`,
+      userIds
+    ),
+    pool.query(
+      `SELECT utp.user_id, t.id AS topic_id, t.name AS topic_name
+       FROM user_topic_preferences utp
+       JOIN topics t ON t.id = utp.topic_id
+       WHERE utp.user_id IN (${ph}) AND utp.type = 'interested'`,
+      userIds
+    ),
+    pool.query(
+      `SELECT utp.user_id, t.id AS topic_id, t.name AS topic_name
+       FROM user_topic_preferences utp
+       JOIN topics t ON t.id = utp.topic_id
+       WHERE utp.user_id IN (${ph}) AND utp.type = 'proficient'`,
+      userIds
+    ),
+    pool.query(
+      `SELECT udp.user_id, t.id AS tag_id, t.name AS tag_name
+       FROM user_difficulty_preferences udp
+       JOIN tags t ON t.id = udp.tag_id
+       WHERE udp.user_id IN (${ph})`,
+      userIds
+    ),
+  ]);
+  const map = new Map();
+  for (const u of usersRes.rows) {
+    map.set(u.id, {
+      id: u.id,
+      username: u.username,
+      last_active: u.last_active,
+      nickname: u.nickname,
+      interested_topics: [],
+      proficient_topics: [],
+      difficulty_preferences: [],
+    });
+  }
+  for (const row of interestedRes.rows) {
+    const m = map.get(row.user_id);
+    if (m) m.interested_topics.push({ id: row.topic_id, name: row.topic_name });
+  }
+  for (const row of proficientRes.rows) {
+    const m = map.get(row.user_id);
+    if (m) m.proficient_topics.push({ id: row.topic_id, name: row.topic_name });
+  }
+  for (const row of difficultyRes.rows) {
+    const m = map.get(row.user_id);
+    if (m) m.difficulty_preferences.push({ id: row.tag_id, name: row.tag_name });
+  }
+  return map;
+}
+
+/**
+ * 批量获取多个用户的未结对问题（含标签），用于匹配「对方题目是否适合我」
+ * @returns {Map<number, Array>} userId -> questions
+ */
+async function getUnpairedQuestionsWithTagsForUserIds(userIds) {
+  const empty = new Map();
+  if (!userIds.length) return empty;
+
+  const ph = userIds.map((_, i) => `$${i + 1}`).join(',');
+  const { rows } = await pool.query(
+    `SELECT q.id, q.title, q.content, q.user_id, q.role, q.created_at, u.username AS author_username
+     FROM questions q
+     JOIN users u ON u.id = q.user_id
+     LEFT JOIN pairs p ON p.question_id = q.id
+     WHERE q.user_id IN (${ph}) AND p.id IS NULL
+     ORDER BY q.user_id, q.created_at DESC`,
+    userIds
+  );
+
+  if (rows.length === 0) {
+    for (const id of userIds) empty.set(id, []);
+    return empty;
+  }
+
+  const qids = rows.map((r) => r.id);
+  const ph2 = qids.map((_, i) => `$${i + 1}`).join(',');
+  const tagsRes = await pool.query(
+    `SELECT qt.question_id, t.id, t.name, t.category
+     FROM question_tags qt
+     JOIN tags t ON t.id = qt.tag_id
+     WHERE qt.question_id IN (${ph2})
+     ORDER BY qt.question_id,
+       CASE t.category WHEN 'subject' THEN 1 WHEN 'difficulty' THEN 2 WHEN 'progress' THEN 3 ELSE 4 END,
+       t.name`,
+    qids
+  );
+
+  const tagsByQ = new Map();
+  for (const t of tagsRes.rows) {
+    if (!tagsByQ.has(t.question_id)) tagsByQ.set(t.question_id, []);
+    tagsByQ.get(t.question_id).push({
+      id: t.id,
+      name: t.name,
+      category: t.category,
+    });
+  }
+
+  const byUser = new Map();
+  for (const id of userIds) byUser.set(id, []);
+
+  for (const row of rows) {
+    const tags = tagsByQ.get(row.id) || [];
+    byUser.get(row.user_id).push({
+      id: row.id,
+      title: row.title,
+      content: row.content,
+      user_id: row.user_id,
+      author_username: row.author_username,
+      role: row.role,
+      created_at: row.created_at,
+      tags,
+    });
+  }
+
+  return byUser;
+}
+
 module.exports = {
   ...queries,
   registerUser,
@@ -1643,5 +1786,8 @@ module.exports = {
   getQuestionById,
   deleteQuestion,
   roundReviews: queries.roundReviews,
-  conversationSummaries: queries.conversationSummaries
+  conversationSummaries: queries.conversationSummaries,
+  getCandidateMatcherUserIds,
+  getBatchUserMatchingProfiles,
+  getUnpairedQuestionsWithTagsForUserIds,
 };

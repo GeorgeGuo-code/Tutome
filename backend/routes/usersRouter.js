@@ -24,6 +24,9 @@ usersRouter.post('/api/users/:userId/change-password', verifyJWT, usersControlle
 // 获取可用用户列表（需要JWT验证）
 usersRouter.get('/api/users/available', verifyJWT, usersController.getAvailableUsers);
 
+// 智能匹配：按学习偏好、在线状态筛选，并返回每位候选人适合的「我的题目」
+usersRouter.get('/api/users/matching', verifyJWT, usersController.getMatchingPartners);
+
 // 学科列表（用于结对、学科偏好选择）
 usersRouter.get('/api/topics', usersController.getTopics);
 // 难度标签列表（用于难度偏好选择）
