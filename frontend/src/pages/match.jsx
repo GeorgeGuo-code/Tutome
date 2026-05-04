@@ -81,31 +81,31 @@ const Match = () => {
 
   // 学科到 topicId（结对申请用，需与后端 topics 表一致）
   const subjectToTopicId = {
-    math: 1,
-    physics: 4,
-    chemistry: 5,
-    biology: 6,
-    programming: 3,
-    economics: 7,
-    engineering: 8,
-    english: 2,
-    research: 9,
-    other: 10,
+    'math': 1,
+    'physics': 4,
+    'chemistry': 5,
+    'biology': 6,
+    'programming': 3,
+    'economics': 7,
+    'engineering': 8,
+    'english': 2,
+    'research': 9,
+    'other': 10,
   };
 
   const subjectNameToKey = {
-    数学: 'math',
-    英语: 'english',
-    编程与计算机: 'programming',
-    编程语言: 'programming',
-    物理: 'physics',
-    化学: 'chemistry',
-    生物: 'biology',
-    经管/社科: 'economics',
-    电子与工程: 'engineering',
-    英语与学术写作: 'english',
-    科研: 'research',
-    其他: 'other',
+    '数学': 'math',
+    '英语': 'english',
+    '编程与计算机': 'programming',
+    '编程语言': 'programming',
+    '物理': 'physics',
+    '化学': 'chemistry',
+    '生物': 'biology',
+    '经管/社科': 'economics',
+    '电子与工程': 'engineering',
+    '英语与学术写作': 'english',
+    '科研': 'research',
+    '其他': 'other'
   };
 
   const handleSearchUsers = async (e) => {
