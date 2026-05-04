@@ -1,6 +1,19 @@
 const queries = require('../models/queries');
 const onlineStatusService = require('../services/onlineStatusService');
 const asyncRoundReviewer = require('../services/asyncRoundReviewer');
+const cosUploadService = require('../services/cosUploadService');
+const multer = require('multer');
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    if (cosUploadService.isValidImageType(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('不支持的图片格式'), false);
+    }
+  }
+});
 
 // 发送结对申请
 const applyPair = async (req, res) => {
@@ -420,6 +433,57 @@ const sendMessage = async (req, res) => {
     }
 };
 
+// 上传图片消息
+const uploadImageMessage = async (req, res) => {
+    const { pairId } = req.params;
+    const senderId = req.user.userId;
+    const { content } = req.body; // 可选的文字说明
+
+    try {
+        const pair = await queries.pair.getById(pairId);
+
+        if (!pair) {
+            return res.status(404).json({ error: '结对不存在' });
+        }
+
+        if (pair.status !== 'active') {
+            return res.status(400).json({ error: '结对未激活或已结束' });
+        }
+
+        if (pair.teacher_id !== senderId && pair.student_id !== senderId) {
+            return res.status(403).json({ error: '无权发送消息' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ error: '未提供图片' });
+        }
+
+        // 验证文件类型
+        if (!cosUploadService.isValidImageType(req.file.mimetype)) {
+            return res.status(400).json({ error: '不支持的图片格式，支持 JPEG、PNG、GIF、WebP' });
+        }
+
+        // 验证文件大小
+        if (!cosUploadService.isValidFileSize(req.file.size)) {
+            return res.status(400).json({ error: '图片大小不能超过 5MB' });
+        }
+
+        // 上传到腾讯云 COS
+        const imageUrl = await cosUploadService.uploadImage(
+            req.file.buffer,
+            req.file.originalname
+        );
+
+        // 创建消息记录
+        const newMessage = await queries.message.create(pairId, senderId, content || '', imageUrl);
+
+        res.status(201).json(newMessage);
+    } catch (err) {
+        console.error('上传图片失败:', err);
+        res.status(500).json({ error: '上传失败' });
+    }
+};
+
 // 结束教学（直接结束，不要求确认）
 const endTeaching = async (req, res) => {
     const { pairId } = req.params;
@@ -780,6 +844,7 @@ module.exports = {
     associatePairWithQuestion,
     getMessages,
     sendMessage,
+    uploadImageMessage,
     endTeaching,
     requestEndTeaching,
     acceptEndRequest,

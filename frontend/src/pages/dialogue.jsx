@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./dialogue.css";
+import 'katex/dist/katex.min.css';
 import FeatureTipModal from '../components/FeatureTipModal';
 import socketService from '../services/socketService';
+import { parseLatexContent } from '../utils/renderLatex';
 
 const Dialogue = () => {
   const { pairId } = useParams();
@@ -21,6 +23,9 @@ const Dialogue = () => {
   const [isSummarizing, setIsSummarizing] = useState(false); // 是否正在生成总结
   const [summary, setSummary] = useState(null); // 总结的容
   const [showSummaryModal, setShowSummaryModal] = useState(false); // 显示总结弹窗
+  const [selectedImage, setSelectedImage] = useState(null); // 选择的图片文件
+  const [imagePreview, setImagePreview] = useState(null); // 图片预览 URL
+  const [imagePreviewModal, setImagePreviewModal] = useState(null); // 全屏预览的图片 URL
   const currentUserId = parseInt(localStorage.getItem("userId")) || null;
   const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
@@ -216,7 +221,7 @@ const Dialogue = () => {
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    if (!inputText.trim() && !selectedImage) return;
 
     try {
       const token = localStorage.getItem("token");
@@ -225,37 +230,119 @@ const Dialogue = () => {
         return;
       }
 
-      console.log('Sending message to pairId:', pairId);
-      console.log('Message content:', inputText);
+      // 如果有选中图片，使用图片上传接口
+      if (selectedImage) {
+        const formData = new FormData();
+        formData.append('image', selectedImage);
+        formData.append('content', inputText);
 
-      const response = await fetch(
-        `http://localhost:3000/api/chats/${pairId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            content: inputText,
-          }),
+        const response = await fetch(
+          `http://localhost:3000/api/chats/${pairId}/image`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || errorData.error || `发送失败 (${response.status})`);
         }
-      );
 
-      console.log('Send response status:', response.status);
+        // 清除图片状态
+        setSelectedImage(null);
+        setImagePreview(null);
+      } else {
+        // 纯文本消息
+        const response = await fetch(
+          `http://localhost:3000/api/chats/${pairId}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              content: inputText,
+            }),
+          }
+        );
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Error response:', errorData);
-        throw new Error(errorData.message || errorData.error || `发送消息失败 (${response.status})`);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || errorData.error || `发送失败 (${response.status})`);
+        }
       }
 
       setInputText("");
-      fetchMessages(false); // 发送消息后不需要显示 loading
+      fetchMessages(false);
     } catch (error) {
       console.error("Error sending message:", error);
-      setError(error.message || "发送消息失败");
+      setError(error.message || "发送失败");
     }
+  };
+
+  // 处理图片选择
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // 验证文件类型
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('不支持的图片格式，支持 JPEG、PNG、GIF、WebP');
+      return;
+    }
+
+    // 验证文件大小（5MB）
+    if (file.size > 5 * 1024 * 1024) {
+      alert('图片大小不能超过 5MB');
+      return;
+    }
+
+    setSelectedImage(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  // 处理粘贴图片
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault(); // 阻止默认粘贴行为
+        const file = item.getAsFile();
+        if (file) {
+          // 复用 handleImageSelect 的逻辑，但需要手动创建事件对象
+          const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+          if (!allowedTypes.includes(file.type)) {
+            alert('不支持的图片格式，支持 JPEG、PNG、GIF、WebP');
+            return;
+          }
+          if (file.size > 5 * 1024 * 1024) {
+            alert('图片大小不能超过 5MB');
+            return;
+          }
+          setSelectedImage(file);
+          setImagePreview(URL.createObjectURL(file));
+        }
+        break;
+      }
+    }
+  };
+
+  // 下载图片
+  const handleDownloadImage = (imageUrl) => {
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = imageUrl.split('/').pop();
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const scrollToBottom = () => {
@@ -568,7 +655,29 @@ const Dialogue = () => {
                   {msg.sender_nickname || (msg.sender_id === currentUserId ? "我" : "对方")}
                 </span>
               </div>
-              <span className="message-content">{msg.content}</span>
+              {msg.image_url && (
+                <img
+                  src={msg.image_url}
+                  alt="消息图片"
+                  className="message-image"
+                  onClick={() => setImagePreviewModal(msg.image_url)}
+                />
+              )}
+              {msg.content && (
+                <span className="message-content">
+                  {parseLatexContent(msg.content).map((part, index) =>
+                    part.type === 'latex' ? (
+                      <span
+                        key={index}
+                        className={part.displayMode ? 'latex-display' : 'latex-inline'}
+                        dangerouslySetInnerHTML={{ __html: part.content }}
+                      />
+                    ) : (
+                      <span key={index}>{part.content}</span>
+                    )
+                  )}
+                </span>
+              )}
             </div>
           ))
         )}
@@ -576,11 +685,36 @@ const Dialogue = () => {
       </div>
 
       <div className="input-area">
+        {/* 图片预览区域 */}
+        {imagePreview && (
+          <div className="image-preview">
+            <img src={imagePreview} alt="预览" />
+            <button
+              className="remove-image-btn"
+              onClick={() => {
+                setSelectedImage(null);
+                setImagePreview(null);
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         <div className="input-container">
+          <label className="image-upload-btn" title="发送图片">
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              onChange={handleImageSelect}
+              style={{ display: 'none' }}
+            />
+            📷
+          </label>
           <span className="input-icon">✏️</span>
           <textarea
             className="message-input"
-            placeholder="请输入消息..."
+            placeholder="请输入消息...（可粘贴图片 Ctrl+V；支持 LaTeX 数学公式）"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={(e) => {
@@ -589,11 +723,12 @@ const Dialogue = () => {
                 handleSend(e);
               }
             }}
+            onPaste={handlePaste}
           />
           <button
             className="send-btn"
             onClick={handleSend}
-            disabled={!inputText.trim()}
+            disabled={!inputText.trim() && !selectedImage}
           >
             发送
           </button>
@@ -794,7 +929,23 @@ const Dialogue = () => {
         features={dialogueFeatures}
         notes={dialogueNotes}
         onClose={handleCloseModal}
-      />      
+      />
+
+      {/* 图片预览模态框 */}
+      {imagePreviewModal && (
+        <div className="image-preview-modal" onClick={() => setImagePreviewModal(null)}>
+          <div className="image-preview-content" onClick={e => e.stopPropagation()}>
+            <button className="close-preview-btn" onClick={() => setImagePreviewModal(null)}>×</button>
+            <img src={imagePreviewModal} alt="预览" />
+            <button
+              className="download-image-btn"
+              onClick={() => handleDownloadImage(imagePreviewModal)}
+            >
+              ⬇️ 下载
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

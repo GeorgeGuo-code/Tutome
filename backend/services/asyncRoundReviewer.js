@@ -140,6 +140,14 @@ const CONVERSATION_SUMMARY_PROMPT = `你是一个教学对话总结助手，负�
    - errorCount: 错误总数
    - averageConfidence: 平均置信度（0-1）
 4. 有错误的轮次详情（包含错误类型和严重程度）
+5. 【重要】对话中出现的图片链接（如果有）：格式为【图片，URL】
+
+## 图片处理要求
+对话中可能出现图片，这些图片链接可以直接访问。请：
+1. 尝试访问每张图片 URL，分析其内容（公式截图、代码、图表、题目等）
+2. 如果图片可访问，在总结中描述图片展示的内容
+3. 如果图片无法访问，在总结中注明"对话中有图片，内容摘要见下方"
+4. 将图片内容与文字对话结合分析
 
 ## 输出格式（严格 JSON）
 {
@@ -216,11 +224,19 @@ async function generateConversationSummaryAsync(pairId) {
     const allKeyPoints = roundReviews.flatMap(r => r.key_points || []);
     console.log('[总总结器] 关键知识点:', allKeyPoints.join(', ') || '无');
 
-    // 4. 构建完整对话上下文
+    // 4. 构建完整对话上下文（含图片占位符）
+    const imageUrls = [];
     const conversationText = messages.map(m => {
       const role = m.sender_id === pair.teacher_id ? '老师' : '学生';
-      return `[${role}]: ${m.content}`;
+      let text = m.content || '';
+      if (m.image_url) {
+        text += `\n【图片，${m.image_url}】`;
+        imageUrls.push(m.image_url);
+      }
+      return `[${role}]: ${text}`;
     }).join('\n\n');
+
+    console.log('[总总结器] 检测到', imageUrls.length, '张图片');
 
     // 5. 收集统计信息
     const stats = {

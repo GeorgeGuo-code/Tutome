@@ -1,8 +1,15 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const chatsController = require('../controllers/chatsController');
 const { verifyJWT } = require('../middlewares/usersMiddleware');
 const queries = require('../models/queries');
+
+// 配置 multer
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
 
 // 先检查 verifyJWT 是否存在
 console.log('verifyJWT 类型:', typeof verifyJWT);
@@ -67,6 +74,7 @@ router.get('/api/notifications/unread-count', async (req, res) => {
 router.get('/api/chats/pending-requests', chatsController.getPendingEndRequests);
 router.get('/api/chats/:pairId', chatsController.getMessages);
 router.post('/api/chats/:pairId', chatsController.sendMessage);
+router.post('/api/chats/:pairId/image', upload.single('image'), chatsController.uploadImageMessage);
 router.post('/api/chats/:pairId/end', chatsController.endTeaching);
 router.post('/api/chats/:pairId/request-end', chatsController.requestEndTeaching);
 router.post('/api/chats/:pairId/accept-end', chatsController.acceptEndRequest);

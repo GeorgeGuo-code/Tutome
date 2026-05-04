@@ -1213,12 +1213,12 @@ const queries = {
 
   // 消息相关查询
   message: {
-    // 创建消息
-    create: async (pairId, senderId, content) => {
+    // 创建消息（支持图片）
+    create: async (pairId, senderId, content, imageUrl = null) => {
       const result = await pool.query(
-        `INSERT INTO messages (pair_id, sender_id, content)
-         VALUES ($1, $2, $3) RETURNING *`,
-        [pairId, senderId, content]
+        `INSERT INTO messages (pair_id, sender_id, content, image_url)
+         VALUES ($1, $2, $3, $4) RETURNING *`,
+        [pairId, senderId, content, imageUrl]
       );
       return result.rows[0];
     },

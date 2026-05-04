@@ -177,15 +177,25 @@ class RoundReviewService {
     // 添加系统提示词
     context.push({ role: 'system', content: BASE_SYSTEM_PROMPT });
 
-    // 构建完整的学生提问（所有学生消息拼接）
-    const studentContent = round.studentMessages && round.studentMessages.length > 0
-      ? round.studentMessages.map(m => m.content).join('\n')
-      : (round.studentQuestion?.content || '');
+    // 构建学生消息内容（含图片占位符）
+    const studentMessages = round.studentMessages && round.studentMessages.length > 0
+      ? round.studentMessages
+      : (round.studentQuestion ? [round.studentQuestion] : []);
 
-    // 构建完整的老师回答（所有老师回复拼接）
-    const teacherContent = round.teacherReplies && round.teacherReplies.length > 0
-      ? round.teacherReplies.map(m => m.content).join('\n')
-      : (round.teacherReply?.content || '');
+    const studentContent = studentMessages.map(m => {
+      const text = m.content || '';
+      return m.image_url ? `${text}\n【图片，${m.image_url}】` : text;
+    }).join('\n');
+
+    // 构建老师回复内容（含图片占位符）
+    const teacherMessages = round.teacherReplies && round.teacherReplies.length > 0
+      ? round.teacherReplies
+      : (round.teacherReply ? [round.teacherReply] : []);
+
+    const teacherContent = teacherMessages.map(m => {
+      const text = m.content || '';
+      return m.image_url ? `${text}\n【图片，${m.image_url}】` : text;
+    }).join('\n');
 
     // 添加学生提问
     if (studentContent) {
@@ -235,8 +245,19 @@ class RoundReviewService {
     // 添加前几轮的简要上下文
     if (previousRounds.length > 0) {
       const contextSummary = previousRounds.map((r, i) => {
-        const studentText = r.studentMessages?.map(m => m.content).join('\n') || r.studentQuestion?.content || '';
-        const teacherText = r.teacherReplies?.map(m => m.content).join('\n') || r.teacherReply?.content || '';
+        const studentMsgs = r.studentMessages || (r.studentQuestion ? [r.studentQuestion] : []);
+        const teacherMsgs = r.teacherReplies || (r.teacherReply ? [r.teacherReply] : []);
+
+        const studentText = studentMsgs.map(m => {
+          const text = m.content || '';
+          return m.image_url ? `${text}\n【图片，${m.image_url}】` : text;
+        }).join('\n');
+
+        const teacherText = teacherMsgs.map(m => {
+          const text = m.content || '';
+          return m.image_url ? `${text}\n【图片，${m.image_url}】` : text;
+        }).join('\n');
+
         return `[前几轮-${i+1}]\n学生: ${studentText}\n老师: ${teacherText}`;
       }).join('\n\n');
 
@@ -247,8 +268,18 @@ class RoundReviewService {
     }
 
     // 添加当前轮次的完整内容（审查目标）
-    const studentContent = round.studentMessages?.map(m => m.content).join('\n') || round.studentQuestion?.content || '';
-    const teacherContent = round.teacherReplies?.map(m => m.content).join('\n') || round.teacherReply?.content || '';
+    const currentStudentMsgs = round.studentMessages || (round.studentQuestion ? [round.studentQuestion] : []);
+    const currentTeacherMsgs = round.teacherReplies || (round.teacherReply ? [round.teacherReply] : []);
+
+    const studentContent = currentStudentMsgs.map(m => {
+      const text = m.content || '';
+      return m.image_url ? `${text}\n【图片，${m.image_url}】` : text;
+    }).join('\n');
+
+    const teacherContent = currentTeacherMsgs.map(m => {
+      const text = m.content || '';
+      return m.image_url ? `${text}\n【图片，${m.image_url}】` : text;
+    }).join('\n');
 
     context.push({ role: 'user', content: `[student]: ${studentContent}` });
     if (teacherContent) {
