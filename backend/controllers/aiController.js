@@ -954,9 +954,81 @@ const getRoundReviews = async (req, res) => {
   }
 };
 
+/**
+ * 获取对话总结
+ * GET /api/ai/summary/:pairId
+ */
+const getConversationSummary = async (req, res) => {
+  const { pairId } = req.params;
+  const userId = req.user?.userId;
+
+  try {
+    // 获取结对信息
+    const pair = await queries.pair.getById(pairId);
+    if (!pair) {
+      return res.status(404).json({ error: '结对不存在' });
+    }
+
+    // 权限检查
+    if (userId && pair.teacher_id !== userId && pair.student_id !== userId) {
+      return res.status(403).json({ error: '无权查看此结对的总结' });
+    }
+
+    // 获取总结
+    const summaries = await queries.conversationSummaries.getByPairId(pairId);
+
+    // 获取结对的统计信息（从 pair 表）
+    const messages = await queries.message.getByPairId(pairId);
+    const rounds = RoundDetector.detectRounds(messages, pair);
+    const savedReviews = await queries.roundReviews.getByPairId(pairId);
+
+    // 构建统计信息
+    const stats = {
+      totalRounds: rounds.length,
+      totalMessages: messages.length,
+      reviewedRounds: savedReviews.length,
+      roundsWithError: savedReviews.filter(r => r.has_error).length
+    };
+
+    if (summaries.length === 0) {
+      return res.json({
+        success: true,
+        data: null,
+        message: '暂无总结',
+        statistics: stats
+      });
+    }
+
+    // 取最新的总结（round_id 为 null 的是总总结）
+    const mainSummary = summaries.find(s => s.round_id === null) || summaries[0];
+
+    res.json({
+      success: true,
+      data: {
+        summary_text: mainSummary.summary_text,
+        key_learnings: mainSummary.key_learnings,
+        problem_count: mainSummary.problem_count,
+        problem_summary: mainSummary.problem_summary,
+        related_links: mainSummary.related_links,
+        overall_rating: mainSummary.overall_rating,
+        generated_at: mainSummary.generated_at
+      },
+      statistics: stats
+    });
+
+  } catch (error) {
+    console.error('[获取总结] 失败:', error);
+    res.status(500).json({
+      error: '获取失败',
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   judgeConversation,
   summarizeConversation,
   reviewRound,
-  getRoundReviews
+  getRoundReviews,
+  getConversationSummary
 };

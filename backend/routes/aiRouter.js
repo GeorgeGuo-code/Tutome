@@ -15,4 +15,7 @@ aiRouter.get('/api/ai/rounds/:pairId', verifyJWT, aiController.getRoundReviews);
 // 轮次即时审查：审查指定轮次
 aiRouter.post('/api/ai/round/:roundId', verifyJWT, aiController.reviewRound);
 
+// 获取对话总结
+aiRouter.get('/api/ai/summary/:pairId', verifyJWT, aiController.getConversationSummary);
+
 module.exports = aiRouter;

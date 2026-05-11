@@ -26,6 +26,10 @@ const Dialogue = () => {
   const [selectedImage, setSelectedImage] = useState(null); // 选择的图片文件
   const [imagePreview, setImagePreview] = useState(null); // 图片预览 URL
   const [imagePreviewModal, setImagePreviewModal] = useState(null); // 全屏预览的图片 URL
+  const [reviewPanelOpen, setReviewPanelOpen] = useState(false); // AI 审查栏是否展开
+  const [roundReviews, setRoundReviews] = useState([]); // 轮次审查结果
+  const [showReviewNotification, setShowReviewNotification] = useState(false); // 显示问题通知
+  const notifiedErrorRoundsRef = useRef(new Set()); // 已显示过通知的问题轮次
   const currentUserId = parseInt(localStorage.getItem("userId")) || null;
   const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
@@ -91,16 +95,58 @@ const Dialogue = () => {
 
     // 监听 Socket.IO 通知
     const handleNotification = (notification) => {
-      if (notification.type === 'end_rejected' && notification.relatedId === pairId) {
+      console.log('[Socket] 收到通知:', notification.type, notification);
+      console.log('[Socket] 当前 pairId:', pairId, '类型:', typeof pairId);
+      console.log('[Socket] notification.relatedId:', notification.relatedId, '类型:', typeof notification.relatedId);
+      // 使用宽松相等比较 pairId，避免类型不一致问题
+      const isThisPair = notification.relatedId == pairId;
+      console.log('[Socket] isThisPair:', isThisPair);
+
+      // 结束申请被拒绝
+      if (notification.type === 'end_rejected' && isThisPair) {
         alert('对方拒绝结束教学');
         setPairStatus('active');
         setEndRequestedBy(null);
+        return;
       }
-      if (notification.type === 'end_accepted' && notification.relatedId === pairId) {
+      // 结束申请被接受
+      if (notification.type === 'end_accepted' && isThisPair) {
         alert('对方已同意结束教学，正在生成总结...');
         setPairStatus('completed');
-        // 执行结束后的处理流程（轮次审查 + 生成
         handleDialogueEnd();
+        return;
+      }
+      // 轮次审查完成通知
+      if (notification.type === 'round_review_completed' && isThisPair) {
+        console.log('[Socket] 收到轮次审查完成通知，刷新审查结果:', notification);
+        // 刷新审查结果（无论侧栏是否打开都更新，保持数据最新）
+        fetchRoundReviews();
+        // 如果发现错误且是新的问题轮次，显示问题提示
+        if (notification.reviewResult?.hasError && notification.roundId) {
+          const roundId = notification.roundId;
+          if (!notifiedErrorRoundsRef.current.has(roundId)) {
+            notifiedErrorRoundsRef.current.add(roundId);
+            setShowReviewNotification(true);
+            console.log('[Socket] 新发现问题轮次:', roundId);
+          }
+        }
+        return;
+      }
+      // 学生错误检测通知（发给老师）
+      if (notification.type === 'student_error_detected' && isThisPair) {
+        console.log('[Socket] 收到学生错误检测通知:', notification);
+        alert(`检测到学生回答存在问题：${notification.content}`);
+        fetchRoundReviews();
+        return;
+      }
+      // 对话总结完成通知
+      if (notification.type === 'conversation_summary_completed' && isThisPair) {
+        console.log('[Socket] 收到对话总结完成通知:', notification);
+        if (notification.summaryData) {
+          setSummary(notification.summaryData);
+          setShowSummaryModal(true);
+        }
+        return;
       }
     };
 
@@ -136,6 +182,18 @@ const Dialogue = () => {
 
     previousMessagesLengthRef.current = messages.length;
   }, [messages]);
+
+  // 调试用：监控 roundReviews 变化
+  useEffect(() => {
+    console.log('[roundReviews 变化] 最新状态，长度:', roundReviews.length);
+    if (roundReviews.length > 0) {
+      console.log('[roundReviews 变化] 最新数据:', JSON.stringify(roundReviews.map(r => ({
+        id: r.id,
+        reviewed: r.reviewed,
+        summary: r.review?.summary?.substring(0, 50)
+      }))));
+    }
+  }, [roundReviews]);
 
   const fetchMessages = async (isInitialLoad = false) => {
     // 只在首次加载时显示 loading 状态
@@ -542,6 +600,60 @@ const Dialogue = () => {
     }
   };
 
+  // 获取轮次审查结果
+  const fetchRoundReviews = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      console.log('[fetchRoundReviews] 开始获取轮次审查结果, pairId:', pairId);
+
+      const response = await fetch(
+        `http://localhost:3000/api/ai/rounds/${pairId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log('[fetchRoundReviews] API 响应状态:', response.status);
+
+      if (!response.ok) {
+        console.error('获取轮次审查结果失败');
+        return;
+      }
+
+      const data = await response.json();
+      console.log('[fetchRoundReviews] API 返回数据:', data);
+
+      if (data.success && data.rounds) {
+        console.log('[fetchRoundReviews] 更新 roundReviews，当前数量:', data.rounds.length);
+        console.log('[fetchRoundReviews] 数据:', JSON.stringify(data.rounds.slice(0, 2)));
+        setRoundReviews(data.rounds);
+        console.log('[fetchRoundReviews] setRoundReviews 已调用，rounds 长度:', data.rounds.length);
+
+        // 检查是否有问题的轮次
+        const hasProblems = data.rounds.some(r => r.reviewed && r.review?.has_error);
+        console.log('[fetchRoundReviews] 是否有问题:', hasProblems);
+        setShowReviewNotification(hasProblems);
+      } else {
+        console.log('[fetchRoundReviews] 数据格式不对或无 rounds:', data);
+      }
+    } catch (error) {
+      console.error('获取轮次审查结果失败:', error);
+    }
+  };
+
+  // 切换审查栏展开/收起
+  const toggleReviewPanel = () => {
+    const newState = !reviewPanelOpen;
+    setReviewPanelOpen(newState);
+    if (newState) {
+      fetchRoundReviews();
+    }
+  };
+
   // 生成对话总结
   const generateSummary = async () => {
     try {
@@ -606,7 +718,100 @@ const Dialogue = () => {
   };
 
   return (
-    <div className="dialogue-container">
+    <div className={`dialogue-container ${reviewPanelOpen ? 'review-panel-open' : ''}`}>
+      {/* AI 审查栏 */}
+      <div className={`review-panel ${reviewPanelOpen ? 'expanded' : 'collapsed'}`}>
+        <div className="review-panel-header" onClick={toggleReviewPanel}>
+          <span className="review-panel-title">
+            <span>🔍</span>
+            <span>AI 审查</span>
+          </span>
+          <span className="review-panel-toggle">{reviewPanelOpen ? '◀' : '▶'}</span>
+        </div>
+        {reviewPanelOpen && (
+          <div className="review-panel-content">
+            {/* 问题汇总 */}
+            {(() => {
+              const problemRounds = roundReviews.filter(r => r.reviewed && r.review?.has_error);
+              if (problemRounds.length > 0) {
+                return (
+                  <div className="problem-summary">
+                    <div className="problem-summary-header">
+                      <span className="warning-icon">⚠️</span>
+                      <span>问题（{problemRounds.length}个）</span>
+                    </div>
+                    <ul className="problem-list">
+                      {problemRounds.map((round, index) => (
+                        <li key={round.id} className="problem-item">
+                          第{index + 1}轮：{round.review.error_details?.[0]?.errorType || '存在错误'}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              } else if (roundReviews.length > 0) {
+                return (
+                  <div className="no-problems">
+                    <div className="no-problems-header">
+                      <span>✓</span>
+                      <span>未发现问题</span>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
+            {/* 轮次总结 */}
+            {roundReviews.length > 0 && (
+              <div className="round-summaries">
+                <div className="round-summaries-title">内容总结</div>
+                {roundReviews.map((round, index) => (
+                  <div
+                    key={round.id}
+                    className={`round-summary-item ${round.reviewed && round.review?.has_error ? 'has-error' : ''}`}
+                  >
+                    <div className="round-number">第{index + 1}轮</div>
+                    <div className="round-summary-content">
+                      {round.review?.summary || '暂无总结'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 问题通知提示 */}
+      {showReviewNotification && !reviewPanelOpen && (() => {
+        const problemCount = notifiedErrorRoundsRef.current.size;
+        return (
+          <div className="review-problem-notification" onClick={toggleReviewPanel}>
+            <div className="review-problem-text">
+              发现 <strong>{problemCount} 个问题</strong>，点击查看详情
+            </div>
+            <button
+              className="review-problem-close"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowReviewNotification(false);
+              }}
+            >
+              ×
+            </button>
+          </div>
+        );
+      })()}
+
+      {/* 审查栏展开提示 - 收起时显示在左侧 */}
+      <div
+        className={`review-panel-expand-hint ${reviewPanelOpen ? '' : 'visible'}`}
+        onClick={toggleReviewPanel}
+      >
+        🔍 AI审查
+      </div>
+
       <div className="dialogue-header">
         <h2 className="dialogue-title">对话</h2>
         {pairStatus === 'active' && (
@@ -681,59 +886,68 @@ const Dialogue = () => {
             </div>
           ))
         )}
+        {pairStatus === 'completed' && (
+          <div className="dialogue-ended-notice">对话已结束，无法发送新消息</div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="input-area">
-        {/* 图片预览区域 */}
-        {imagePreview && (
-          <div className="image-preview">
-            <img src={imagePreview} alt="预览" />
-            <button
-              className="remove-image-btn"
-              onClick={() => {
-                setSelectedImage(null);
-                setImagePreview(null);
+      {pairStatus !== 'completed' ? (
+        <div className="input-area">
+          {/* 图片预览区域 */}
+          {imagePreview && (
+            <div className="image-preview">
+              <img src={imagePreview} alt="预览" />
+              <button
+                className="remove-image-btn"
+                onClick={() => {
+                  setSelectedImage(null);
+                  setImagePreview(null);
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          <div className="input-container">
+            <label className="image-upload-btn" title="发送图片">
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handleImageSelect}
+                style={{ display: 'none' }}
+              />
+              📷
+            </label>
+            <span className="input-icon">✏️</span>
+            <textarea
+              className="message-input"
+              placeholder="请输入消息...（可粘贴图片 Ctrl+V；支持 LaTeX 数学公式）"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend(e);
+                }
               }}
+              onPaste={handlePaste}
+            />
+            <button
+              className="send-btn"
+              onClick={handleSend}
+              disabled={!inputText.trim() && !selectedImage}
             >
-              ×
+              发送
             </button>
           </div>
-        )}
-
-        <div className="input-container">
-          <label className="image-upload-btn" title="发送图片">
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/gif,image/webp"
-              onChange={handleImageSelect}
-              style={{ display: 'none' }}
-            />
-            📷
-          </label>
-          <span className="input-icon">✏️</span>
-          <textarea
-            className="message-input"
-            placeholder="请输入消息...（可粘贴图片 Ctrl+V；支持 LaTeX 数学公式）"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend(e);
-              }
-            }}
-            onPaste={handlePaste}
-          />
-          <button
-            className="send-btn"
-            onClick={handleSend}
-            disabled={!inputText.trim() && !selectedImage}
-          >
-            发送
-          </button>
         </div>
-      </div>
+      ) : (
+        <div className="input-area-disabled">
+          <div className="dialogue-ended-notice">对话已结束，无法发送新消息</div>
+        </div>
+      )}
 
       {/* 确认结束模态框 */}
       {showEndConfirmModal && (

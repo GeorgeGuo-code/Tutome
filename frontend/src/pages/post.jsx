@@ -15,6 +15,9 @@ const Post = () => {
   const [showTipModal, setShowTipModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
   const [targetPage, setTargetPage] = useState(null);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [summaryData, setSummaryData] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   useEffect(() => {
     const hasSeenPostTip = localStorage.getItem('hasSeenPostTip');
@@ -154,6 +157,51 @@ const Post = () => {
       }
     } catch (error) {
       console.error("Error fetching pair by question:", error);
+    }
+  };
+
+  // 获取对话总结
+  const fetchSummary = async (pairId) => {
+    setSummaryLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert('请先登录');
+        return;
+      }
+
+      const response = await fetch(
+        `http://localhost:3000/api/ai/summary/${pairId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || '获取总结失败');
+      }
+
+      const data = await response.json();
+      console.log('总结数据:', data);
+
+      if (data.success) {
+        if (data.data) {
+          setSummaryData(data.data);
+          setShowSummaryModal(true);
+        } else {
+          alert('暂无总结内容');
+        }
+      } else {
+        alert(data.message || '获取总结失败');
+      }
+    } catch (error) {
+      console.error('获取总结失败:', error);
+      alert(error.message || '获取总结失败');
+    } finally {
+      setSummaryLoading(false);
     }
   };
 
@@ -304,17 +352,36 @@ const Post = () => {
         </div>
 
         <div className="post-actions">
-          <button
-            onClick={handleDialogueClick}
-            className="dialogue-btn"
-            disabled={pairStatus === 'completed'}
-            style={{
-              backgroundColor: pairStatus === 'completed' ? '#9CA3AF' : undefined,
-              cursor: pairStatus === 'completed' ? 'not-allowed' : undefined
-            }}
-          >
-            {pairStatus === 'completed' ? '已结束' : (validPairId ? '继续对话' : '创建结对')}
-          </button>
+          {pairStatus === 'completed' && validPairId ? (
+            <>
+              <Link
+                to={`/dialogue/${validPairId}`}
+                className="dialogue-btn view-dialogue-link"
+              >
+                查看对话
+              </Link>
+              <button
+                onClick={() => fetchSummary(validPairId)}
+                className="dialogue-btn"
+                disabled={summaryLoading}
+                style={{ marginLeft: '10px' }}
+              >
+                {summaryLoading ? '加载中...' : '查看总结'}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleDialogueClick}
+              className="dialogue-btn"
+              disabled={pairStatus === 'completed'}
+              style={{
+                backgroundColor: pairStatus === 'completed' ? '#9CA3AF' : undefined,
+                cursor: pairStatus === 'completed' ? 'not-allowed' : undefined
+              }}
+            >
+              {validPairId ? '继续对话' : '创建结对'}
+            </button>
+          )}
         </div>
       </div>
       <FeatureTipModal
@@ -352,6 +419,77 @@ const Post = () => {
                 }}
               >
                 返回
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 总结弹窗 */}
+      {showSummaryModal && summaryData && (
+        <div className="modal-overlay" onClick={() => setShowSummaryModal(false)}>
+          <div className="modal-content summary-modal" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">教学对话总结</h3>
+
+            {/* 整体评价 */}
+            {summaryData.summary_text && (
+              <div className="summary-section">
+                <h4 className="summary-section-title">📝 整体评价</h4>
+                <p className="summary-text">{summaryData.summary_text}</p>
+              </div>
+            )}
+
+            {/* 核心知识点 */}
+            {summaryData.key_learnings && summaryData.key_learnings.length > 0 && (
+              <div className="summary-section">
+                <h4 className="summary-section-title">📚 核心知识点</h4>
+                <ul className="summary-list">
+                  {summaryData.key_learnings.map((learning, index) => (
+                    <li key={index} className="summary-item learning-item">
+                      {learning}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 问题汇总 */}
+            {summaryData.problem_summary && summaryData.problem_summary.length > 0 && (
+              <div className="summary-section">
+                <h4 className="summary-section-title">⚠️ 问题汇总</h4>
+                <ul className="summary-list">
+                  {summaryData.problem_summary.map((problem, index) => (
+                    <li key={index} className="summary-item problem-item">
+                      {problem}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 相关链接 */}
+            {summaryData.related_links && summaryData.related_links.length > 0 && (
+              <div className="summary-section">
+                <h4 className="summary-section-title">🔗 相关学习资源</h4>
+                <ul className="summary-list">
+                  {summaryData.related_links.map((link, index) => (
+                    <li key={index} className="summary-item link-item">
+                      <a href={link.url} target="_blank" rel="noopener noreferrer">
+                        {link.title}
+                      </a>
+                      {link.description && <span className="link-description"> - {link.description}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="modal-buttons">
+              <button
+                className="btn-confirm"
+                onClick={() => setShowSummaryModal(false)}
+              >
+                关闭
               </button>
             </div>
           </div>

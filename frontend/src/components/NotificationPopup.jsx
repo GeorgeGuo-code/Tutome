@@ -38,6 +38,25 @@ const NotificationPopup = ({ notifications, onRemove }) => {
               对方已同意结束教学
             </span>
           );
+        } else if (notification.type === 'round_review_completed') {
+          notificationContent = (
+            <span className="notification-popup-text">
+              轮次审查完成
+              {notification.reviewResult?.hasError ? '，发现错误' : ''}
+            </span>
+          );
+        } else if (notification.type === 'conversation_summary_completed') {
+          notificationContent = (
+            <span className="notification-popup-text">
+              对话总结已生成
+            </span>
+          );
+        } else if (notification.type === 'student_error_detected') {
+          notificationContent = (
+            <span className="notification-popup-text">
+              检测到学生回答存在问题
+            </span>
+          );
         } else {
           notificationContent = (
             <span className="notification-popup-text">

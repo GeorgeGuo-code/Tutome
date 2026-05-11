@@ -7,6 +7,7 @@ const queries = require('../models/queries');
 const RoundDetectorClass = require('../services/roundDetector');
 const RoundDetector = new RoundDetectorClass();
 const RoundReviewService = require('../services/roundReviewService');
+const onlineStatusService = require('../services/onlineStatusService');
 
 console.log('[异步轮次审查器] 模块已加载（滑动窗口模式）');
 
@@ -32,6 +33,9 @@ async function triggerRoundReview(pairId, senderId) {
       console.log('[滑动窗口] 结对不存在，跳过审查');
       return { success: false, reason: '结对不存在' };
     }
+
+    console.log('[滑动窗口] 结对信息: teacher_id=', pair.teacher_id, 'student_id=', pair.student_id);
+    console.log('[滑动窗口] 将发送通知给: 学生=', pair.student_id, '老师=', pair.teacher_id);
 
     // 只有学生发送消息才可能触发轮次审查（老师刚回答完）
     if (senderId === pair.teacher_id) {
@@ -96,6 +100,54 @@ async function triggerRoundReview(pairId, senderId) {
       );
 
       console.log('[滑动窗口] ✅ 审查结果已保存');
+
+      // 通过 Socket.IO 推送审查结果给结对双方
+      const reviewResult = {
+        roundId: round.id,
+        hasError: judgment.hasError,
+        errorCount: judgment.errorDetails?.length || 0,
+        errorDetails: judgment.errorDetails || [],
+        summary: judgment.summary || '',
+        keyPoints: judgment.keyPoints || [],
+        confidence: judgment.overallConfidence
+      };
+
+      const roundIndex = rounds.findIndex(r => r.id === round.id) + 1;
+
+      // 通知学生（查看审查结果）
+      console.log('[滑动窗口] 准备通知学生:', pair.student_id);
+      onlineStatusService.sendNotificationToUser(pair.student_id, {
+        type: 'round_review_completed',
+        title: '轮次审查完成',
+        content: `第${roundIndex}轮审查已完成${judgment.hasError ? '，发现错误' : ''}`,
+        relatedId: pair.id,
+        roundId: round.id,
+        reviewResult
+      });
+
+      // 通知老师（审查结果，供侧栏更新用）
+      console.log('[滑动窗口] 准备通知老师:', pair.teacher_id);
+      onlineStatusService.sendNotificationToUser(pair.teacher_id, {
+        type: 'round_review_completed',
+        title: '轮次审查完成',
+        content: `第${roundIndex}轮审查已完成${judgment.hasError ? '，发现错误' : ''}`,
+        relatedId: pair.id,
+        roundId: round.id,
+        reviewResult
+      });
+
+      // 如果发现错误，额外通知老师（弹出提示）
+      if (judgment.hasError) {
+        onlineStatusService.sendNotificationToUser(pair.teacher_id, {
+          type: 'student_error_detected',
+          title: '学生回答存在问题',
+          content: `第${roundIndex}轮发现${judgment.errorDetails.length}个错误`,
+          relatedId: pair.id,
+          roundId: round.id,
+          errorCount: judgment.errorDetails.length
+        });
+      }
+
       console.log('[滑动窗口] ============');
 
       return {
@@ -308,6 +360,24 @@ async function generateConversationSummaryAsync(pairId) {
     console.log('[总总结器] 问题数量:', saveData.problem_count);
     console.log('[总总结器] 关键知识点数:', (saveData.key_learnings || []).length);
     console.log('[总总结器] 相关链接数:', (saveData.related_links || []).length);
+
+    // 通过 Socket.IO 推送总结结果给结对双方
+    onlineStatusService.sendNotificationToUser(pair.teacher_id, {
+      type: 'conversation_summary_completed',
+      title: '对话总结已生成',
+      content: '教学对话总结已完成，点击查看详情',
+      relatedId: pair.id,
+      summaryData: saveData
+    });
+
+    onlineStatusService.sendNotificationToUser(pair.student_id, {
+      type: 'conversation_summary_completed',
+      title: '对话总结已生成',
+      content: '教学对话总结已完成，点击查看详情',
+      relatedId: pair.id,
+      summaryData: saveData
+    });
+
     console.log('[总总结器] ============');
 
     return {
