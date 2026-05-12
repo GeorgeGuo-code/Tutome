@@ -1,0 +1,123 @@
+import React, { useState } from "react";
+import "./login.css";
+
+const Login = () => {
+  const [isLogin, setIsLogin] = useState(true); // true = 登录, false = 注册
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMessage("处理中...");
+
+    const endpoint = isLogin ? "login" : "register";
+    const apiUrl = `http://localhost:3000/api/${endpoint}`;
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMessage(isLogin ? "登录成功!" : "注册成功!");
+        if (isLogin && data.token) {
+          // 清除旧的登录信息
+          localStorage.removeItem("token");
+          localStorage.removeItem("username");
+          localStorage.removeItem("userId");
+
+          // 设置新的登录信息
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("username", username);
+
+          // 解析 token 获取用户 ID
+          try {
+            const tokenPayload = JSON.parse(atob(data.token.split('.')[1]));
+            localStorage.setItem("userId", tokenPayload.userId);
+            console.log('登录成功，用户ID:', tokenPayload.userId);
+          } catch (err) {
+            console.error('解析用户ID失败:', err);
+          }
+
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 1000);
+        } else if (!isLogin) {
+          // 注册成功后1秒后自动跳转到登录界面
+          setTimeout(() => {
+            setIsLogin(true);
+            setMessage("");
+            setUsername("");
+            setPassword("");
+          }, 1000);
+        }
+      } else {
+        // 尝试解析 JSON，如果失败则使用文本
+        let errorMessage = "操作失败";
+        try {
+          const data = await response.json();
+          errorMessage = data.message || errorMessage;
+        } catch {
+          // 如果不是 JSON，尝试获取文本
+          errorMessage = await response.text();
+        }
+        setMessage(errorMessage);
+      }
+    } catch (error) {
+      setMessage("服务器错误,请稍后重试");
+      console.error("Error:", error);
+    }
+  };
+
+  return (
+    <div className="login-container">
+      <div className="login-box">
+        <h2>{isLogin ? "登录" : "注册"}</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>用户名</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>密码</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          <button type="submit" className="submit-btn">
+            {isLogin ? "登录" : "注册"}
+          </button>
+        </form>
+        {message && <p className="message">{message}</p>}
+        <p className="toggle-text">
+          {isLogin ? "还没有账号?" : "已有账号?"}
+          <button
+            type="button"
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setMessage("");
+            }}
+          >
+            {isLogin ? "去注册" : "去登录"}
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default Login;

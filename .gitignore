@@ -1,0 +1,7 @@
+backend/config/.env
+backend/test
+frontend/dist/
+frontend/node_modules/
+backend/node_modules/
+local_file/
+temp/
