@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./personal.css";
 import FeatureTipModal from '../components/FeatureTipModal';
-import { userService } from '../services/apiService';
-import { HistoryIcon, NotificationIcon, HomeIcon } from '../components/icons';
+import { userService, rewardService } from '../services/apiService';
+import { HistoryIcon, NotificationIcon, HomeIcon, GiftIcon } from '../components/icons';
 
 // 自定义下拉多选组件
 function MultiSelectDropdown({ options, value, onChange, placeholder = "请选择" }) {
@@ -1245,6 +1245,352 @@ const NotificationsSection = () => {
   );
 };
 
+// 概率说明弹窗组件
+const RewardInfoModal = ({ visible, onClose, stockMap }) => {
+  if (!visible) return null;
+
+  const item1Stock = stockMap[1] ?? 3;
+  const item2Stock = stockMap[2] ?? 5;
+  const hasStockDepleted = item1Stock <= 0 || item2Stock <= 0;
+  const reducedProb = (item1Stock <= 0 ? 1 : 0) + (item2Stock <= 0 ? 4 : 0);
+  const hongbaoCurrentProb = 20 + reducedProb;
+
+  return (
+    <div className="reward-info-overlay" onClick={onClose}>
+      <div className="reward-info-modal" onClick={e => e.stopPropagation()}>
+        <div className="reward-info-header">
+          <h3 className="reward-info-title">概率及奖励说明</h3>
+          <button className="reward-info-close" onClick={onClose}>×</button>
+        </div>
+        <div className="reward-info-body">
+          <div className="reward-info-section">
+            <h4 className="reward-info-section-title">奖品概率</h4>
+            <div className="reward-info-list">
+              <div className="reward-info-item">
+                <span className="reward-info-rarity sss">SSS</span>
+                <span className="reward-info-name">国誉文具礼盒（库存{item1Stock}件）</span>
+                {item1Stock > 0 ? (
+                  <span className="reward-info-prob">1%</span>
+                ) : (
+                  <span className="reward-info-prob" style={{color: '#EF4444'}}>0%（已售罄）</span>
+                )}
+              </div>
+              <div className="reward-info-item">
+                <span className="reward-info-rarity ss">SS</span>
+                <span className="reward-info-name">精品笔记本（库存{item2Stock}件）</span>
+                {item2Stock > 0 ? (
+                  <span className="reward-info-prob">4%</span>
+                ) : (
+                  <span className="reward-info-prob" style={{color: '#EF4444'}}>0%（已售罄）</span>
+                )}
+              </div>
+              <div className="reward-info-item">
+                <span className="reward-info-rarity s">S</span>
+                <span className="reward-info-name">一元红包</span>
+                {hasStockDepleted ? (
+                  <span className="reward-info-prob" style={{color: '#10B981'}}>{hongbaoCurrentProb}% ↑</span>
+                ) : (
+                  <span className="reward-info-prob">20%</span>
+                )}
+              </div>
+              <div className="reward-info-item">
+                <span className="reward-info-rarity a">A</span>
+                <span className="reward-info-name">小零食</span>
+                <span className="reward-info-prob">25%</span>
+              </div>
+            </div>
+          </div>
+
+          {hasStockDepleted && (
+            <div className="reward-info-section">
+              <h4 className="reward-info-section-title">库存说明</h4>
+              <ul className="reward-info-rules">
+                <li>实物奖品库存耗尽后，其概率将全部转移至一元红包</li>
+              </ul>
+            </div>
+          )}
+
+          <div className="reward-info-section">
+            <h4 className="reward-info-section-title">抽取规则</h4>
+            <ul className="reward-info-rules">
+              <li>单抽消耗 1 张抽奖券，五抽消耗 5 张</li>
+              <li>每次抽取相互独立，概率不受影响</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 奖励中心子组件
+const RewardSection = () => {
+  const [drawMode, setDrawMode] = useState(1); // 1 或 5
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [cards, setCards] = useState([]);
+  const [hasDrawn, setHasDrawn] = useState(false); // 是否已经抽过
+  const [showInfo, setShowInfo] = useState(false);
+  const [tickets, setTickets] = useState(0); // 抽奖券数量
+  const [totalDrawn, setTotalDrawn] = useState({}); // 已抽取统计 { rewardId: count }
+  const [rewardStats, setRewardStats] = useState({}); // 可兑换统计 { rewardId: count }
+  const [stockMap, setStockMap] = useState({}); // 库存数据 { rewardId: stock }
+
+  // 奖池配置
+  const rewardsPool = [
+    { id: 1, name: '国誉文具礼盒', icon: '🎁', rarity: 'sss', desc: '精美文具套装', probability: 1 },
+    { id: 2, name: '精品笔记本', icon: '📓', rarity: 'ss', desc: '高品质笔记本', probability: 4 },
+    { id: 3, name: '一元红包', icon: '🧧', rarity: 's', desc: '微信红包奖励', probability: 20 },
+    { id: 4, name: '小零食', icon: '🍪', rarity: 'a', desc: '随机零食一份', probability: 25 },
+    { id: 5, name: '谢谢参与', icon: '😢', rarity: 'none', desc: '再接再厉', probability: 50 },
+  ];
+
+  // 加载用户抽奖信息
+  useEffect(() => {
+    loadRewardInfo();
+  }, []);
+
+  const loadRewardInfo = async () => {
+    try {
+      const result = await rewardService.getRewardInfo();
+      console.log('loadRewardInfo result:', result);
+      if (result.success && result.data) {
+        setTickets(result.data.tickets);
+        setTotalDrawn(result.data.totalDrawn || {});
+        setRewardStats(result.data.rewardStats || {});
+        setStockMap(result.data.stockMap || {});
+      }
+    } catch (error) {
+      console.error('加载抽奖信息失败:', error);
+    }
+  };
+
+  // 概率抽奖
+  const drawByProbability = () => {
+    const total = rewardsPool.reduce((sum, r) => sum + r.probability, 0);
+    let random = Math.random() * total;
+    for (const reward of rewardsPool) {
+      random -= reward.probability;
+      if (random <= 0) return reward;
+    }
+    return rewardsPool[0];
+  };
+
+  // 初始化卡牌
+  const initCards = (count) => {
+    return Array.from({ length: count }, (_, i) => ({
+      id: i,
+      reward: null,
+      flipped: false,
+    }));
+  };
+
+  // 切换模式
+  const handleModeChange = (mode) => {
+    if (isDrawing || mode === drawMode) return;
+    setDrawMode(mode);
+    setCards([]);
+    setHasDrawn(false);
+  };
+
+  // 抽奖
+  const handleDraw = async () => {
+    if (isDrawing) return;
+    setIsDrawing(true);
+    setHasDrawn(false);
+
+    const count = drawMode;
+    const newCards = initCards(count);
+    setCards(newCards);
+
+    // 调用API进行抽奖（后端处理概率和库存）
+    try {
+      const result = await rewardService.drawReward(count);
+      console.log('drawReward result:', result);
+
+      if (result.success && result.data) {
+        const drawnRewards = result.data.rewards || [];
+
+        // 依次翻开卡牌
+        for (let i = 0; i < count; i++) {
+          await new Promise(resolve => setTimeout(resolve, count === 1 ? 400 : 200));
+          if (drawnRewards[i]) {
+            newCards[i].reward = {
+              id: drawnRewards[i].rewardId,
+              name: drawnRewards[i].rewardName,
+              icon: drawnRewards[i].rewardIcon,
+              rarity: drawnRewards[i].rewardRarity,
+              desc: rewardsPool.find(r => r.id === drawnRewards[i].rewardId)?.desc || ''
+            };
+            newCards[i].flipped = true;
+            setCards([...newCards]);
+          }
+        }
+
+        // 全部翻开后的延迟
+        await new Promise(resolve => setTimeout(resolve, 600));
+
+        // 记录抽取结果（不包含谢谢参与）
+        const validRewards = drawnRewards.filter(r => r.rewardRarity !== 'none');
+        if (validRewards.length > 0) {
+          const recordData = validRewards.map(r => ({
+            rewardId: r.rewardId,
+            rewardName: r.rewardName,
+            rewardIcon: r.rewardIcon,
+            rewardRarity: r.rewardRarity
+          }));
+          await rewardService.recordReward(recordData);
+        }
+
+        // 更新抽奖券数量
+        setTickets(result.data.tickets);
+
+        // 重新加载抽奖信息
+        await loadRewardInfo();
+      }
+    } catch (error) {
+      console.error('抽奖API调用失败:', error);
+    }
+
+    setIsDrawing(false);
+    setHasDrawn(true);
+  };
+
+  // 渲染单张卡牌
+  const renderCard = (card, index) => {
+    if (!card.reward) {
+      return (
+        <div key={card.id} className="reward-card">
+          <div className="reward-card-back">
+            <div className="reward-card-back-pattern">
+              <span className="reward-card-back-star">✨</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div key={card.id} className={`reward-card ${card.flipped ? 'flipped' : ''}`}>
+        <div className="reward-card-back">
+          <div className="reward-card-back-pattern">
+            <span className="reward-card-back-star">✨</span>
+          </div>
+        </div>
+        <div className={`reward-card-front rarity-${card.reward.rarity}`}>
+          <span className="reward-card-rarity">
+            {card.reward.rarity === 'sss' ? 'SSS' :
+             card.reward.rarity === 'ss' ? 'SS' :
+             card.reward.rarity === 's' ? 'S' :
+             card.reward.rarity === 'a' ? 'A' : '谢谢参与'}
+          </span>
+          <span className="reward-card-icon">{card.reward.icon}</span>
+          <span className="reward-card-name">{card.reward.name}</span>
+          <span className="reward-card-desc">{card.reward.desc}</span>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="reward-section">
+      <div className="reward-header">
+        <h2 className="reward-title">奖励中心</h2>
+      </div>
+
+      {/* 抽取模式选择 - 在卡牌上方 */}
+      <div className="reward-mode-selector">
+        <button
+          className={`reward-mode-btn ${drawMode === 1 ? 'active' : ''}`}
+          onClick={() => handleModeChange(1)}
+          disabled={isDrawing}
+        >
+          抽取一次
+        </button>
+        <button
+          className={`reward-mode-btn ${drawMode === 5 ? 'active' : ''}`}
+          onClick={() => handleModeChange(5)}
+          disabled={isDrawing}
+        >
+          抽取五次
+        </button>
+      </div>
+
+      {/* 卡牌区域 */}
+      <div className="reward-cards-container">
+        <div className="reward-cards-wrapper">
+          {cards.length === 0 ? (
+            <div style={{ color: '#9CA3AF', fontSize: '16px' }}>
+              点击下方按钮开始抽取
+            </div>
+          ) : (
+            cards.map((card, index) => renderCard(card, index))
+          )}
+        </div>
+      </div>
+
+      {/* 抽取按钮和消耗 - 在卡牌下方 */}
+      <div className="reward-action-area">
+        <div className="reward-cost-info">
+          <div className="reward-cost">
+            <span className="reward-cost-text">本次消耗：</span>
+            <span className="reward-cost-value">
+              <span className="reward-cost-icon">🎫</span>
+              {drawMode === 1 ? '1' : '5'} 张抽奖券
+            </span>
+          </div>
+          <div className="reward-balance">
+            <span className="reward-balance-text">剩余抽奖券：</span>
+            <span className="reward-balance-value">{tickets}</span>
+          </div>
+        </div>
+        <button
+          className="reward-draw-btn"
+          onClick={handleDraw}
+          disabled={isDrawing}
+        >
+          {isDrawing ? '抽取中...' : hasDrawn ? `再抽一次${drawMode === 1 ? '' : ' x5'}` : `开始抽取${drawMode === 1 ? '' : ' x5'}`}
+        </button>
+      </div>
+
+      {/* 已抽取统计 */}
+      <div className="reward-stats">
+        <div className="reward-stats-header">
+          <h4 className="reward-stats-title">已抽取统计</h4>
+          <button
+            className="reward-info-btn"
+            onClick={() => setShowInfo(true)}
+          >
+            概率及奖励说明
+          </button>
+        </div>
+        <div className="reward-stats-list">
+          {rewardsPool.filter(r => r.rarity !== 'none').map(reward => (
+            <div key={reward.id} className="reward-stats-item">
+              <span className="reward-stats-icon">{reward.icon}</span>
+              <span className="reward-stats-name">{reward.name}</span>
+              <span className="reward-stats-count">{totalDrawn[reward.id] || 0}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 前往兑奖按钮 */}
+      <div className="reward-exchange">
+        <Link to="/reward-exchange" className="reward-exchange-btn">
+          前往兑奖
+        </Link>
+      </div>
+
+      {/* 概率说明弹窗 */}
+      <RewardInfoModal
+            visible={showInfo}
+            onClose={() => setShowInfo(false)}
+            stockMap={stockMap}
+          />
+    </div>
+  );
+};
+
 // 主组件
 const Personal = () => {
   const location = useLocation();
@@ -1271,6 +1617,9 @@ const Personal = () => {
           }
         });
       }, 300);
+    }
+    if (location.state?.activeTab === 'reward') {
+      setActiveTab('reward');
     }
   }, [location.state]);
 
@@ -1330,6 +1679,13 @@ const Personal = () => {
             <NotificationIcon />
             <span className="sidebar-text">我的通知</span>
           </button>
+          <button
+            className={`sidebar-item ${activeTab === 'reward' ? 'active' : ''}`}
+            onClick={() => setActiveTab('reward')}
+          >
+            <GiftIcon />
+            <span className="sidebar-text">奖励中心</span>
+          </button>
         </nav>
       </div>
 
@@ -1338,6 +1694,7 @@ const Personal = () => {
         {activeTab === 'profile' && <ProfileSection key={currentToken} />}
         {activeTab === 'history' && <HistorySection location={location} />}
         {activeTab === 'notifications' && <NotificationsSection />}
+        {activeTab === 'reward' && <RewardSection />}
       </div>
     </div><FeatureTipModal
         visible={showTipModal}

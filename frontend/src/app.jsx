@@ -6,6 +6,7 @@ import Ask from './pages/ask';
 import Browse from './pages/browse';
 import Match from './pages/match';
 import Personal from './pages/personal';
+import RewardExchange from './pages/RewardExchange';
 import Dialogue from './pages/dialogue';
 import Post from './pages/post';
 import PreSessionQuiz from './components/PreSessionQuiz';
@@ -70,6 +71,7 @@ export default function App() {
         <Route path="/browse" element={<><Navbar /><Browse /></>} />
         <Route path="/match" element={<><Navbar /><Match /></>} />
         <Route path="/personal" element={<><Navbar /><Personal /></>} />
+        <Route path="/reward-exchange" element={<><Navbar /><RewardExchange /></>} />
         <Route path="/dialogue/:pairId" element={<><Navbar /><Dialogue /></>} />
         <Route path="/question/:id" element={<><Navbar /><Post /></>} />
         <Route path="/quiz/pre/:pairId" element={<><Navbar showMinimal={true} /><PreSessionQuiz /></>} />

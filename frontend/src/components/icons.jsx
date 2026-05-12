@@ -74,3 +74,21 @@ export const HomeIcon = () => (
     </g>
   </svg>
 );
+
+export const GiftIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg"
+       xmlnsXlink="http://www.w3.org/1999/xlink"
+       viewBox="0 0 48 48"
+       width="24"
+       height="24"
+       filter="none">
+    <g>
+      <rect x="6" y="18" width="36" height="24" rx="2" stroke="rgba(16,16,16,1)" strokeWidth="3" fill="none"/>
+      <rect x="20" y="18" width="8" height="24" fill="rgba(16,16,16,1)"/>
+      <path d="M24 18C24 18 18 12 12 12C6 12 6 18 6 18" stroke="rgba(16,16,16,1)" strokeWidth="3" fill="none"/>
+      <path d="M24 18C24 18 30 12 36 12C42 12 42 18 42 18" stroke="rgba(16,16,16,1)" strokeWidth="3" fill="none"/>
+      <path d="M24 6V12" stroke="rgba(16,16,16,1)" strokeWidth="3" strokeLinecap="round"/>
+      <circle cx="24" cy="6" r="2" fill="rgba(16,16,16,1)"/>
+    </g>
+  </svg>
+);

@@ -14,6 +14,7 @@ const questionsRouter = require('./routes/questionsRouter');
 const chatsRouter = require('./routes/chatsRouter');
 const aiRouter = require('./routes/aiRouter');
 const surveyRouter = require('./routes/surveyRouter');
+const rewardRouter = require('./routes/rewardRouter');
 const app = express();
 
 app.use(cors());  // 使用 cors 中间件
@@ -27,6 +28,7 @@ app.use(protectedRouter);
 app.use(chatsRouter);
 app.use(aiRouter);
 app.use(surveyRouter);
+app.use(rewardRouter); 
 
 
 // 创建 HTTP 服务器

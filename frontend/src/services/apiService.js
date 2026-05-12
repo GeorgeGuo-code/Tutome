@@ -99,4 +99,61 @@ export const userService = {
   },
 };
 
+// 奖励相关 API
+export const rewardService = {
+  // 获取用户抽奖信息
+  getRewardInfo: async () => {
+    const response = await request('/reward/info');
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 抽取奖励
+  drawReward: async (drawMode) => {
+    const response = await request('/reward/draw', {
+      method: 'POST',
+      body: JSON.stringify({ drawMode }),
+    });
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 记录抽取结果
+  recordReward: async (rewards) => {
+    const response = await request('/reward/record', {
+      method: 'POST',
+      body: JSON.stringify({ rewards }),
+    });
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 兑换奖励
+  exchangeReward: async (data) => {
+    const response = await request('/reward/exchange', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    return { success: response.ok, data: result };
+  },
+
+  // 获取兑换记录列表
+  getExchangeRecords: async () => {
+    const response = await request('/reward/exchanges');
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 更新兑换记录
+  updateExchangeRecord: async (id, data) => {
+    const response = await request(`/reward/exchange/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    return { success: response.ok, data: result };
+  },
+};
+
 export default authService;
