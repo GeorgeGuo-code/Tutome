@@ -1167,6 +1167,24 @@ const NotificationsSection = () => {
           </div>
         );
 
+      case 'survey_reminder':
+        return (
+          <div key={notification.id} className="notification-item notification-survey-reminder">
+            <div className="notification-content">
+              <div className="notification-title">{notification.title}</div>
+              <div className="notification-message">{notification.content}</div>
+            </div>
+            <div className="notification-actions">
+              <button
+                className="notification-btn notification-btn-primary"
+                onClick={() => window.location.href = `/quiz/post/${notification.related_id}`}
+              >
+                去填写
+              </button>
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div key={notification.id} className="notification-item">

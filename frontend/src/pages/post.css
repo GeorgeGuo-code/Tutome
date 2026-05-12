@@ -290,9 +290,10 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-/* 总结弹窗样式 */
-.summary-modal {
-  max-width: 600px;
+/* 总结弹窗样式 - 需要比 .modal-content 优先级更高 */
+.post-container .modal-content.summary-modal {
+  max-width: 1800px;
+  width: 90%;
   max-height: 80vh;
   overflow-y: auto;
   padding: 20px;
@@ -309,14 +310,14 @@
 }
 
 .summary-section-title {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   color: #374151;
   margin-bottom: 8px;
 }
 
 .summary-text {
-  font-size: 14px;
+  font-size: 15px;
   color: #6B7280;
   line-height: 1.6;
   margin: 0;
@@ -329,7 +330,7 @@
 }
 
 .summary-item {
-  font-size: 13px;
+  font-size: 14px;
   color: #6B7280;
   padding: 4px 0;
   line-height: 1.5;
@@ -414,4 +415,147 @@
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* 问卷反馈区域样式 */
+.feedback-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed #E5E7EB;
+}
+
+.feedback-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #F0F9FF;
+  border: 1px solid #E0E7EB;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.feedback-toggle:hover {
+  background: #E0F2FE;
+}
+
+.feedback-toggle-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1E88E5;
+}
+
+.feedback-toggle-icon {
+  font-size: 12px;
+  color: #1E88E5;
+}
+
+.feedback-toggle-arrow {
+  font-size: 18px;
+  color: #1E88E5;
+  margin-left: auto;
+}
+
+.feedback-content {
+  margin-top: 12px;
+  padding: 16px;
+  background: #FAFBFC;
+  border-radius: 8px;
+  border: 1px solid #E5E7EB;
+}
+
+.feedback-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.feedback-response {
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  border: 1px solid #E5E7EB;
+}
+
+.feedback-response:last-child {
+  margin-bottom: 0;
+}
+
+.feedback-response-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.feedback-role {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.feedback-score {
+  font-size: 13px;
+  color: #059669;
+  font-weight: 500;
+}
+
+.feedback-toggle-icon {
+  margin-left: auto;
+  margin-right: 8px;
+  font-size: 13px;
+  color: #059669;
+  font-weight: 500;
+}
+
+.feedback-wrong-item {
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  border: 1px solid #E5E7EB;
+}
+
+.feedback-wrong-item:last-child {
+  margin-bottom: 0;
+}
+
+.feedback-wrong-question,
+.feedback-wrong-answer,
+.feedback-wrong-explanation {
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.feedback-wrong-answer {
+  color: #DC2626;
+}
+
+.feedback-wrong-explanation {
+  color: #059669;
+  margin-bottom: 0;
+}
+
+.feedback-wrong-label {
+  font-weight: 600;
+  color: #6B7280;
+}
+
+.feedback-empty {
+  text-align: center;
+  padding: 20px;
+  color: #059669;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.feedback-response-time {
+  font-size: 12px;
+  color: #9CA3AF;
 }

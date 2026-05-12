@@ -891,6 +891,16 @@
   color: #DC2626;
 }
 
+/* 问卷提醒 - 蓝色边框 */
+.notification-item.notification-survey-reminder {
+  background: #ecf5ff;
+  border: 1px solid #409eff;
+}
+
+.notification-item.notification-survey-reminder .notification-title {
+  color: #409eff;
+}
+
 /* 已处理通知 - 灰色样式 */
 .notification-item.notification-processed {
   border: 1px solid #9CA3AF;

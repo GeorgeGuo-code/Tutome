@@ -423,6 +423,48 @@ async function generatePostSurvey(pairId) {
     });
 
     console.log(`[SurveyService] 生成了问卷，包含 ${knowledgeQuestions.length} 道知识题和 ${allQuestions.length - knowledgeQuestions.length} 道评价题`);
+
+    // 向结对双方发送问卷提醒通知
+    try {
+      const queriesModule = require('../models/queries');
+      const teacherId = pair.teacher_id;
+      const studentId = pair.student_id;
+
+      // 检查是否已经存在未处理的问卷提醒通知，避免重复发送
+      const existingNotifications = await queriesModule.notification.getByUserId(teacherId, {
+        type: 'survey_reminder',
+        relatedId: pairId,
+        status: 'pending'
+      });
+
+      // 只有在没有 existingNotifications 时才发送通知
+      if (!existingNotifications || existingNotifications.length === 0) {
+        // 发送问卷提醒给老师
+        await queriesModule.notification.create(
+          teacherId,
+          'survey_reminder',
+          pairId,
+          '请填写课后问卷',
+          `来自"${pair.question_title}"的课后问卷`
+        );
+
+        // 发送问卷提醒给学生
+        await queriesModule.notification.create(
+          studentId,
+          'survey_reminder',
+          pairId,
+          '请填写课后问卷',
+          `来自"${pair.question_title}"的课后问卷`
+        );
+
+        console.log(`[SurveyService] 已向结对 ${pairId} 双方发送问卷提醒通知`);
+      } else {
+        console.log(`[SurveyService] 结对 ${pairId} 已存在问卷提醒通知，跳过发送`);
+      }
+    } catch (notifError) {
+      console.error('[SurveyService] 发送问卷提醒通知失败:', notifError);
+    }
+
     return { success: true, survey };
 
   } catch (error) {

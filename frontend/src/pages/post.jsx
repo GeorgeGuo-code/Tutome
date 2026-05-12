@@ -18,6 +18,9 @@ const Post = () => {
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [summaryData, setSummaryData] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [surveyFeedback, setSurveyFeedback] = useState(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackExpanded, setFeedbackExpanded] = useState(false);
 
   useEffect(() => {
     const hasSeenPostTip = localStorage.getItem('hasSeenPostTip');
@@ -205,6 +208,35 @@ const Post = () => {
     }
   };
 
+  // 获取问卷反馈
+  const fetchSurveyFeedback = async (pairId) => {
+    setFeedbackLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const response = await fetch(
+        `http://localhost:3000/api/survey/post/${pairId}/feedback`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          setSurveyFeedback(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('获取问卷反馈失败:', error);
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
   const handleDialogueClick = async (e) => {
     e.preventDefault();
 
@@ -361,7 +393,10 @@ const Post = () => {
                 查看对话
               </Link>
               <button
-                onClick={() => fetchSummary(validPairId)}
+                onClick={() => {
+                  fetchSummary(validPairId);
+                  fetchSurveyFeedback(validPairId);
+                }}
                 className="dialogue-btn"
                 disabled={summaryLoading}
                 style={{ marginLeft: '10px' }}
@@ -481,6 +516,50 @@ const Post = () => {
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+
+            {/* 问卷反馈区域 */}
+            {surveyFeedback && surveyFeedback.score !== undefined && (
+              <div className="feedback-section">
+                <div
+                  className="feedback-toggle"
+                  onClick={() => setFeedbackExpanded(!feedbackExpanded)}
+                >
+                  <span className="feedback-toggle-text">📋 问卷反馈</span>
+                  <span className="feedback-toggle-icon">
+                    正确率：{(surveyFeedback.score * 100).toFixed(0)}%
+                  </span>
+                  <span className="feedback-toggle-arrow">{feedbackExpanded ? '∧' : '›'}</span>
+                </div>
+
+                {feedbackExpanded && (
+                  <div className="feedback-content">
+                    {surveyFeedback.wrongQuestions && surveyFeedback.wrongQuestions.length > 0 ? (
+                      <>
+                        <div className="feedback-title">错误题目分析</div>
+                        {surveyFeedback.wrongQuestions.map((item, index) => (
+                          <div key={index} className="feedback-wrong-item">
+                            <div className="feedback-wrong-question">
+                              <span className="feedback-wrong-label">题目：</span>
+                              {item.question}
+                            </div>
+                            <div className="feedback-wrong-answer">
+                              <span className="feedback-wrong-label">我的答案：</span>
+                              {item.myAnswer}
+                            </div>
+                            <div className="feedback-wrong-explanation">
+                              <span className="feedback-wrong-label">解析：</span>
+                              {item.explanation}
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    ) : (
+                      <div className="feedback-empty">恭喜！全部答对</div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

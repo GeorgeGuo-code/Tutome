@@ -342,6 +342,14 @@ const submitPostResponse = async (req, res) => {
       await queries.survey.updatePostSurveyStatus(surveyId, 'completed');
       // 计算进度
       await surveyService.calculateMasteryProgress(survey.pair_id);
+
+      // 归档双方的问卷提醒通知
+      try {
+        await queries.notification.archiveByRelatedId(survey.pair_id, 'survey_reminder');
+        console.log('[SurveyController] 已归档问卷提醒通知');
+      } catch (notifError) {
+        console.error('[SurveyController] 归档问卷通知失败:', notifError);
+      }
     }
 
     res.json({
@@ -407,6 +415,109 @@ const getProgress = async (req, res) => {
   }
 };
 
+// ==================== 问卷反馈查询接口 ====================
+
+/**
+ * 获取问卷反馈（包含错误题目详情）
+ * GET /api/survey/post/:pairId/feedback
+ */
+const getPostSurveyFeedback = async (req, res) => {
+  const { pairId } = req.params;
+  const userId = req.user?.userId;
+
+  try {
+    const pair = await queries.pair.getById(pairId);
+    if (!pair) {
+      return res.status(404).json({ error: '结对不存在' });
+    }
+
+    // 权限检查
+    if (userId && pair.teacher_id !== userId && pair.student_id !== userId) {
+      return res.status(403).json({ error: '无权查看' });
+    }
+
+    // 获取问卷
+    const surveys = await queries.survey.getPostSurveysByPairId(pairId);
+    if (surveys.length === 0) {
+      return res.json({
+        success: true,
+        data: null,
+        message: '暂无问卷'
+      });
+    }
+
+    const survey = surveys[0];
+
+    // 获取双方回答
+    const responses = await queries.survey.getPostResponsesBySurveyId(survey.id);
+
+    if (responses.length === 0) {
+      return res.json({
+        success: true,
+        data: null,
+        message: '问卷尚未填写'
+      });
+    }
+
+    // 解析问卷题目（包含正确答案和解析）
+    const surveyQuestions = typeof survey.questions === 'string'
+      ? JSON.parse(survey.questions)
+      : survey.questions;
+
+    // 构建题目ID到题目信息的映射
+    const questionMap = {};
+    surveyQuestions.forEach((q, index) => {
+      questionMap[index] = q;
+    });
+
+    // 获取当前用户的回答
+    const userResponse = responses.find(r => r.user_id === userId);
+
+    // 构建反馈数据
+    const feedbackData = {
+      survey_id: survey.id,
+      status: survey.status
+    };
+
+    if (userResponse) {
+      feedbackData.score = userResponse.score;
+      feedbackData.wrongQuestions = [];
+
+      const answers = typeof userResponse.answers === 'string'
+        ? JSON.parse(userResponse.answers)
+        : userResponse.answers;
+
+      // 筛选错误题目（is_correct === false && is_fixed === false）
+      answers.forEach((answer, index) => {
+        if (answer.is_correct === false && answer.is_fixed === false) {
+          const question = questionMap[index];
+          if (question) {
+            const selectedIndex = answer.selected_index;
+            const myAnswer = question.options && question.options[selectedIndex]
+              ? question.options[selectedIndex]
+              : '未知答案';
+
+            feedbackData.wrongQuestions.push({
+              question: question.question,
+              myAnswer: myAnswer,
+              explanation: answer.feedback || question.explanation || '暂无解析'
+            });
+          }
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      data: feedbackData
+    });
+
+  } catch (error) {
+    console.error('[SurveyController] 获取问卷反馈失败:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   generatePreQuestions,
   getPreQuestions,
@@ -414,5 +525,6 @@ module.exports = {
   generatePostSurvey,
   getPostSurvey,
   submitPostResponse,
+  getPostSurveyFeedback,
   getProgress
 };

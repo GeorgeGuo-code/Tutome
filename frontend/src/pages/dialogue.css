@@ -406,9 +406,23 @@
 
 /* 总结模态框样式 */
 .summary-modal {
-  max-width: 600px;
+  max-width: 1800px;
   max-height: 80vh;
   overflow-y: auto;
+}
+
+.summary-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1E293B;
+  margin: 0 0 12px 0;
+}
+
+.summary-text {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #4B5563;
+  margin: 0;
 }
 
 .summary-section {
@@ -447,6 +461,7 @@
   display: flex;
   gap: 8px;
   align-items: flex-start;
+  font-size: 14px;
 }
 
 .summary-item:last-child {

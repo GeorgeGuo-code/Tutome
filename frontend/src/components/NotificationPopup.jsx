@@ -57,6 +57,12 @@ const NotificationPopup = ({ notifications, onRemove }) => {
               检测到学生回答存在问题
             </span>
           );
+        } else if (notification.type === 'survey_reminder') {
+          notificationContent = (
+            <span className="notification-popup-text">
+              {notification.title || '请填写课后问卷'}
+            </span>
+          );
         } else {
           notificationContent = (
             <span className="notification-popup-text">

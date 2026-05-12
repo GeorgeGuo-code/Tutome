@@ -27,4 +27,7 @@ router.post('/api/survey/post/:pairId', verifyJWT, surveyController.generatePost
 // GET /api/survey/progress/:pairId - 获取掌握度进度
 router.get('/api/survey/progress/:pairId', verifyJWT, surveyController.getProgress);
 
+// GET /api/survey/post/:pairId/feedback - 获取问卷反馈
+router.get('/api/survey/post/:pairId/feedback', verifyJWT, surveyController.getPostSurveyFeedback);
+
 module.exports = router;

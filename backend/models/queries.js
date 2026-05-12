@@ -1372,11 +1372,21 @@ const queries = {
     // 删除通知（软删除：归档）
     archive: async (notificationId) => {
       const result = await pool.query(
-        `UPDATE notifications SET status = 'archived', updated_at = NOW() 
+        `UPDATE notifications SET status = 'archived', updated_at = NOW()
          WHERE id = $1 RETURNING *`,
         [notificationId]
       );
       return result.rows[0];
+    },
+
+    // 根据 related_id 和 type 归档通知
+    archiveByRelatedId: async (relatedId, type) => {
+      const result = await pool.query(
+        `UPDATE notifications SET status = 'archived', updated_at = NOW()
+         WHERE related_id = $1 AND type = $2 RETURNING *`,
+        [relatedId, type]
+      );
+      return result.rows;
     },
 
     // 获取未读通知数量
@@ -1665,6 +1675,11 @@ const queries = {
       return result.rows;
     },
     getPostSurveyById: async (surveyId) => {
+      const result = await pool.query('SELECT * FROM post_surveys WHERE id = $1', [surveyId]);
+      return result.rows[0] || null;
+    },
+    // 获取问卷完整信息（包含正确答案和解析，用于反馈）
+    getPostSurveyWithCorrectAnswers: async (surveyId) => {
       const result = await pool.query('SELECT * FROM post_surveys WHERE id = $1', [surveyId]);
       return result.rows[0] || null;
     },

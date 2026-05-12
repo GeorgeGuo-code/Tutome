@@ -64,39 +64,49 @@ const applyPair = async (req, res) => {
         // 创建结对，传入正确的 teacher_id 和 student_id
         const newPair = await queries.pair.create(teacherId, studentId, topicId);
 
-        // 创建结对申请通知
-        const applicant = await queries.findUserById(userId);
-        const notificationTitle = role === 'teacher' ? '收到老师申请' : '收到学生申请';
-        const notificationContent = `${applicant.username} 想要与您结对`;
-
-        const newNotification = await queries.notification.create(
-            targetUserId,  // 通知接收者
-            'pair_application',  // 通知类型
-            newPair.id,  // related_id = pair_id
-            notificationTitle,
-            notificationContent,
-            'pending'  // 状态
-        );
-
-        // 推送实时通知
-        onlineStatusService.sendNotificationToUser(targetUserId, {
-            id: newNotification.id,
-            type: 'pair_application',
-            title: notificationTitle,
-            content: notificationContent,
-            relatedId: newPair.id,
-            applicantUsername: applicant.username
+        // 检查是否已经存在该类型的未处理通知，避免重复发送
+        const existingNotifications = await queries.notification.getByUserId(targetUserId, {
+          type: 'pair_application',
+          relatedId: newPair.id,
+          status: 'pending'
         });
 
-        // 在返回结果中添加角色信息
-        const result = {
-            ...newPair,
-            your_role: role,  // 你的角色
-            partner_role: role === 'teacher' ? 'student' : 'teacher',  // 对方的角色
-            message: '申请已发送，等待对方确认'
-        };
+        // 只有在没有 existingNotifications 时才发送通知
+        if (!existingNotifications || existingNotifications.length === 0) {
+          // 创建结对申请通知
+          const applicant = await queries.findUserById(userId);
+          const notificationTitle = role === 'teacher' ? '收到老师申请' : '收到学生申请';
+          const notificationContent = `${applicant.username} 想要与您结对`;
 
-        res.status(201).json(result);
+          const newNotification = await queries.notification.create(
+              targetUserId,  // 通知接收者
+              'pair_application',  // 通知类型
+              newPair.id,  // related_id = pair_id
+              notificationTitle,
+              notificationContent,
+              'pending'  // 状态
+          );
+
+          // 推送实时通知
+          onlineStatusService.sendNotificationToUser(targetUserId, {
+              id: newNotification.id,
+              type: 'pair_application',
+              title: notificationTitle,
+              content: notificationContent,
+              relatedId: newPair.id,
+              applicantUsername: applicant.username
+        });
+
+          // 在返回结果中添加角色信息
+          const result = {
+              ...newPair,
+              your_role: role,  // 你的角色
+              partner_role: role === 'teacher' ? 'student' : 'teacher',  // 对方的角色
+              message: '申请已发送，等待对方确认'
+          };
+
+          res.status(201).json(result);
+        }
     } catch (err) {
         console.error('申请结对失败:', err);
         res.status(500).json({ error: '申请失败' });

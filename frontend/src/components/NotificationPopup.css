@@ -38,6 +38,13 @@
   border-left: 4px solid #1f2937;
 }
 
+/* 问卷提醒 - 蓝色左边框 */
+.notification-popup-item.notification-survey_reminder {
+  background: #ecf5ff;
+  border: 1px solid #6b7280;
+  border-left: 4px solid #409eff;
+}
+
 .notification-popup-item.removing {
   animation: slideOut 0.3s ease-out forwards;
 }
