@@ -10,9 +10,10 @@ const cors = require('cors');  // 引入 cors 中间件
 const { Server } = require('socket.io');
 const usersRouter = require('./routes/usersRouter');
 const protectedRouter = require('./routes/protectedRouter');  // 受jwt保护的api
-const questionsRouter = require('./routes/questionsRouter'); 
+const questionsRouter = require('./routes/questionsRouter');
 const chatsRouter = require('./routes/chatsRouter');
 const aiRouter = require('./routes/aiRouter');
+const surveyRouter = require('./routes/surveyRouter');
 const app = express();
 
 app.use(cors());  // 使用 cors 中间件
@@ -24,7 +25,8 @@ app.use(usersRouter);
 app.use(questionsRouter);
 app.use(protectedRouter);
 app.use(chatsRouter);
-app.use(aiRouter); 
+app.use(aiRouter);
+app.use(surveyRouter);
 
 
 // 创建 HTTP 服务器

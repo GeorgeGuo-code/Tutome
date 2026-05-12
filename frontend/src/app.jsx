@@ -8,6 +8,8 @@ import Match from './pages/match';
 import Personal from './pages/personal';
 import Dialogue from './pages/dialogue';
 import Post from './pages/post';
+import PreSessionQuiz from './components/PreSessionQuiz';
+import PostSessionSurvey from './components/PostSessionSurvey';
 import Navbar from './components/Navbar';
 import NotificationPopup from './components/NotificationPopup';
 import socketService from './services/socketService';
@@ -70,6 +72,8 @@ export default function App() {
         <Route path="/personal" element={<><Navbar /><Personal /></>} />
         <Route path="/dialogue/:pairId" element={<><Navbar /><Dialogue /></>} />
         <Route path="/question/:id" element={<><Navbar /><Post /></>} />
+        <Route path="/quiz/pre/:pairId" element={<><Navbar showMinimal={true} /><PreSessionQuiz /></>} />
+        <Route path="/quiz/post/:pairId" element={<><Navbar showMinimal={true} /><PostSessionSurvey /></>} />
       </Routes>
       <NotificationPopup
         notifications={notifications}

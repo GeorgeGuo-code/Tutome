@@ -1,4 +1,5 @@
 const queries = require('../models/queries');
+const surveyService = require('../services/surveyService');
 
 // 定义分类规则（可配置）
 const CATEGORY_RULES = {
@@ -50,6 +51,13 @@ const createQuestion = async (req, res) => {
     );
 
     if (result.success) {
+      // 生成热身题目模板（异步，不阻塞响应）
+      const questionId = result.questionId;
+      if (questionId) {
+        surveyService.generatePreQuestionTemplates(questionId).catch(err => {
+          console.error('[创建问题] 生成热身题目模板失败:', err);
+        });
+      }
       res.status(201).json(result);
     } else {
       const statusCode = result.message.includes('至少选择') ||

@@ -1,6 +1,7 @@
 const queries = require('../models/queries');
 const onlineStatusService = require('../services/onlineStatusService');
 const asyncRoundReviewer = require('../services/asyncRoundReviewer');
+const surveyService = require('../services/surveyService');
 const cosUploadService = require('../services/cosUploadService');
 const multer = require('multer');
 const upload = multer({
@@ -153,12 +154,44 @@ const acceptPair = async (req, res) => {
             return res.status(404).json({ error: '结对不存在' });
         }
 
-        if ((pair.teacher_id !== userId && pair.student_id !== userId) || pair.status !== 'pending') {
-            console.log('权限验证失败');
-            return res.status(403).json({ error: '无权操作或状态错误' });
+        // 检查用户是否是结对的参与者（teacher或student）
+        const isParticipant = (pair.teacher_id === userId || pair.student_id === userId);
+        if (!isParticipant) {
+            console.log('权限验证失败: 用户不是结对参与者');
+            return res.status(403).json({ error: '无权操作' });
+        }
+
+        // 如果已经是active状态，说明已经接受了，直接返回成功（幂等性）
+        if (pair.status === 'active') {
+            console.log('结对已经处于active状态，可能是重复点击');
+            return res.json({
+                success: true,
+                message: '结对已经接受',
+                pair_id: pair.id,
+                already_accepted: true
+            });
+        }
+
+        if (pair.status !== 'pending') {
+            console.log('状态验证失败: 当前状态为', pair.status);
+            return res.status(400).json({ error: '状态错误，只能接受待处理的结对申请' });
         }
 
         const updatedPair = await queries.pair.accept(pairId);
+
+        // 生成热身题目（同步等待完成）
+        // 即使question_id为null也会生成通用热身题
+        try {
+          console.log('[结对成功] 开始生成热身题目, question_id:', pair.question_id);
+          const preResult = await surveyService.generatePreQuestions(parseInt(pairId));
+          if (preResult.success) {
+            console.log('[结对成功] 生成热身题目完成，共', preResult.questions?.length || 0, '道题');
+          } else {
+            console.log('[结对成功] 生成热身题目失败:', preResult.error);
+          }
+        } catch (err) {
+          console.error('[结对成功] 生成热身题目异常:', err);
+        }
 
         // 判断谁是申请者（对方才是申请者，需要通知对方）
         const partnerId = pair.teacher_id === userId ? pair.student_id : pair.teacher_id;
@@ -510,6 +543,12 @@ const endTeaching = async (req, res) => {
         // 触发对话总总结（异步，不阻塞响应）
         asyncRoundReviewer.generateConversationSummaryAsync(pairId);
 
+        // 生成对话后问卷（异步，不阻塞响应）
+        console.log('[结束教学] 生成对话后问卷');
+        surveyService.generatePostSurvey(parseInt(pairId)).catch(err => {
+          console.error('[结束教学] 生成对话后问卷失败:', err);
+        });
+
         res.json(endedPair);
     } catch (err) {
         console.error('结束教学失败:', err);
@@ -577,7 +616,8 @@ const requestEndTeaching = async (req, res) => {
             title: '收到结束教学申请',
             content: `${currentUser.username} 申请结束教学`,
             relatedId: pairId,
-            applicantUsername: currentUser.username
+            applicantUsername: currentUser.username,
+            end_requested_by: userId  // 让对方知道是谁申请的
         });
 
         res.json({
@@ -630,6 +670,12 @@ const acceptEndRequest = async (req, res) => {
         }
 
                const updatedPair = await queries.pair.acceptEndRequest(pairId);
+
+        // 生成对话后问卷
+        console.log('[结束确认] 生成对话后问卷');
+        surveyService.generatePostSurvey(parseInt(pairId)).catch(err => {
+          console.error('[结束确认] 生成对话后问卷失败:', err);
+        });
 
         // 创建同意结束通知
         const requesterId = pair.end_requested_by;

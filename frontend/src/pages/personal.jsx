@@ -913,6 +913,8 @@ const NotificationsSection = () => {
         }
       );
 
+      const data = await response.json();
+
       if (response.ok) {
         // 标记通知为已处理
         await markNotificationAsRead(notificationId);
@@ -922,12 +924,19 @@ const NotificationsSection = () => {
         setSuccessMessage('结对成功！');
         setPairIdToNavigate(pairId);
       } else {
-        const errorData = await response.json();
-        alert(`操作失败：${errorData.message || errorData.error || '未知错误'}`);
-        // 操作失败时标记通知为已读，并刷新列表
-        await markNotificationAsRead(notificationId);
-        fetchNotifications();
-        fetchUnreadCount();
+        // 只有特定错误才标记通知为已读，避免重复点击问题
+        if (data.error === '状态错误，只能接受待处理的结对申请') {
+          // 如果是状态错误（可能已被其他操作处理），也标记为已读并显示结果
+          await markNotificationAsRead(notificationId);
+          fetchNotifications();
+          fetchUnreadCount();
+          // 检查是否是pair已被接受（成功场景）
+          if (data.message && data.message.includes('已接受')) {
+            setSuccessMessage('结对成功！');
+            setPairIdToNavigate(pairId);
+          }
+        }
+        alert(`操作失败：${data.message || data.error || '未知错误'}`);
       }
     } catch (error) {
       console.error('接受结对申请错误:', error);
@@ -1097,9 +1106,9 @@ const NotificationsSection = () => {
             <div className="notification-actions notification-actions-vertical">
               <button
                 className="notification-btn notification-btn-primary"
-                onClick={() => window.location.href = `/dialogue/${notification.related_id}`}
+                onClick={() => window.location.href = `/quiz/pre/${notification.related_id}`}
               >
-                进入
+                完成热身问卷
               </button>
               <button
                 className="notification-btn notification-btn-know"
@@ -1211,12 +1220,12 @@ const NotificationsSection = () => {
                   onClick={() => {
                     setSuccessMessage(null);
                     if (pairIdToNavigate) {
-                      window.location.href = `/dialogue/${pairIdToNavigate}`;
+                      window.location.href = `/quiz/pre/${pairIdToNavigate}`;
                       setPairIdToNavigate(null);
                     }
                   }}
                 >
-                  好的，去对话
+                  好的，去完成热身问卷
                 </button>
                 <button
                   className="success-modal-btn success-modal-btn-secondary"

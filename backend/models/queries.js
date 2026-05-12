@@ -1621,9 +1621,86 @@ const queries = {
       return result.rows[0] || null;
     }
   }
+,
+  survey: {
+    createPreQuestion: async ({ pair_id, question, correct_index, position }) => {
+      const result = await pool.query(
+        `INSERT INTO pre_questions (pair_id, question, correct_index, position) VALUES ($1, $2::jsonb, $3, $4) RETURNING *`,
+        [pair_id, JSON.stringify(question), correct_index, position]
+      );
+      return result.rows[0];
+    },
+    getPreQuestionsByPairId: async (pairId) => {
+      const result = await pool.query('SELECT * FROM pre_questions WHERE pair_id = $1 ORDER BY position ASC', [pairId]);
+      return result.rows;
+    },
+    getPreQuestionById: async (questionId) => {
+      const result = await pool.query('SELECT * FROM pre_questions WHERE id = $1', [questionId]);
+      return result.rows[0] || null;
+    },
+    createPreResponse: async ({ pair_id, question_id, user_id, selected_index, is_correct }) => {
+      const result = await pool.query(
+        `INSERT INTO pre_responses (pair_id, question_id, user_id, selected_index, is_correct) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [pair_id, question_id, user_id, selected_index, is_correct]
+      );
+      return result.rows[0];
+    },
+    getPreResponsesByPairId: async (pairId) => {
+      const result = await pool.query('SELECT * FROM pre_responses WHERE pair_id = $1 ORDER BY answered_at ASC', [pairId]);
+      return result.rows;
+    },
+    getPreResponse: async (questionId, userId) => {
+      const result = await pool.query('SELECT * FROM pre_responses WHERE question_id = $1 AND user_id = $2', [questionId, userId]);
+      return result.rows[0] || null;
+    },
+    createPostSurvey: async ({ pair_id, questions, fixed_components, status, expires_at }) => {
+      const result = await pool.query(
+        `INSERT INTO post_surveys (pair_id, questions, fixed_components, status, expires_at) VALUES ($1, $2::jsonb, $3::jsonb, $4, $5) RETURNING *`,
+        [pair_id, JSON.stringify(questions), JSON.stringify(fixed_components || {}), status, expires_at]
+      );
+      return result.rows[0];
+    },
+    getPostSurveysByPairId: async (pairId) => {
+      const result = await pool.query('SELECT * FROM post_surveys WHERE pair_id = $1 ORDER BY created_at DESC', [pairId]);
+      return result.rows;
+    },
+    getPostSurveyById: async (surveyId) => {
+      const result = await pool.query('SELECT * FROM post_surveys WHERE id = $1', [surveyId]);
+      return result.rows[0] || null;
+    },
+    updatePostSurveyStatus: async (surveyId, status) => {
+      const result = await pool.query('UPDATE post_surveys SET status = $1 WHERE id = $2 RETURNING *', [status, surveyId]);
+      return result.rows[0];
+    },
+    createPostResponse: async ({ survey_id, user_id, user_role, answers, score, ai_review_result }) => {
+      const result = await pool.query(
+        `INSERT INTO post_responses (survey_id, user_id, user_role, answers, score, ai_review_result) VALUES ($1, $2, $3, $4::jsonb, $5, $6::jsonb) RETURNING *`,
+        [survey_id, user_id, user_role, JSON.stringify(answers), score, JSON.stringify(ai_review_result || {})]
+      );
+      return result.rows[0];
+    },
+    getPostResponsesBySurveyId: async (surveyId) => {
+      const result = await pool.query('SELECT * FROM post_responses WHERE survey_id = $1', [surveyId]);
+      return result.rows;
+    },
+    getPostResponse: async (surveyId, userId) => {
+      const result = await pool.query('SELECT * FROM post_responses WHERE survey_id = $1 AND user_id = $2', [surveyId, userId]);
+      return result.rows[0] || null;
+    },
+    createOrUpdateMasteryProgress: async ({ pair_id, topic, pre_correct_rate, post_correct_rate, pre_total, post_total, progress }) => {
+      const result = await pool.query(
+        `INSERT INTO mastery_progress (pair_id, topic, pre_correct_rate, post_correct_rate, pre_total, post_total, progress) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (pair_id, topic) DO UPDATE SET pre_correct_rate = EXCLUDED.pre_correct_rate, post_correct_rate = EXCLUDED.post_correct_rate, pre_total = EXCLUDED.pre_total, post_total = EXCLUDED.post_total, progress = EXCLUDED.progress, calculated_at = NOW() RETURNING *`,
+        [pair_id, topic, pre_correct_rate, post_correct_rate, pre_total, post_total, progress]
+      );
+      return result.rows[0];
+    },
+    getMasteryProgressByPairId: async (pairId) => {
+      const result = await pool.query('SELECT * FROM mastery_progress WHERE pair_id = $1 ORDER BY calculated_at DESC', [pairId]);
+      return result.rows;
+    }
+  }
 };
 
-/** 至少有一条问题的用户 id（排除自己），用于结对匹配候选人池 */
 async function getCandidateMatcherUserIds(excludeUserId) {
   const r = await pool.query(
     `SELECT DISTINCT u.id FROM users u
@@ -1765,6 +1842,7 @@ async function getUnpairedQuestionsWithTagsForUserIds(userIds) {
   return byUser;
 }
 
+
 module.exports = {
   ...queries,
   registerUser,
@@ -1788,6 +1866,7 @@ module.exports = {
   deleteQuestion,
   roundReviews: queries.roundReviews,
   conversationSummaries: queries.conversationSummaries,
+  survey: queries.survey,
   getCandidateMatcherUserIds,
   getBatchUserMatchingProfiles,
   getUnpairedQuestionsWithTagsForUserIds,

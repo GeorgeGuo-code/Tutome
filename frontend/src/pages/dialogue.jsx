@@ -30,6 +30,7 @@ const Dialogue = () => {
   const [roundReviews, setRoundReviews] = useState([]); // 轮次审查结果
   const [showReviewNotification, setShowReviewNotification] = useState(false); // 显示问题通知
   const notifiedErrorRoundsRef = useRef(new Set()); // 已显示过通知的问题轮次
+  const [preQuizCompleted, setPreQuizCompleted] = useState(false); // 热身测试是否完成
   const currentUserId = parseInt(localStorage.getItem("userId")) || null;
   const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
@@ -42,17 +43,6 @@ const Dialogue = () => {
     if (!hasSeenDialogueTip) {
       setShowTipModal(true);
     }
-
-    // 原有对话逻辑（保留不动，比如加载聊天记录、接收消息等）
-    const loadDialogueHistory = async () => {
-      const token = localStorage.getItem('token');
-      const res = await fetch('/api/dialogue/history', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      // 你原有处理聊天记录的逻辑...
-    };
-    loadDialogueHistory();
   }, []);
 
   // 新增：关闭弹窗并标记已查看
@@ -83,7 +73,45 @@ const Dialogue = () => {
       return;
     }
 
+    // 检查热身测试是否完成，如果未完成则跳转到问卷页面
+    const checkPreQuiz = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/survey/pre/${pairId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (result.success && result.data) {
+          // 只要当前用户完成了热身测试就标记
+          if (result.data.completed) {
+            setPreQuizCompleted(true);
+          } else if (result.data.questions && result.data.questions.length > 0) {
+            // 有题目但未完成，跳转到热身问卷页面
+            console.log('[Dialogue] 热身问卷未完成，跳转到问卷页面');
+            navigate(`/quiz/pre/${pairId}`);
+            return;
+          } else {
+            // 没有题目（可能生成失败），也跳转到问卷页面尝试重新生成/获取
+            console.log('[Dialogue] 无热身题目，跳转到问卷页面');
+            navigate(`/quiz/pre/${pairId}`);
+            return;
+          }
+        } else if (result.error) {
+          // API返回错误，可能是题目还没生成，跳转到问卷页面
+          console.log('[Dialogue] 获取热身题目失败:', result.error);
+          navigate(`/quiz/pre/${pairId}`);
+          return;
+        }
+      } catch (err) {
+        console.error('检查热身测试失败:', err);
+        // 网络错误也跳转到问卷页面
+        navigate(`/quiz/pre/${pairId}`);
+        return;
+      }
+    };
+
     // 首次加载消息和结对状态
+    checkPreQuiz();
     fetchMessages(true);
     fetchPairStatus();
 
@@ -102,6 +130,13 @@ const Dialogue = () => {
       const isThisPair = notification.relatedId == pairId;
       console.log('[Socket] isThisPair:', isThisPair);
 
+      // 收到结束申请通知
+      if (notification.type === 'end_request' && isThisPair) {
+        setPairStatus('end_requested');
+        setEndRequestedBy(notification.applicantId || notification.end_requested_by);
+        setShowEndRequestModal(true);
+        return;
+      }
       // 结束申请被拒绝
       if (notification.type === 'end_rejected' && isThisPair) {
         alert('对方拒绝结束教学');
@@ -712,9 +747,9 @@ const Dialogue = () => {
     // 1. 生成对话总结（轮次审查已在消息发送时自动触发）
     await generateSummary();
 
-    // 2. 跳转到个人中心
-    console.log('[对话结束] 跳转到个人中心');
-    navigate('/personal');
+    // 2. 跳转到问卷页面
+    console.log('[对话结束] 跳转到问卷页面');
+    navigate(`/quiz/post/${pairId}`);
   };
 
   return (
