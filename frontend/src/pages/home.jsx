@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { requireAuth } from "../services/auth";
+import { requireAuth, checkAuth } from "../services/auth";
 import "./home.css";
 import FeatureTipModal from '../components/FeatureTipModal';
 
 const Home = () => {
   const navigate = useNavigate();
+  const isLoggedIn = checkAuth();
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
 
@@ -115,7 +116,7 @@ const Home = () => {
       {/* Hero 区 */}
       <section className="hero">
         <h1 className="hero-title">TUTOME</h1>
-        <button className="hero-btn" onClick={handleEnter}>ENTER</button>
+        <button className={`hero-btn${isLoggedIn ? ' hero-btn-logged-in' : ''}`} onClick={handleEnter}>ENTER</button>
       </section>
 
       {/* About us */}

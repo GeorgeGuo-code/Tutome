@@ -1202,7 +1202,7 @@ const NotificationsSection = () => {
       <div className="notification-section">
         <div className="notification-header">
           <div className="notification-icon-wrapper">
-            <span className="notification-bell">🔔</span>
+            <NotificationIcon />
             {unreadCount > 0 && (
               <span className="notification-badge">{unreadCount}</span>
             )}

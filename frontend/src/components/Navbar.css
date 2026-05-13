@@ -1,6 +1,6 @@
 /* 导航栏样式 */
 .navbar {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
@@ -86,7 +86,7 @@
   margin-top: -0.25rem;
   animation: fadeIn 0.3s ease-out;
   z-index: 1001;
-  border: 1px solid rgba(102, 126, 234, 0.15);
+  border: 1px solid rgba(51, 90, 122, 0.15);
   flex-direction: column;
   backdrop-filter: blur(10px);
 }
@@ -125,14 +125,14 @@
 }
 
 .dropdown-item:hover {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-  color: #667eea;
+  background: linear-gradient(135deg, rgba(51, 90, 122, 0.1) 0%, rgba(166, 146, 152, 0.1) 100%);
+  color: #335A7A;
   transform: translateX(4px);
 }
 
 .dropdown-item:hover {
   background: #f0f0f0;
-  color: #667eea;
+  color: #335A7A;
 }
 
 /* 响应式设计 */
@@ -220,8 +220,8 @@
 
 .form-group input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #335A7A;
+  box-shadow: 0 0 0 3px rgba(51, 90, 122, 0.1);
 }
 
 .error-message {
@@ -274,11 +274,11 @@
 }
 
 .modal-button.primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   color: white;
 }
 
 .modal-button.primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.4);
 }

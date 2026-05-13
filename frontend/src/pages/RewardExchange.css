@@ -18,8 +18,8 @@
 .exchange-back-btn {
   padding: 8px 16px;
   background: transparent;
-  color: #667eea;
-  border: 1px solid #667eea;
+  color: #335A7A;
+  border: 1px solid #335A7A;
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
@@ -28,7 +28,7 @@
 }
 
 .exchange-back-btn:hover {
-  background: #667eea;
+  background: #335A7A;
   color: white;
 }
 
@@ -60,19 +60,19 @@
 .exchange-go-btn {
   display: inline-block;
   padding: 12px 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   color: white;
   border-radius: 24px;
   font-size: 15px;
   font-weight: 600;
   text-decoration: none;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
 }
 
 .exchange-go-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(51, 90, 122, 0.4);
 }
 
 .exchange-tip {
@@ -101,8 +101,8 @@
 }
 
 .exchange-reward-item:hover {
-  border-color: #667eea;
-  background: #EFF6FF;
+  border-color: #335A7A;
+  background: #F5EEF1;
 }
 
 .exchange-reward-item.wechat {
@@ -139,7 +139,7 @@
 .exchange-reward-count {
   font-size: 18px;
   font-weight: 600;
-  color: #667eea;
+  color: #335A7A;
   padding: 8px 16px;
   background: white;
   border-radius: 20px;
@@ -261,8 +261,8 @@
 
 .exchange-form-item input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #335A7A;
+  box-shadow: 0 0 0 3px rgba(51, 90, 122, 0.1);
 }
 
 .exchange-form-item input::placeholder {
@@ -278,7 +278,7 @@
 .exchange-form-submit {
   width: 100%;
   padding: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -286,12 +286,12 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
 }
 
 .exchange-form-submit:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(51, 90, 122, 0.4);
 }
 
 .exchange-form-submit:disabled {
@@ -491,8 +491,8 @@
 .exchange-history-edit-btn {
   padding: 8px 16px;
   background: transparent;
-  color: #667eea;
-  border: 1px solid #667eea;
+  color: #335A7A;
+  border: 1px solid #335A7A;
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
@@ -501,7 +501,7 @@
 }
 
 .exchange-history-edit-btn:hover {
-  background: #667eea;
+  background: #335A7A;
   color: white;
 }
 

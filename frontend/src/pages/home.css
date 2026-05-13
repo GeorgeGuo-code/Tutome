@@ -56,6 +56,16 @@
   transform: translateY(-1px) scale(1.02);
 }
 
+.hero-btn-logged-in {
+  background: #A69298;
+  border-color: #a8818c;
+  box-shadow: 0 4px 5px rgba(166, 146, 152, 0.4);
+}
+
+.hero-btn-logged-in:hover {
+  box-shadow: 0 6px 20px #A69298;
+}
+
 /* About */
 .about {
   padding: 0 40px 60px;
@@ -91,7 +101,7 @@
 
 .card:hover {
     transform: translateY(-8px);
-    box-shadow: 0 12px 24px #667eea33;
+    box-shadow: 0 12px 24px #335A7A33;
     border-color: #18181a
 }
 

@@ -65,7 +65,7 @@
 }
 
 .sidebar-item.active {
-    background: linear-gradient(135deg, #8f98be, #667eea);
+    background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
     color: #fff
 }
 
@@ -102,7 +102,7 @@
 
 .loading-spinner {
   border: 3px solid #E5E7EB;
-  border-top: 3px solid #3B82F6;
+  border-top: 3px solid #335A7A;
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -154,7 +154,7 @@
 
 .profile-section-edit-btn {
   padding: 8px 16px;
-  background: linear-gradient(135deg, #6084d3, #2563eb);
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   color: white;
   border: none;
   border-radius: 6px;
@@ -198,8 +198,8 @@
 }
 
 .dropdown-trigger.open {
-  border-color: #3B82F6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #335A7A;
+  box-shadow: 0 0 0 3px rgba(51, 90, 122, 0.1);
 }
 
 .dropdown-selected-tags {
@@ -220,7 +220,7 @@
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: linear-gradient(135deg, #3b82f6 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, #335A7A 0%, #335A7A 100%);
   color: white;
   font-size: 12px;
   font-weight: 500;
@@ -314,8 +314,8 @@
 }
 
 .dropdown-option.selected {
-  background: #EFF6FF;
-  color: #1D4ED8;
+  background: #F5EEF1;
+  color: #2D3B4E;
 }
 
 .dropdown-option-empty {
@@ -330,7 +330,7 @@
 }
 
 .option-checkmark {
-  color: #3B82F6;
+  color: #335A7A;
   font-weight: 600;
   margin-left: 8px;
 }
@@ -341,8 +341,8 @@
   height: 100px;
   border-radius: 50%;
   overflow: hidden;
-  background: linear-gradient(135deg, #7b88c7 0%, #667eea 100%);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
 }
 
 .profile-avatar-img {
@@ -437,7 +437,7 @@
 .topic-item {
   display: inline-block;
   padding: 8px 16px;
-  background: linear-gradient(135deg, #7887c8 0%, #4b72a2 100%);
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   color: white;
   font-size: 14px;
   font-weight: 500;
@@ -449,7 +449,7 @@
 
 .topic-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
 }
 
 .topic-item:last-child {
@@ -478,7 +478,7 @@
 
 .difficulty-tag {
   padding: 8px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #4b5fa2 100%);
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   color: white;
   font-size: 14px;
   font-weight: 500;
@@ -489,7 +489,7 @@
 
 .difficulty-tag:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
 }
 
 /* 响应式设计 - 个人主页 */
@@ -644,7 +644,7 @@
 
 .tag-small {
   padding: 4px 10px;
-  background: linear-gradient(135deg, #667eea 0%, #7a99e6 100%);
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   color: white;
   font-size: 11px;
   font-weight: 500;
@@ -685,13 +685,13 @@
 .view-details {
   font-size: 14px;
   font-weight: 500;
-  color: #1D4ED8;
+  color: #2D3B4E;
   text-decoration: none;
   transition: all 0.2s ease;
 }
 
 .view-details:hover {
-  color: #2563EB;
+  color: #33445C;
   text-decoration: underline;
 }
 
@@ -740,9 +740,9 @@
 }
 
 .page-btn.active {
-  background: #3B82F6;
+  background: #335A7A;
   color: white;
-  border-color: #2563EB;
+  border-color: #33445C;
 }
 
 .page-btn:disabled {
@@ -776,8 +776,8 @@
   gap: 8px;
 }
 
-.notification-bell {
-  font-size: 20px;
+.notification-icon-wrapper svg {
+  display: block;
 }
 
 .notification-badge {
@@ -810,7 +810,7 @@
 
 .notification-refresh-btn {
   padding: 8px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #7a99e6 100%);
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   color: white;
   border: none;
   border-radius: 6px;
@@ -823,7 +823,7 @@
 
 .notification-refresh-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
 }
 
 .notification-refresh-btn:active:not(:disabled) {
@@ -864,11 +864,11 @@
 /* 结对申请 - 浅蓝背景 + 蓝边框 + 蓝字 */
 .notification-item.pair-application {
   background: #ECF5FF;
-  border: 1px solid #409EFF;
+  border: 1px solid #8FA3B3;
 }
 
 .notification-item.pair-application .notification-title {
-  color: #409EFF;
+  color: #8FA3B3;
 }
 
 /* 结对已接受 - 浅绿背景 + 绿边框 + 绿字 */
@@ -894,11 +894,11 @@
 /* 问卷提醒 - 蓝色边框 */
 .notification-item.notification-survey-reminder {
   background: #ecf5ff;
-  border: 1px solid #409eff;
+  border: 1px solid #8FA3B3;
 }
 
 .notification-item.notification-survey-reminder .notification-title {
-  color: #409eff;
+  color: #8FA3B3;
 }
 
 /* 已处理通知 - 灰色样式 */
@@ -1094,7 +1094,7 @@
 
 .success-modal-btn {
   padding: 12px 32px;
-  background: linear-gradient(135deg, #667eea 0%, #7a99e6 100%);
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -1102,12 +1102,12 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
 }
 
 .success-modal-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(51, 90, 122, 0.4);
 }
 
 .success-modal-btn:active {
@@ -1230,8 +1230,8 @@
 .edit-btn {
   padding: 8px 16px;
   background: transparent;
-  color: #3B82F6;
-  border: 1px solid #3B82F6;
+  color: #335A7A;
+  border: 1px solid #335A7A;
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
@@ -1241,7 +1241,7 @@
 }
 
 .edit-btn:hover {
-  background: #3B82F6;
+  background: #335A7A;
   color: white;
 }
 
@@ -1407,8 +1407,8 @@
 .profile-form-textarea:focus,
 .profile-form-select:focus {
   outline: none;
-  border-color: #3B82F6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #335A7A;
+  box-shadow: 0 0 0 3px rgba(51, 90, 122, 0.1);
 }
 
 .profile-form-input:disabled,
@@ -1465,7 +1465,7 @@
   width: 16px;
   height: 16px;
   cursor: pointer;
-  accent-color: #3B82F6;
+  accent-color: #335A7A;
 }
 
 .profile-form-checkbox-label input[type="checkbox"]:disabled {
@@ -1514,14 +1514,14 @@
 }
 
 .profile-modal-btn-save {
-  background: #3B82F6;
+  background: #335A7A;
   color: white;
-  border-color: #2563EB;
+  border-color: #33445C;
 }
 
 .profile-modal-btn-save:hover:not(:disabled) {
-  background: #2563EB;
-  border-color: #1D4ED8;
+  background: #33445C;
+  border-color: #2D3B4E;
 }
 
 .profile-modal-btn-save:active:not(:disabled) {
@@ -1684,7 +1684,7 @@
 .reward-stats-count {
   font-size: 14px;
   font-weight: 600;
-  color: #667eea;
+  color: #335A7A;
   min-width: 20px;
   text-align: center;
 }
@@ -1747,15 +1747,15 @@
 }
 
 .reward-mode-btn:hover:not(:disabled) {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: #335A7A;
+  color: #335A7A;
 }
 
 .reward-mode-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   border-color: transparent;
   color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
 }
 
 .reward-mode-btn:disabled {
@@ -1809,7 +1809,7 @@
 }
 
 .reward-card-back {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   border: 3px solid rgba(255, 255, 255, 0.3);
 }
 
@@ -1830,7 +1830,7 @@
 
 .reward-card-front {
   background: white;
-  border: 3px solid #667eea;
+  border: 3px solid #335A7A;
   transform: rotateY(180deg);
   padding: 12px;
 }
@@ -1938,7 +1938,7 @@
 }
 
 .reward-card-back {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   border: 3px solid rgba(255, 255, 255, 0.3);
 }
 
@@ -1959,7 +1959,7 @@
 
 .reward-card-front {
   background: white;
-  border: 3px solid #667eea;
+  border: 3px solid #335A7A;
   transform: rotateY(180deg);
   padding: 12px;
 }
@@ -2099,7 +2099,7 @@
 
 .reward-draw-btn {
   padding: 14px 48px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   color: white;
   border: none;
   border-radius: 30px;
@@ -2107,12 +2107,12 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(51, 90, 122, 0.4);
 }
 
 .reward-draw-btn:hover:not(:disabled) {
   transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  box-shadow: 0 6px 20px rgba(51, 90, 122, 0.5);
 }
 
 .reward-draw-btn:active:not(:disabled) {
@@ -2170,7 +2170,7 @@
   height: 140px;
   background: white;
   border-radius: 10px;
-  border: 3px solid #667eea;
+  border: 3px solid #335A7A;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2190,7 +2190,7 @@
   display: block;
   margin: 0 auto;
   padding: 12px 32px;
-  background: #667eea;
+  background: #335A7A;
   color: white;
   border: none;
   border-radius: 24px;
@@ -2201,7 +2201,7 @@
 }
 
 .reward-result-close:hover {
-  background: #5a6fd6;
+  background: #3E4D60;
 }
 
 @keyframes fadeIn {
@@ -2292,9 +2292,9 @@
 }
 
 .reward-info-btn:hover {
-  color: #667eea;
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  color: #335A7A;
+  border-color: #335A7A;
+  background: rgba(51, 90, 122, 0.05);
 }
 
 /* 概率说明弹窗 */
@@ -2434,7 +2434,7 @@
 .reward-info-prob {
   font-size: 14px;
   font-weight: 600;
-  color: #667eea;
+  color: #335A7A;
 }
 
 .reward-info-rules {
