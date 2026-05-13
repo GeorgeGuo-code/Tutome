@@ -154,6 +154,13 @@ export const rewardService = {
     const result = await response.json();
     return { success: response.ok, data: result };
   },
+
+  // 获取用户抽奖统计
+  getDrawStats: async () => {
+    const response = await request('/reward/stats');
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
 };
 
 // 私信相关 API

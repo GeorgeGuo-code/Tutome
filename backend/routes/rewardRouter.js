@@ -23,4 +23,7 @@ rewardRouter.get('/api/reward/exchanges', verifyJWT, rewardController.getExchang
 // 更新兑换记录（需要登录）
 rewardRouter.put('/api/reward/exchange/:id', verifyJWT, rewardController.updateExchangeRecord);
 
+// 获取用户抽奖统计（需要登录）
+rewardRouter.get('/api/reward/stats', verifyJWT, rewardController.getDrawStats);
+
 module.exports = rewardRouter;

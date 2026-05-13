@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { parseLatexContent } from '../utils/renderLatex';
 import './PostSessionSurvey.css';
 
 const PostSessionSurvey = () => {
@@ -15,6 +16,7 @@ const PostSessionSurvey = () => {
   const currentUserId = parseInt(localStorage.getItem('userId'));
   const [userRole, setUserRole] = useState(null); // 'teacher' or 'student'
   const [pairInfo, setPairInfo] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // 获取问卷和用户角色
   const fetchSurvey = useCallback(async () => {
@@ -55,6 +57,7 @@ const PostSessionSurvey = () => {
         }
       } else if (res.data === null) {
         // 还没有问卷，先生成
+        setIsGenerating(true);
         const generateRes = await fetch(`/api/survey/post/${pairId}`, {
           method: 'POST',
           headers: {
@@ -162,7 +165,19 @@ const PostSessionSurvey = () => {
                   {r.is_correct ? '✓' : '✗'}
                 </div>
                 <div className="result-content">
-                  <p className="result-question">{question.question}</p>
+                  <p className="result-question">
+                    {parseLatexContent(question.question).map((part, pIdx) =>
+                      part.type === 'latex' ? (
+                        <span
+                          key={pIdx}
+                          className={part.displayMode ? 'latex-display' : 'latex-inline'}
+                          dangerouslySetInnerHTML={{ __html: part.content }}
+                        />
+                      ) : (
+                        <span key={pIdx}>{part.content}</span>
+                      )
+                    )}
+                  </p>
                   <p className="result-answer">
                     你的答案: {question.options[r.selected_index]}
                   </p>
@@ -190,7 +205,7 @@ const PostSessionSurvey = () => {
   if (loading) {
     return (
       <div className="post-survey-container">
-        <div className="loading">加载中...</div>
+        <div className="loading">{isGenerating ? '问卷生成中……' : '加载中...'}</div>
       </div>
     );
   }
@@ -264,7 +279,19 @@ const PostSessionSurvey = () => {
                     {q.difficulty === 1 ? '基础' : q.difficulty === 2 ? '中等' : '进阶'}
                   </span>
                 </div>
-                <div className="question-text">{q.question}</div>
+                <div className="question-text">
+                  {parseLatexContent(q.question).map((part, pIdx) =>
+                    part.type === 'latex' ? (
+                      <span
+                        key={pIdx}
+                        className={part.displayMode ? 'latex-display' : 'latex-inline'}
+                        dangerouslySetInnerHTML={{ __html: part.content }}
+                      />
+                    ) : (
+                      <span key={pIdx}>{part.content}</span>
+                    )
+                  )}
+                </div>
                 <div className="options-list">
                   {q.options.map((option, optIndex) => (
                     <div
@@ -273,7 +300,19 @@ const PostSessionSurvey = () => {
                       onClick={() => handleSelect(q.id, optIndex)}
                     >
                       <span className="option-letter">{String.fromCharCode(65 + optIndex)}</span>
-                      <span className="option-text">{option}</span>
+                      <span className="option-text">
+                        {parseLatexContent(option).map((part, pIdx) =>
+                          part.type === 'latex' ? (
+                            <span
+                              key={pIdx}
+                              className={part.displayMode ? 'latex-display' : 'latex-inline'}
+                              dangerouslySetInnerHTML={{ __html: part.content }}
+                            />
+                          ) : (
+                            <span key={pIdx}>{part.content}</span>
+                          )
+                        )}
+                      </span>
                     </div>
                   ))}
                 </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { parseLatexContent } from '../utils/renderLatex';
 import './PreSessionQuiz.css';
 
 const PreSessionQuiz = () => {
@@ -279,7 +280,19 @@ const PreSessionQuiz = () => {
           return (
             <div key={q.id} className="question-card">
               <div className="question-number">题目 {index + 1}</div>
-              <div className="question-text">{qData.question}</div>
+              <div className="question-text">
+                {parseLatexContent(qData.question).map((part, pIdx) =>
+                  part.type === 'latex' ? (
+                    <span
+                      key={pIdx}
+                      className={part.displayMode ? 'latex-display' : 'latex-inline'}
+                      dangerouslySetInnerHTML={{ __html: part.content }}
+                    />
+                  ) : (
+                    <span key={pIdx}>{part.content}</span>
+                  )
+                )}
+              </div>
               <div className="options-list">
                 {qData.options && qData.options.length > 0 ? (
                   qData.options.map((option, optIndex) => (
@@ -291,7 +304,19 @@ const PreSessionQuiz = () => {
                       <span className="option-letter">
                         {String.fromCharCode(65 + optIndex)}
                       </span>
-                      <span className="option-text">{option}</span>
+                      <span className="option-text">
+                        {parseLatexContent(option).map((part, pIdx) =>
+                          part.type === 'latex' ? (
+                            <span
+                              key={pIdx}
+                              className={part.displayMode ? 'latex-display' : 'latex-inline'}
+                              dangerouslySetInnerHTML={{ __html: part.content }}
+                            />
+                          ) : (
+                            <span key={pIdx}>{part.content}</span>
+                          )
+                        )}
+                      </span>
                     </div>
                   ))
                 ) : (

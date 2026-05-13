@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { rewardService } from '../services/apiService';
+import { rewardService, messageService } from '../services/apiService';
 import "./RewardExchange.css";
 
 // 奖池配置（和 RewardSection 保持一致）
@@ -18,17 +18,18 @@ const RewardExchange = () => {
   const [selectedReward, setSelectedReward] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
-    wechatAccount: '',
-    campus: '',
-    dormitoryEmail: ''
+    // 红包
+    // 实物
+    area: '',
+    address: '',
+    exchangeCount: 1
   });
   const [submitting, setSubmitting] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [editFormData, setEditFormData] = useState({
-    wechatAccount: '',
-    campus: '',
-    dormitoryEmail: ''
+    area: '',
+    address: ''
   });
 
   useEffect(() => {
@@ -62,22 +63,38 @@ const RewardExchange = () => {
     if (rewardStats[reward.id] > 0) {
       setSelectedReward(reward);
       setShowForm(true);
-      setFormData({ wechatAccount: '', campus: '', dormitoryEmail: '' });
+      setFormData({
+        area: '',
+        address: '',
+        exchangeCount: rewardStats[reward.id]
+      });
     }
   };
 
   const handleSubmit = async () => {
     if (!selectedReward) return;
 
+    const rewardCount = rewardStats[selectedReward.id] || 0;
+    const exchangeCount = formData.exchangeCount || 1;
+
     // 验证表单
     if (selectedReward.type === 'wechat') {
-      if (!formData.wechatAccount.trim()) {
-        alert('请填写微信账号');
+      // 红包必须一次性兑换全部
+      if (rewardCount === 0) {
+        alert('没有可兑换的奖励');
         return;
       }
     } else {
-      if (!formData.campus.trim() || !formData.dormitoryEmail.trim()) {
-        alert('请填写完整的兑奖信息');
+      if (!formData.area.trim()) {
+        alert('请选择地区');
+        return;
+      }
+      if (!formData.address.trim()) {
+        alert('请填写详细地址');
+        return;
+      }
+      if (exchangeCount <= 0 || exchangeCount > rewardCount) {
+        alert('兑换数量无效');
         return;
       }
     }
@@ -85,21 +102,44 @@ const RewardExchange = () => {
     setSubmitting(true);
 
     try {
+      // 发送私信给管理员
+      let messageContent = '';
+      if (selectedReward.type === 'wechat') {
+        // 红包：兑换n元红包（一次性兑换全部）
+        messageContent = `${rewardCount}元红包`;
+      } else {
+        // 实物：兑换奖品*数量，地区，地址
+        messageContent = `${selectedReward.name}*${exchangeCount}\n地区：${formData.area}\n${formData.address}`;
+      }
+
+      // 先发送私信
+      const messageResult = await messageService.sendPrivateMessage('管理员', messageContent, null);
+      if (!messageResult.success) {
+        alert('发送兑换信息失败，请重试');
+        setSubmitting(false);
+        return;
+      }
+
+      // 再调用兑换 API
       const result = await rewardService.exchangeReward({
         rewardId: selectedReward.id,
         rewardName: selectedReward.name,
         rewardIcon: selectedReward.icon,
         rewardRarity: selectedReward.rarity,
         rewardType: selectedReward.type,
-        wechatAccount: selectedReward.type === 'wechat' ? formData.wechatAccount : null,
-        campus: selectedReward.type === 'physical' ? formData.campus : null,
-        dormitoryEmail: selectedReward.type === 'physical' ? formData.dormitoryEmail : null,
+        exchangeCount: selectedReward.type === 'wechat' ? rewardCount : exchangeCount,
+        area: selectedReward.type === 'physical' ? formData.area : null,
+        address: selectedReward.type === 'physical' ? formData.address : null,
       });
 
       if (result.success) {
-        alert(`兑奖成功！\n奖励：${selectedReward.name}`);
+        if (selectedReward.type === 'wechat') {
+          alert(`兑奖成功！\n奖励：${rewardCount}元红包`);
+        } else {
+          alert(`兑奖成功！\n奖励：${selectedReward.name}*${exchangeCount}`);
+        }
         setShowForm(false);
-        // 刷新兑换记录并重新加载奖励信息（让后端计算剩余可兑换数量）
+        // 刷新兑换记录并重新加载奖励信息
         loadExchangeRecords();
         loadRewardInfo();
       } else {
@@ -116,9 +156,8 @@ const RewardExchange = () => {
   const handleEditClick = (record) => {
     setEditingRecord(record);
     setEditFormData({
-      wechatAccount: record.wechat_account || '',
-      campus: record.campus || '',
-      dormitoryEmail: record.dormitory_email || ''
+      area: record.area || '',
+      address: record.address || ''
     });
   };
 
@@ -126,23 +165,21 @@ const RewardExchange = () => {
     if (!editingRecord) return;
 
     // 验证
-    if (editingRecord.reward_type === 'wechat') {
-      if (!editFormData.wechatAccount.trim()) {
-        alert('请填写微信账号');
+    if (editingRecord.reward_type === 'physical') {
+      if (!editFormData.area.trim()) {
+        alert('请选择地区');
         return;
       }
-    } else {
-      if (!editFormData.campus.trim() || !editFormData.dormitoryEmail.trim()) {
-        alert('请填写完整的兑奖信息');
+      if (!editFormData.address.trim()) {
+        alert('请填写详细地址');
         return;
       }
     }
 
     try {
       const result = await rewardService.updateExchangeRecord(editingRecord.id, {
-        wechatAccount: editingRecord.reward_type === 'wechat' ? editFormData.wechatAccount : null,
-        campus: editingRecord.reward_type === 'physical' ? editFormData.campus : null,
-        dormitoryEmail: editingRecord.reward_type === 'physical' ? editFormData.dormitoryEmail : null,
+        area: editingRecord.reward_type === 'physical' ? editFormData.area : null,
+        address: editingRecord.reward_type === 'physical' ? editFormData.address : null,
       });
 
       if (result.success) {
@@ -188,7 +225,7 @@ const RewardExchange = () => {
                   {earnedRewards.map(reward => (
                     <div
                       key={reward.id}
-                      className={`exchange-reward-item ${reward.type}`}
+                      className={`exchange-reward-item ${reward.rarity}`}
                       onClick={() => handleRewardClick(reward)}
                     >
                       <div className="exchange-reward-icon">{reward.icon}</div>
@@ -223,7 +260,10 @@ const RewardExchange = () => {
                   <div key={record.id} className="exchange-history-item">
                     <div className="exchange-history-item-header">
                       <span className="exchange-history-icon">{record.reward_icon}</span>
-                      <span className="exchange-history-name">{record.reward_name}</span>
+                      <span className="exchange-history-name">
+                        {record.reward_name}
+                        {record.exchange_count > 1 && `*${record.exchange_count}`}
+                      </span>
                       <span className="exchange-history-time">
                         {new Date(record.created_at).toLocaleString('zh-CN', {
                           year: 'numeric',
@@ -237,18 +277,18 @@ const RewardExchange = () => {
                     <div className="exchange-history-item-body">
                       {record.reward_type === 'wechat' ? (
                         <div className="exchange-history-info-row">
-                          <span className="exchange-history-label">微信账号：</span>
-                          <span className="exchange-history-value">{record.wechat_account || '未填写'}</span>
+                          <span className="exchange-history-label">发放方式：</span>
+                          <span className="exchange-history-value">支付宝口令</span>
                         </div>
                       ) : (
                         <>
                           <div className="exchange-history-info-row">
-                            <span className="exchange-history-label">校区：</span>
-                            <span className="exchange-history-value">{record.campus || '未填写'}</span>
+                            <span className="exchange-history-label">地区：</span>
+                            <span className="exchange-history-value">{record.area || '未填写'}</span>
                           </div>
                           <div className="exchange-history-info-row">
-                            <span className="exchange-history-label">宿舍邮箱：</span>
-                            <span className="exchange-history-value">{record.dormitory_email || '未填写'}</span>
+                            <span className="exchange-history-label">{record.area === '紫金港' ? '宿舍邮箱' : '详细地址'}：</span>
+                            <span className="exchange-history-value">{record.address || '未填写'}</span>
                           </div>
                         </>
                       )}
@@ -289,34 +329,55 @@ const RewardExchange = () => {
 
               {selectedReward.type === 'wechat' ? (
                 <div className="exchange-form-item">
-                  <label>微信账号</label>
-                  <input
-                    type="text"
-                    placeholder="请输入您的微信账号"
-                    value={formData.wechatAccount}
-                    onChange={e => setFormData({ ...formData, wechatAccount: e.target.value })}
-                  />
+                  <div className="alipay-notice">将通过支付宝口令发放</div>
                 </div>
               ) : (
                 <>
                   <div className="exchange-form-item">
-                    <label>校区</label>
-                    <input
-                      type="text"
-                      placeholder="请输入您的校区"
-                      value={formData.campus}
-                      onChange={e => setFormData({ ...formData, campus: e.target.value })}
-                    />
+                    <label>兑换数量（最多{rewardStats[selectedReward.id] || 0}个）</label>
+                    <div className="exchange-count-selector">
+                      <button
+                        type="button"
+                        className="exchange-count-btn"
+                        onClick={() => setFormData({ ...formData, exchangeCount: Math.max(1, formData.exchangeCount - 1) })}
+                        disabled={formData.exchangeCount <= 1}
+                      >
+                        -
+                      </button>
+                      <span className="exchange-count-value">{formData.exchangeCount}</span>
+                      <button
+                        type="button"
+                        className="exchange-count-btn"
+                        onClick={() => setFormData({ ...formData, exchangeCount: Math.min(rewardStats[selectedReward.id] || 0, formData.exchangeCount + 1) })}
+                        disabled={formData.exchangeCount >= (rewardStats[selectedReward.id] || 0)}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="exchange-count-hint">请尽量一次性多兑换</div>
                   </div>
                   <div className="exchange-form-item">
-                    <label>宿舍邮箱</label>
-                    <input
-                      type="text"
-                      placeholder="请输入您的宿舍邮箱"
-                      value={formData.dormitoryEmail}
-                      onChange={e => setFormData({ ...formData, dormitoryEmail: e.target.value })}
-                    />
+                    <label>地区</label>
+                    <select
+                      value={formData.area}
+                      onChange={e => setFormData({ ...formData, area: e.target.value, address: '' })}
+                    >
+                      <option value="">请选择地区</option>
+                      <option value="紫金港">紫金港</option>
+                      <option value="其他">其他</option>
+                    </select>
                   </div>
+                  {formData.area && (
+                    <div className="exchange-form-item">
+                      <label>{formData.area === '紫金港' ? '宿舍邮箱' : '详细地址'}</label>
+                      <input
+                        type="text"
+                        placeholder="请尽量详细填写"
+                        value={formData.address}
+                        onChange={e => setFormData({ ...formData, address: e.target.value })}
+                      />
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -326,7 +387,7 @@ const RewardExchange = () => {
                 onClick={handleSubmit}
                 disabled={submitting}
               >
-                {submitting ? '提交中...' : '确认兑奖'}
+                {submitting ? '提交中...' : (selectedReward.type === 'wechat' ? '确认兑换' : '确认兑奖')}
               </button>
             </div>
           </div>
@@ -349,34 +410,32 @@ const RewardExchange = () => {
 
               {editingRecord.reward_type === 'wechat' ? (
                 <div className="exchange-form-item">
-                  <label>微信账号</label>
-                  <input
-                    type="text"
-                    placeholder="请输入您的微信账号"
-                    value={editFormData.wechatAccount}
-                    onChange={e => setEditFormData({ ...editFormData, wechatAccount: e.target.value })}
-                  />
+                  <div className="alipay-notice">将通过支付宝口令发放</div>
                 </div>
               ) : (
                 <>
                   <div className="exchange-form-item">
-                    <label>校区</label>
-                    <input
-                      type="text"
-                      placeholder="请输入您的校区"
-                      value={editFormData.campus}
-                      onChange={e => setEditFormData({ ...editFormData, campus: e.target.value })}
-                    />
+                    <label>地区</label>
+                    <select
+                      value={editFormData.area}
+                      onChange={e => setEditFormData({ ...editFormData, area: e.target.value, address: '' })}
+                    >
+                      <option value="">请选择地区</option>
+                      <option value="紫金港">紫金港</option>
+                      <option value="其他">其他</option>
+                    </select>
                   </div>
-                  <div className="exchange-form-item">
-                    <label>宿舍邮箱</label>
-                    <input
-                      type="text"
-                      placeholder="请输入您的宿舍邮箱"
-                      value={editFormData.dormitoryEmail}
-                      onChange={e => setEditFormData({ ...editFormData, dormitoryEmail: e.target.value })}
-                    />
-                  </div>
+                  {editFormData.area && (
+                    <div className="exchange-form-item">
+                      <label>{editFormData.area === '紫金港' ? '宿舍邮箱' : '详细地址'}</label>
+                      <input
+                        type="text"
+                        placeholder="请尽量详细填写"
+                        value={editFormData.address}
+                        onChange={e => setEditFormData({ ...editFormData, address: e.target.value })}
+                      />
+                    </div>
+                  )}
                 </>
               )}
             </div>

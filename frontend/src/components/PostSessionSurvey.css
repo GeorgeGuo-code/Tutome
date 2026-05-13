@@ -420,3 +420,14 @@
 .continue-btn:hover {
   background: #33445C;
 }
+
+/* LaTeX 公式样式 */
+.latex-display {
+  display: block;
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+.latex-inline {
+  display: inline;
+}

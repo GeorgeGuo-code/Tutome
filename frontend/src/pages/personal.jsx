@@ -1723,6 +1723,9 @@ const RewardSection = () => {
   const [totalDrawn, setTotalDrawn] = useState({}); // 已抽取统计 { rewardId: count }
   const [rewardStats, setRewardStats] = useState({}); // 可兑换统计 { rewardId: count }
   const [stockMap, setStockMap] = useState({}); // 库存数据 { rewardId: stock }
+  const [drawError, setDrawError] = useState(null); // 抽奖错误信息
+  // 抽奖统计
+  const [drawStats, setDrawStats] = useState({ total_draws: 0, red_pocket_pity: 0, notebook_pity: 0, notebook_pity_used: false });
 
   // 奖池配置
   const rewardsPool = [
@@ -1736,6 +1739,7 @@ const RewardSection = () => {
   // 加载用户抽奖信息
   useEffect(() => {
     loadRewardInfo();
+    loadDrawStats();
   }, []);
 
   const loadRewardInfo = async () => {
@@ -1750,6 +1754,18 @@ const RewardSection = () => {
       }
     } catch (error) {
       console.error('加载抽奖信息失败:', error);
+    }
+  };
+
+  const loadDrawStats = async () => {
+    try {
+      const result = await rewardService.getDrawStats();
+      console.log('loadDrawStats result:', result);
+      if (result.success && result.data) {
+        setDrawStats(result.data);
+      }
+    } catch (error) {
+      console.error('加载抽奖统计失败:', error);
     }
   };
 
@@ -1788,13 +1804,24 @@ const RewardSection = () => {
     setHasDrawn(false);
 
     const count = drawMode;
-    const newCards = initCards(count);
-    setCards(newCards);
 
-    // 调用API进行抽奖（后端处理概率和库存）
+    // 先调用API检测抽奖券是否足够
     try {
       const result = await rewardService.drawReward(count);
       console.log('drawReward result:', result);
+
+      // 处理失败情况（如抽奖券不足）
+      if (!result.success) {
+        setIsDrawing(false);
+        setHasDrawn(false);
+        setDrawError(result.data?.message || '抽奖失败，请重试');
+        setTimeout(() => setDrawError(null), 3000);
+        return;
+      }
+
+      // 抽奖券足够，始化卡牌并开始动画
+      const newCards = initCards(count);
+      setCards(newCards);
 
       if (result.success && result.data) {
         const drawnRewards = result.data.rewards || [];
@@ -1835,6 +1862,8 @@ const RewardSection = () => {
 
         // 重新加载抽奖信息
         await loadRewardInfo();
+        // 重新加载抽奖统计
+        await loadDrawStats();
       }
     } catch (error) {
       console.error('抽奖API调用失败:', error);
@@ -1885,6 +1914,21 @@ const RewardSection = () => {
       <div className="reward-header">
         <h2 className="reward-title">奖励中心</h2>
       </div>
+
+      {/* 错误提示 */}
+      {drawError && (
+        <div className="reward-error" style={{
+          background: '#FEE2E2',
+          color: '#DC2626',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          marginBottom: '16px',
+          textAlign: 'center',
+          fontSize: '14px'
+        }}>
+          {drawError}
+        </div>
+      )}
 
       {/* 抽取模式选择 - 在卡牌上方 */}
       <div className="reward-mode-selector">
@@ -1941,16 +1985,69 @@ const RewardSection = () => {
         </button>
       </div>
 
-      {/* 已抽取统计 */}
+      {/* 抽奖统计 */}
       <div className="reward-stats">
         <div className="reward-stats-header">
-          <h4 className="reward-stats-title">已抽取统计</h4>
+          <h4 className="reward-stats-title">抽奖统计</h4>
           <button
             className="reward-info-btn"
             onClick={() => setShowInfo(true)}
           >
             概率及奖励说明
           </button>
+        </div>
+        <div className="draw-stats-info">
+          <div className="draw-stats-item">
+            <span className="draw-stats-label">累计抽奖：</span>
+            <span className="draw-stats-value">{drawStats.total_draws} 次</span>
+          </div>
+        </div>
+        <div className="pity-progress">
+          <div className="pity-item">
+            <div className="pity-item-header">
+              <span className="pity-icon">🧧</span>
+              <span className="pity-name">红包保底</span>
+              <span className="pity-count">{drawStats.red_pocket_pity}/5</span>
+            </div>
+            <div className="pity-bar">
+              <div
+                className="pity-bar-fill pity-bar-red"
+                style={{ width: `${Math.min((drawStats.red_pocket_pity / 5) * 100, 100)}%` }}
+              ></div>
+            </div>
+            <div className="pity-hint">
+              {drawStats.red_pocket_pity >= 5 ? '下次抽取必得红包！' : `还需 ${5 - drawStats.red_pocket_pity} 次触发保底`}
+            </div>
+          </div>
+          <div className="pity-item">
+            <div className="pity-item-header">
+              <span className="pity-icon">📓</span>
+              <span className="pity-name">笔记本保底</span>
+              <span className="pity-count">{drawStats.notebook_pity}/10</span>
+            </div>
+            <div className="pity-bar">
+              <div
+                className={`pity-bar-fill pity-bar-blue ${drawStats.notebook_pity_used ? 'pity-bar-disabled' : ''}`}
+                style={{ width: `${Math.min((drawStats.notebook_pity / 10) * 100, 100)}%` }}
+              ></div>
+            </div>
+            <div className="pity-hint">
+              {drawStats.notebook_pity_used ? (
+                <span style={{ color: '#9CA3AF' }}>保底机会已用完</span>
+              ) : drawStats.notebook_pity >= 10 ? (
+                '下次抽取必得笔记本！'
+              ) : (
+                `还需 ${10 - drawStats.notebook_pity} 次触发保底`
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 已抽取统计 */}
+      <div className="reward-stats">
+        <div className="reward-stats-header">
+          <h4 className="reward-stats-title">已抽取统计</h4>
         </div>
         <div className="reward-stats-list">
           {rewardsPool.filter(r => r.rarity !== 'none').map(reward => (

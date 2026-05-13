@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS reward_tickets (
     id SERIAL PRIMARY KEY,
     user_id INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    tickets INTEGER NOT NULL DEFAULT 9999,
+    tickets INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -20,9 +20,9 @@ CREATE TABLE IF NOT EXISTS reward_records (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 为reward_tickets创建初始数据（所有现有用户获得9999张券）
+-- 为reward_tickets创建初始数据（所有现有用户获得0张券）
 INSERT INTO reward_tickets (user_id, tickets)
-SELECT id, 9999 FROM users
+SELECT id, 0 FROM users
 WHERE NOT EXISTS (SELECT 1 FROM reward_tickets WHERE reward_tickets.user_id = users.id);
 
 -- 创建索引

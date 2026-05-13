@@ -1,5 +1,6 @@
 const surveyService = require('../services/surveyService');
 const queries = require('../models/queries');
+const rewardController = require('./rewardController');
 
 // ==================== 热身测试接口 ====================
 
@@ -338,6 +339,14 @@ const submitPostResponse = async (req, res) => {
       score: gradingResult.score,
       ai_review_result: gradingResult.ai_review
     });
+
+    // 增加用户抽奖券（每提交一次问卷 +1）
+    try {
+      await rewardController.incrementTickets(userId, 1);
+      console.log(`[SurveyController] 用户 ${userId} 提交问卷获得 +1 tickets`);
+    } catch (ticketError) {
+      console.error('[SurveyController] 增加抽奖券失败:', ticketError);
+    }
 
     // 立即归档当前用户的问卷提醒通知
     try {

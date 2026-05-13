@@ -114,6 +114,43 @@
   background: #FFFBEB;
 }
 
+/* 按 rarity 设置边框颜色 */
+.exchange-reward-item.sss {
+  border-color: #EF4444;
+}
+
+.exchange-reward-item.sss:hover {
+  border-color: #DC2626;
+  background: #FEF2F2;
+}
+
+.exchange-reward-item.ss {
+  border-color: #F59E0B;
+}
+
+.exchange-reward-item.ss:hover {
+  border-color: #D97706;
+  background: #FFFBEB;
+}
+
+.exchange-reward-item.s {
+  border-color: #9333EA;
+}
+
+.exchange-reward-item.s:hover {
+  border-color: #7C22CE;
+  background: #FAF5FF;
+}
+
+.exchange-reward-item.a {
+  border-color: #10B981;
+}
+
+.exchange-reward-item.a:hover {
+  border-color: #059669;
+  background: #ECFDF5;
+}
+
 .exchange-reward-icon {
   font-size: 40px;
   flex-shrink: 0;
@@ -267,6 +304,84 @@
 
 .exchange-form-item input::placeholder {
   color: #9CA3AF;
+}
+
+/* 支付宝提示 */
+.alipay-notice {
+  padding: 16px;
+  background: #FEF3C7;
+  border-radius: 8px;
+  color: #92400E;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* 选择框样式 */
+.exchange-form-item select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1F2937;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.exchange-form-item select:focus {
+  outline: none;
+  border-color: #335A7A;
+  box-shadow: 0 0 0 3px rgba(51, 90, 122, 0.1);
+}
+
+/* 兑换数量选择器 */
+.exchange-count-selector {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: fit-content;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.exchange-count-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: #F3F4F6;
+  color: #374151;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.exchange-count-btn:hover:not(:disabled) {
+  background: #E5E7EB;
+}
+
+.exchange-count-btn:disabled {
+  color: #9CA3AF;
+  cursor: not-allowed;
+}
+
+.exchange-count-value {
+  min-width: 60px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1F2937;
+  padding: 0 12px;
+  line-height: 40px;
+}
+
+.exchange-count-hint {
+  font-size: 12px;
+  color: #9CA3AF;
+  margin-top: 8px;
 }
 
 .exchange-form-footer {

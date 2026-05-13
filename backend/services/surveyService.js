@@ -24,6 +24,14 @@ const PRE_QUESTIONS_SYSTEM_PROMPT = `你是一个教学辅导专家，负责根�
 3. 能激发进一步思考和提问
 4. 不出超纲题，难度适中
 5. 每道题需标注关联的知识点（topic）
+6. **数学公式必须使用纯 LaTeX 格式（ASCII）**
+   - 积分符号：\\int（不是 ∫），二重积分用 \\iint 或两个 \\int
+   - 希腊字母用 \\alpha, \\beta, \\theta, \\pi 等
+   - 分数用 \\frac{a}{b}，指数用 x^{2}，下标用 x_{0}
+   - 比较符号：\\leq（≤）、\\geq（≥）、\\lt、\\gt
+   - 求和、积分上下限：\\int_{a}^{b}、\\sum_{i=1}^{n}
+   - 区域用文字描述，如 "区域 D 是圆域 x^2+y^2\\leq R^2"
+   - **绝对禁止使用任何 Unicode 数学符号**（∫、≤、≥、²、³、π、θ 等）
 
 ## 输出格式（严格JSON）
 {
@@ -62,6 +70,14 @@ const POST_SURVEY_SYSTEM_PROMPT = `你是一个教学评估专家，负责基于
   - difficulty: 1=基础, 2=中等, 3=进阶
   - is_original: true表示原题，false表示新题
   - 正确答案和解析
+- **数学公式必须使用纯 LaTeX 格式（ASCII）**
+  - 积分符号：\\int（不是 ∫），二重积分用 \\iint 或两个 \\int
+  - 希腊字母用 \\alpha, \\beta, \\theta, \\pi 等
+  - 分数用 \\frac{a}{b}，指数用 x^{2}，下标用 x_{0}
+  - 比较符号：\\leq（≤）、\\geq（≥）、\\lt、\\gt
+  - 求和、积分上下限：\\int_{a}^{b}、\\sum_{i=1}^{n}
+  - 区域用文字描述，如 "区域 D 是圆域 x^2+y^2\\leq R^2"
+  - **绝对禁止使用任何 Unicode 数学符号**（∫、≤、≥、²、³、π、θ 等）
 
 ### 第二部分：固定评价组件
 **学生评价老师**（3题，5分制）：
@@ -80,13 +96,16 @@ const POST_SURVEY_SYSTEM_PROMPT = `你是一个教学评估专家，负责基于
 3. 推荐意愿：是否愿意推荐给其他人
 
 ## 输出格式（严格JSON）
+- question 和 options 中的数学公式必须使用纯 LaTeX（ASCII格式）
+- 选项内容要清晰描述，不要使用模糊的表达
+- 示例：计算二重积分 \\int\\int_D (x^2+y^2) d\\sigma，区域 D：x^2+y^2\\leq R^2
 {
   "questions": [
     {
-      "question": "题目内容",
-      "options": ["选项A", "选项B", "选项C", "选项D"],
+      "question": "题目内容（用 LaTeX 如 \\int\\\\int_D f(x,y)d\\sigma）",
+      "options": ["选项A（正确答案，如 \\leq）", "选项B", "选项C", "选项D"],
       "correct_index": 0,
-      "explanation": "答案解析",
+      "explanation": "答案解析（用 LaTeX）",
       "topic": "关联知识点",
       "difficulty": 1,
       "is_original": false
@@ -132,6 +151,65 @@ const GRADING_SYSTEM_PROMPT = `你是一个教学评估助手，负责批改用�
 // ==================== 辅助函数 ====================
 
 /**
+ * 修复 JSON 字符串中无效的反斜杠转义
+ * AI 返回的 LaTeX 内容可能包含 \int 这样的未正确转义的字符
+ * @param {string} str - JSON 字符串
+ * @returns {string} 修复后的字符串
+ */
+function fixInvalidBackslashes(str) {
+  if (!str || typeof str !== 'string') return str;
+
+  let result = '';
+  let inString = false;
+  let stringChar = '';
+  let i = 0;
+
+  while (i < str.length) {
+    const char = str[i];
+
+    if (!inString) {
+      if (char === '"' || char === "'") {
+        inString = true;
+        stringChar = char;
+      }
+      result += char;
+      i++;
+    } else {
+      if (char === '\\' && i + 1 < str.length) {
+        const nextChar = str[i + 1];
+        // 已经正确转义的：\n \t \r \" \' \\
+        if (nextChar === 'n' || nextChar === 't' || nextChar === 'r' || nextChar === '"' || nextChar === "'" || nextChar === '\\') {
+          result += char + nextChar;
+          i += 2;
+        } else {
+          // 可能需要修复的：\i, \f 等在 JSON 字符串中非法的转义
+          // 或者 \int, \frac 等 LaTeX 命令（单个字母后缀）
+          // 如果下一个字符是字母或特定符号，尝试双重转义
+          if (/[a-zA-Z0-9_{}^_\-+=]/.test(nextChar)) {
+            // 这可能是 LaTeX 命令的一部分，双重转义
+            result += '\\\\' + nextChar;
+            i += 2;
+          } else {
+            // 其他情况保持原样
+            result += char + nextChar;
+            i += 2;
+          }
+        }
+      } else if (char === stringChar) {
+        inString = false;
+        result += char;
+        i++;
+      } else {
+        result += char;
+        i++;
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
  * 调用 AI 生成内容
  * @param {Array} context - 消息上下文
  * @param {number} temperature - 温度参数
@@ -161,8 +239,23 @@ async function callAI(context, temperature = 0.3, maxTokens = 2000) {
     if (jsonContent.endsWith('```')) {
       jsonContent = jsonContent.slice(0, -3);
     }
+    jsonContent = jsonContent.trim();
 
-    return JSON.parse(jsonContent.trim());
+    // 尝试解析，如果失败则尝试修复
+    try {
+      return JSON.parse(jsonContent);
+    } catch (parseErr) {
+      // JSON 解析失败，尝试修复字符串值中的无效反斜杠
+      // 策略：找到所有字符串值，修复其中的反斜杠
+      const fixedContent = fixInvalidBackslashes(jsonContent);
+      try {
+        return JSON.parse(fixedContent);
+      } catch (二次解析Err) {
+        console.error('[SurveyService] JSON修复后仍解析失败');
+        console.error('[SurveyService] 原始内容前500字符:', jsonContent.slice(0, 500));
+        throw new Error('AI 响应格式错误：' + content.slice(0, 100));
+      }
+    }
   } catch (parseError) {
     console.error('[SurveyService] AI 响应解析失败:', parseError);
     throw new Error('AI 响应格式错误：' + content.slice(0, 100));
