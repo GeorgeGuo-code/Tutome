@@ -3,7 +3,7 @@ import ReactDOM from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./personal.css";
 import FeatureTipModal from '../components/FeatureTipModal';
-import { userService, rewardService } from '../services/apiService';
+import { userService, rewardService, messageService } from '../services/apiService';
 import { HistoryIcon, NotificationIcon, HomeIcon, GiftIcon } from '../components/icons';
 
 // 自定义下拉多选组件
@@ -781,7 +781,7 @@ const HistorySection = ({ location }) => {
                         删除问题
                       </button>
                     )}
-                    <Link to={`/question/${item.id}`} state={{ question: item, from: '/personal' }} className="view-details">
+                    <Link to={`/question/${item.id}`} state={{ question: item, from: '/personal', activeTab: 'history' }} className="view-details">
                       查看详情
                     </Link>
                   </div>
@@ -822,17 +822,241 @@ const HistorySection = ({ location }) => {
 };
 
 // 我的通知子组件
-const NotificationsSection = () => {
+const NotificationsSection = ({ location: locationProp }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [successMessage, setSuccessMessage] = useState(null);
   const [pairIdToNavigate, setPairIdToNavigate] = useState(null);
 
+  // 私信相关状态
+  const [showPrivateMessage, setShowPrivateMessage] = useState(false);
+  const [privateMessageReceiver, setPrivateMessageReceiver] = useState('');
+  const [privateMessageContent, setPrivateMessageContent] = useState('');
+  const [isSendingPrivate, setIsSendingPrivate] = useState(false);
+  const [receiverUser, setReceiverUser] = useState(null);
+  const [receiverValidationError, setReceiverValidationError] = useState('');
+  const [privateMessageImage, setPrivateMessageImage] = useState(null); // 图片文件
+  const [privateMessageImagePreview, setPrivateMessageImagePreview] = useState(null); // 图片预览
+  const [isDragging, setIsDragging] = useState(false); // 拖拽状态
+  const [expandedImageNotificationId, setExpandedImageNotificationId] = useState(null); // 展开图片的通知ID
+
+  // 处理图片选择（支持粘贴和拖拽）
+  const handleImageFile = (file) => {
+    if (!file) return;
+
+    // 验证文件类型
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('不支持的图片格式，支持 JPEG、PNG、GIF、WebP');
+      return;
+    }
+
+    // 验证文件大小（5MB）
+    if (file.size > 5 * 1024 * 1024) {
+      alert('图片大小不能超过 5MB');
+      return;
+    }
+
+    setPrivateMessageImage(file);
+    setPrivateMessageImagePreview(URL.createObjectURL(file));
+  };
+
+  // 处理粘贴事件
+  const handlePrivatePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          handleImageFile(file);
+        }
+        return;
+      }
+    }
+  };
+
+  // 处理拖拽事件
+  const handlePrivateDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handlePrivateDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handlePrivateDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+
+    for (const file of files) {
+      if (file.type.startsWith('image/')) {
+        handleImageFile(file);
+        return;
+      }
+    }
+  };
+
+  // 移除已选择的图片
+  const removePrivateMessageImage = () => {
+    setPrivateMessageImage(null);
+    if (privateMessageImagePreview) {
+      URL.revokeObjectURL(privateMessageImagePreview);
+    }
+    setPrivateMessageImagePreview(null);
+  };
+
   useEffect(() => {
     fetchNotifications();
     fetchUnreadCount();
-  }, []);
+
+    // 处理从通知跳转过来的回复（通过 location.state）
+    if (locationProp?.state?.openPrivateMessage && locationProp.state.replyToNickname) {
+      setShowPrivateMessage(true);
+      setPrivateMessageReceiver(locationProp.state.replyToNickname);
+      validateReceiver(locationProp.state.replyToNickname);
+      // 滚动到页面底部
+      setTimeout(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        // 聚焦到消息输入框
+        const textarea = document.querySelector('.private-message-input-group textarea');
+        if (textarea) {
+          textarea.focus();
+        }
+      }, 300);
+    }
+  }, [locationProp]);
+
+  // 验证接收者是否存在
+  const validateReceiver = async (nickname) => {
+    if (!nickname || nickname.trim() === '') {
+      setReceiverUser(null);
+      setReceiverValidationError('');
+      return;
+    }
+
+    try {
+      const result = await messageService.findUserByNickname(nickname.trim());
+      if (result.success && result.data.user) {
+        setReceiverUser(result.data.user);
+        setReceiverValidationError('');
+      } else {
+        setReceiverUser(null);
+        setReceiverValidationError('用户不存在');
+      }
+    } catch (error) {
+      console.error('验证用户失败:', error);
+      setReceiverUser(null);
+      setReceiverValidationError('验证失败');
+    }
+  };
+
+  // 处理接收者输入变化
+  const handleReceiverChange = (value) => {
+    setPrivateMessageReceiver(value);
+    if (value.trim() === '') {
+      setReceiverUser(null);
+      setReceiverValidationError('');
+    } else {
+      // 防抖验证
+      clearTimeout(window.receiverValidationTimeout);
+      window.receiverValidationTimeout = setTimeout(() => {
+        validateReceiver(value);
+      }, 500);
+    }
+  };
+
+  // 发送私信
+  const handleSendPrivateMessage = async () => {
+    if (!privateMessageReceiver.trim() || !privateMessageContent.trim()) {
+      alert('请填写接收者昵称和消息内容');
+      return;
+    }
+
+    if (!receiverUser) {
+      alert('请输入有效的用户昵称');
+      return;
+    }
+
+    setIsSendingPrivate(true);
+    try {
+      const token = localStorage.getItem('token');
+      let result;
+
+      if (privateMessageImage) {
+        // 有图片时，使用 FormData 上传
+        const formData = new FormData();
+        formData.append('receiverNickname', privateMessageReceiver.trim());
+        formData.append('content', privateMessageContent.trim());
+        formData.append('image', privateMessageImage);
+
+        const response = await fetch('http://localhost:3000/api/private-messages', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+        result = await response.json();
+        result.success = response.ok;
+      } else {
+        // 无图片时，使用普通 JSON
+        result = await messageService.sendPrivateMessage(
+          privateMessageReceiver.trim(),
+          privateMessageContent.trim(),
+          null
+        );
+      }
+
+      if (result.success) {
+        alert('私信发送成功！');
+        setPrivateMessageReceiver('');
+        setPrivateMessageContent('');
+        setReceiverUser(null);
+        setShowPrivateMessage(false);
+        // 清除图片
+        if (privateMessageImagePreview) {
+          URL.revokeObjectURL(privateMessageImagePreview);
+        }
+        setPrivateMessageImage(null);
+        setPrivateMessageImagePreview(null);
+        // 清除 URL 参数
+        window.history.replaceState({}, '', '/personal?tab=notifications');
+      } else {
+        alert(result.data?.error || result.error || '发送失败');
+      }
+    } catch (error) {
+      console.error('发送私信失败:', error);
+      alert('发送失败，请稍后重试');
+    } finally {
+      setIsSendingPrivate(false);
+    }
+  };
+
+  // 处理通知中的回复按钮 - 仅展开私信发送区域，不跳转
+  const handleReplyPrivateMessage = (notification) => {
+    const senderNickname = notification.senderNickname || notification.sender_nickname || '';
+    setShowPrivateMessage(true);
+    setPrivateMessageReceiver(senderNickname);
+    validateReceiver(senderNickname);
+    // 滚动到页面底部
+    setTimeout(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      // 聚焦到消息输入框
+      const textarea = document.querySelector('.private-message-input-group textarea');
+      if (textarea) {
+        textarea.focus();
+      }
+    }, 100);
+  };
 
   const fetchNotifications = async () => {
     setLoading(true);
@@ -900,6 +1124,9 @@ const NotificationsSection = () => {
 
   const handleAcceptPairApplication = async (notificationId, pairId) => {
     try {
+      setSuccessMessage('正在生成热身题目，请稍候...');
+      setPairIdToNavigate(pairId);
+
       const token = localStorage.getItem("token");
       const response = await fetch(
         "http://localhost:3000/api/pairs/accept",
@@ -920,9 +1147,9 @@ const NotificationsSection = () => {
         await markNotificationAsRead(notificationId);
         fetchNotifications();
         fetchUnreadCount();
-        // 显示成功弹窗
+        // 直接显示"结对成功！"，不需要等待 socket.io 通知
+        // 因为 socket.io 的 pair_accepted 是发给申请人（发起者）的，不是发给接受者的
         setSuccessMessage('结对成功！');
-        setPairIdToNavigate(pairId);
       } else {
         // 只有特定错误才标记通知为已读，避免重复点击问题
         if (data.error === '状态错误，只能接受待处理的结对申请') {
@@ -934,12 +1161,17 @@ const NotificationsSection = () => {
           if (data.message && data.message.includes('已接受')) {
             setSuccessMessage('结对成功！');
             setPairIdToNavigate(pairId);
+          } else {
+            setSuccessMessage(null);
           }
+        } else {
+          setSuccessMessage(null);
         }
         alert(`操作失败：${data.message || data.error || '未知错误'}`);
       }
     } catch (error) {
       console.error('接受结对申请错误:', error);
+      setSuccessMessage(null);
       alert('操作失败，请稍后重试');
     }
   };
@@ -1171,8 +1403,8 @@ const NotificationsSection = () => {
         return (
           <div key={notification.id} className="notification-item notification-survey-reminder">
             <div className="notification-content">
-              <div className="notification-title">{notification.title}</div>
-              <div className="notification-message">{notification.content}</div>
+              <div className="notification-title">{notification.title || '请填写课后问卷'}</div>
+              <div className="notification-message">{notification.content || ''}</div>
             </div>
             <div className="notification-actions">
               <button
@@ -1180,6 +1412,68 @@ const NotificationsSection = () => {
                 onClick={() => window.location.href = `/quiz/post/${notification.related_id}`}
               >
                 去填写
+              </button>
+              <button
+                className="notification-btn notification-btn-know"
+                onClick={() => handleMarkAsRead(notification.id)}
+              >
+                知道了
+              </button>
+            </div>
+          </div>
+        );
+
+      case 'private_message':
+        const hasImage = notification.hasImage || notification.has_image || notification.imageUrl;
+        const isImageExpanded = expandedImageNotificationId === notification.id;
+        const toggleImageExpand = () => {
+          setExpandedImageNotificationId(isImageExpanded ? null : notification.id);
+        };
+        return (
+          <div key={notification.id} className="notification-item private-message-notification">
+            <div className="notification-content">
+              <div className="notification-title">{notification.title}</div>
+              <div className="notification-message">
+                {notification.content}
+                {hasImage && !isImageExpanded && (
+                  <span
+                    className="image-indicator clickable"
+                    onClick={toggleImageExpand}
+                  >
+                    📷 点击查看图片
+                  </span>
+                )}
+              </div>
+              {hasImage && isImageExpanded && (
+                <>
+                  <div className="notification-image-preview">
+                    <img
+                      src={notification.imageUrl || notification.image_url}
+                      alt="私信图片"
+                      onClick={() => window.open(notification.imageUrl || notification.image_url, '_blank')}
+                    />
+                  </div>
+                  <span
+                    className="image-indicator clickable"
+                    onClick={toggleImageExpand}
+                  >
+                    📷 收起图片
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="notification-actions">
+              <button
+                className="notification-btn notification-btn-reply"
+                onClick={() => handleReplyPrivateMessage(notification)}
+              >
+                回复
+              </button>
+              <button
+                className="notification-btn notification-btn-know"
+                onClick={() => handleMarkAsRead(notification.id)}
+              >
+                知道了
               </button>
             </div>
           </div>
@@ -1223,6 +1517,83 @@ const NotificationsSection = () => {
             notifications.map(notification => renderNotificationItem(notification))
           ) : (
             <div className="notification-empty">暂无待处理消息</div>
+          )}
+        </div>
+
+        {/* 私信发送区域 */}
+        <div className="private-message-section">
+          <div
+            className="private-message-header"
+            onClick={() => setShowPrivateMessage(!showPrivateMessage)}
+          >
+            <span className="private-message-icon">💬</span>
+            <span className="private-message-title">发送私信</span>
+            <span className={`private-message-arrow ${showPrivateMessage ? 'expanded' : ''}`}>▼</span>
+          </div>
+
+          {showPrivateMessage && (
+            <div className="private-message-form">
+              <div className="private-message-input-group">
+                <label>发送给：</label>
+                <input
+                  type="text"
+                  value={privateMessageReceiver}
+                  onChange={(e) => handleReceiverChange(e.target.value)}
+                  placeholder="输入对方昵称"
+                  disabled={isSendingPrivate}
+                />
+                {receiverUser && (
+                  <span className="receiver-valid">✓ 用户存在</span>
+                )}
+                {!receiverUser && privateMessageReceiver && (
+                  <span className="receiver-invalid">{receiverValidationError || '用户不存在'}</span>
+                )}
+              </div>
+
+              <div className="private-message-input-group">
+                <label>消息内容：</label>
+                <div
+                  className={`private-message-textarea-wrapper ${isDragging ? 'dragging' : ''}`}
+                  onDragOver={handlePrivateDragOver}
+                  onDragLeave={handlePrivateDragLeave}
+                  onDrop={handlePrivateDrop}
+                >
+                  <textarea
+                    value={privateMessageContent}
+                    onChange={(e) => setPrivateMessageContent(e.target.value)}
+                    onPaste={handlePrivatePaste}
+                    placeholder="输入消息内容...（支持 LaTeX 公式，如 $x^2$；支持粘贴或拖拽图片）"
+                    disabled={isSendingPrivate}
+                    rows={4}
+                  />
+                  {isDragging && <div className="drag-overlay">松开以发送图片</div>}
+                </div>
+              </div>
+
+              {/* 图片预览 */}
+              {privateMessageImagePreview && (
+                <div className="private-message-image-preview">
+                  <img src={privateMessageImagePreview} alt="预览" />
+                  <button
+                    className="remove-image-btn"
+                    onClick={removePrivateMessageImage}
+                    disabled={isSendingPrivate}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+
+              <div className="private-message-actions">
+                <button
+                  className="private-message-send-btn"
+                  onClick={handleSendPrivateMessage}
+                  disabled={isSendingPrivate || !privateMessageReceiver.trim() || !privateMessageContent.trim() || !receiverUser}
+                >
+                  {isSendingPrivate ? '发送中...' : '发送'}
+                </button>
+              </div>
+            </div>
           )}
         </div>
 
@@ -1623,8 +1994,14 @@ const Personal = () => {
     }
   }, []);
 
-  // 监听 location.state，实现滚动到指定部分
+  // 监听 location.state，实现滚动到指定部分和标签页切换
   useEffect(() => {
+    if (location.state?.activeTab === 'notifications') {
+      setActiveTab('notifications');
+    }
+    if (location.state?.activeTab === 'history') {
+      setActiveTab('history');
+    }
     if (location.state?.scrollTo === 'in-progress') {
       setActiveTab('history');
       setTimeout(() => {
@@ -1711,7 +2088,7 @@ const Personal = () => {
       <div className="personal-content">
         {activeTab === 'profile' && <ProfileSection key={currentToken} />}
         {activeTab === 'history' && <HistorySection location={location} />}
-        {activeTab === 'notifications' && <NotificationsSection />}
+        {activeTab === 'notifications' && <NotificationsSection location={location} />}
         {activeTab === 'reward' && <RewardSection />}
       </div>
     </div><FeatureTipModal

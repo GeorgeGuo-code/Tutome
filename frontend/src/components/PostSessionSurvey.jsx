@@ -180,8 +180,8 @@ const PostSessionSurvey = () => {
           })}
         </div>
 
-        <button className="continue-btn" onClick={() => navigate(`/dialogue/${pairId}`)}>
-          返回对话
+        <button className="continue-btn" onClick={() => navigate('/personal')}>
+          返回个人中心
         </button>
       </div>
     );

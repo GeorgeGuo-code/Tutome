@@ -138,8 +138,12 @@ const submitPreResponse = async (req, res) => {
       return res.status(400).json({ error: '已回答过此问题' });
     }
 
-    // 计算是否正确（热身题目没有正确答案记录，只记录回答）
-    const isCorrect = false; // 热身题目不评判对错
+    // 计算是否正确（热身题目需要判断对错）
+    const questionData = typeof question.question === 'string'
+      ? JSON.parse(question.question)
+      : question.question;
+    const correctIndex = question.correct_index ?? questionData.correct_index;
+    const isCorrect = selectedIndex === correctIndex;
 
     // 保存回答
     const response = await queries.survey.createPreResponse({
@@ -158,7 +162,7 @@ const submitPreResponse = async (req, res) => {
       success: true,
       data: {
         submitted: true,
-        isCorrect: isCorrect, // 始终为false，因为热身不显示答案
+        isCorrect: isCorrect,
         totalQuestions: allQuestions.length,
         answeredCount: allResponses.filter(r => r.user_id === userId).length
       }
@@ -238,16 +242,14 @@ const getPostSurvey = async (req, res) => {
       return res.status(403).json({ error: '无权查看' });
     }
 
-    const surveys = await queries.survey.getPostSurveysByPairId(pairId);
-    if (surveys.length === 0) {
+    const survey = await queries.survey.getLatestPostSurvey(pairId);
+    if (!survey) {
       return res.json({
         success: true,
         data: null,
         message: '暂无问卷'
       });
     }
-
-    const survey = surveys[0];
 
     // 检查用户是否已提交
     const existingResponse = await queries.survey.getPostResponse(survey.id, userId);
@@ -329,12 +331,21 @@ const submitPostResponse = async (req, res) => {
     // 保存回答
     const response = await queries.survey.createPostResponse({
       survey_id: surveyId,
+      pair_id: survey.pair_id,
       user_id: userId,
       user_role: userRole,
       answers: gradingResult.results,
       score: gradingResult.score,
       ai_review_result: gradingResult.ai_review
     });
+
+    // 立即归档当前用户的问卷提醒通知
+    try {
+      await queries.notification.archiveByRelatedIdAndUser(survey.pair_id, 'survey_reminder', userId);
+      console.log('[SurveyController] 已归档用户 ${userId} 的问卷提醒通知');
+    } catch (notifError) {
+      console.error('[SurveyController] 归档问卷通知失败:', notifError);
+    }
 
     // 检查是否双方都已提交
     const allResponses = await queries.survey.getPostResponsesBySurveyId(surveyId);
@@ -436,17 +447,15 @@ const getPostSurveyFeedback = async (req, res) => {
       return res.status(403).json({ error: '无权查看' });
     }
 
-    // 获取问卷
-    const surveys = await queries.survey.getPostSurveysByPairId(pairId);
-    if (surveys.length === 0) {
+    // 获取问卷（使用最新的）
+    const survey = await queries.survey.getLatestPostSurvey(pairId);
+    if (!survey) {
       return res.json({
         success: true,
         data: null,
         message: '暂无问卷'
       });
     }
-
-    const survey = surveys[0];
 
     // 获取双方回答
     const responses = await queries.survey.getPostResponsesBySurveyId(survey.id);

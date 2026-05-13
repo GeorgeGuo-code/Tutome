@@ -189,19 +189,19 @@ const acceptPair = async (req, res) => {
 
         const updatedPair = await queries.pair.accept(pairId);
 
-        // 生成热身题目（同步等待完成）
+        // 生成热身题目（异步，不阻塞响应）
         // 即使question_id为null也会生成通用热身题
-        try {
-          console.log('[结对成功] 开始生成热身题目, question_id:', pair.question_id);
-          const preResult = await surveyService.generatePreQuestions(parseInt(pairId));
-          if (preResult.success) {
-            console.log('[结对成功] 生成热身题目完成，共', preResult.questions?.length || 0, '道题');
-          } else {
-            console.log('[结对成功] 生成热身题目失败:', preResult.error);
-          }
-        } catch (err) {
-          console.error('[结对成功] 生成热身题目异常:', err);
-        }
+        surveyService.generatePreQuestions(parseInt(pairId))
+          .then(preResult => {
+            if (preResult.success) {
+              console.log('[结对成功] 生成热身题目完成，共', preResult.questions?.length || 0, '道题');
+            } else {
+              console.log('[结对成功] 生成热身题目失败:', preResult.error);
+            }
+          })
+          .catch(err => {
+            console.error('[结对成功] 生成热身题目异常:', err);
+          });
 
         // 判断谁是申请者（对方才是申请者，需要通知对方）
         const partnerId = pair.teacher_id === userId ? pair.student_id : pair.teacher_id;
@@ -890,6 +890,156 @@ const getPendingNotifications = async (req, res) => {
     }
 };
 
+// 发送私信
+const sendPrivateMessage = async (req, res) => {
+    const senderId = req.user.userId;
+    let receiverNickname, content, imageUrl;
+
+    try {
+        // 处理有图片的情况（multipart/form-data）
+        if (req.file) {
+            // 验证文件类型
+            if (!cosUploadService.isValidImageType(req.file.mimetype)) {
+                return res.status(400).json({ error: '不支持的图片格式，支持 JPEG、PNG、GIF、WebP' });
+            }
+            // 验证文件大小
+            if (!cosUploadService.isValidFileSize(req.file.size)) {
+                return res.status(400).json({ error: '图片大小不能超过 5MB' });
+            }
+            // 上传到腾讯云 COS
+            imageUrl = await cosUploadService.uploadImage(req.file.buffer, req.file.originalname);
+            // 从其他字段获取
+            receiverNickname = req.body.receiverNickname;
+            content = req.body.content;
+        } else {
+            // 普通 JSON 请求
+            receiverNickname = req.body.receiverNickname;
+            content = req.body.content;
+            imageUrl = req.body.imageUrl || null;
+        }
+
+        // 验证内容不能为空
+        if (!content || content.trim() === '') {
+            return res.status(400).json({ error: '消息内容不能为空' });
+        }
+
+        // 查找接收者
+        const receiver = await queries.user.findByNickname(receiverNickname.trim());
+        if (!receiver) {
+            return res.status(404).json({ error: '用户不存在' });
+        }
+
+        // 不能给自己发私信
+        if (receiver.id === senderId) {
+            return res.status(400).json({ error: '不能给自己发送私信' });
+        }
+
+        // 创建私信记录
+        const message = await queries.privateMessage.create(
+            senderId,
+            receiver.id,
+            content.trim(),
+            imageUrl || null
+        );
+
+        // 获取发送者信息
+        const sender = await queries.user.findById(senderId);
+        const senderNickname = sender.nickname || sender.username;
+
+        // 创建通知
+        const notificationContent = content.length > 100 ? content.substring(0, 100) + '...' : content;
+
+        const notification = await queries.notification.create(
+            receiver.id,
+            'private_message',
+            message.id,
+            `收到来自 ${senderNickname} 的私信`,
+            notificationContent,
+            'pending'
+        );
+
+        // 推送实时通知（包含图片信息）
+        onlineStatusService.sendNotificationToUser(receiver.id, {
+            id: notification.id,
+            type: 'private_message',
+            title: notification.title,
+            content: notificationContent,
+            relatedId: message.id,
+            senderId: senderId,
+            senderNickname: senderNickname,
+            hasImage: !!imageUrl,
+            imageUrl: imageUrl || null
+        });
+
+        res.json({ success: true, message });
+    } catch (error) {
+        console.error('发送私信错误:', error);
+        res.status(500).json({ error: '发送失败' });
+    }
+};
+
+// 获取私信列表
+const getPrivateMessages = async (req, res) => {
+    const userId = req.user.userId;
+    const { page = 1, limit = 50 } = req.query;
+
+    try {
+        const messages = await queries.privateMessage.getListByUserId(userId, {
+            limit: parseInt(limit),
+            offset: (parseInt(page) - 1) * parseInt(limit)
+        });
+        res.json({ success: true, messages });
+    } catch (error) {
+        console.error('获取私信列表错误:', error);
+        res.status(500).json({ error: '获取失败' });
+    }
+};
+
+// 获取与某用户的对话
+const getPrivateConversation = async (req, res) => {
+    const userId = req.user.userId;
+    const { otherUserId } = req.params;
+    const { page = 1, limit = 50 } = req.query;
+
+    try {
+        // 先标记对方的来信为已读
+        await queries.privateMessage.markAllAsReadFromUser(parseInt(otherUserId), userId);
+
+        const messages = await queries.privateMessage.getConversationBetweenUsers(
+            userId,
+            parseInt(otherUserId),
+            { limit: parseInt(limit), offset: (parseInt(page) - 1) * parseInt(limit) }
+        );
+        res.json({ success: true, messages });
+    } catch (error) {
+        console.error('获取私信对话错误:', error);
+        res.status(500).json({ error: '获取失败' });
+    }
+};
+
+// 根据昵称查询用户
+const findUserByNicknameController = async (req, res) => {
+    const { nickname } = req.params;
+
+    try {
+        const user = await queries.user.findByNickname(nickname);
+        if (!user) {
+            return res.status(404).json({ success: false, error: '用户不存在' });
+        }
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                nickname: user.nickname || user.username,
+                avatar_url: user.avatar_url
+            }
+        });
+    } catch (error) {
+        console.error('查询用户错误:', error);
+        res.status(500).json({ error: '查询失败' });
+    }
+};
+
 module.exports = {
     applyPair,
     acceptPair,
@@ -907,5 +1057,9 @@ module.exports = {
     rejectEndRequest,
     getTeachingTime,
     getPendingEndRequests,
-    getPendingNotifications
+    getPendingNotifications,
+    sendPrivateMessage,
+    getPrivateMessages,
+    getPrivateConversation,
+    findUserByNicknameController
 };

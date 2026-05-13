@@ -44,8 +44,9 @@ const PreSessionQuiz = () => {
       if (result.success) {
         setQuestions(result.data.questions || []);
 
-        // 如果已完成，标记已提交
-        if (result.data.completed) {
+        // 如果题目已生成且用户已回答完所有题目，才标记已提交
+        // 只有当有题目（questions.length > 0）且用户回答数等于题目数时，才算已完成
+        if (result.data.questions && result.data.questions.length > 0 && result.data.completed) {
           setSubmitted(true);
         }
       } else {
@@ -62,6 +63,22 @@ const PreSessionQuiz = () => {
   useEffect(() => {
     fetchQuestions();
   }, [fetchQuestions]);
+
+  // 题目未生成时，自动刷新直到获取到题目
+  useEffect(() => {
+    // 当正在加载、或已有题目、或已有错误时，不需要自动刷新
+    if (loading || questions.length > 0 || error) {
+      return;
+    }
+
+    // 题目尚未生成，设置定时器自动刷新
+    const refreshTimer = setInterval(() => {
+      console.log('[PreSessionQuiz] 题目尚未生成，自动刷新...');
+      fetchQuestions();
+    }, 3000); // 每3秒检查一次
+
+    return () => clearInterval(refreshTimer);
+  }, [loading, questions.length, error, fetchQuestions]);
 
   // 计时器
   useEffect(() => {
@@ -214,19 +231,7 @@ const PreSessionQuiz = () => {
         </div>
         <div className="empty-questions">
           <p>热身题目正在生成中，请稍候...</p>
-          <p className="hint">如果等待时间过长，可以尝试刷新页面</p>
-          <button
-            className="submit-btn"
-            onClick={() => fetchQuestions()}
-          >
-            刷新
-          </button>
-          <button
-            className="skip-btn"
-            onClick={() => navigate(`/dialogue/${pairId}`)}
-          >
-            跳过，直接进入对话
-          </button>
+          <p className="hint">系统将在题目生成完毕后自动显示</p>
         </div>
       </div>
     );
@@ -236,7 +241,6 @@ const PreSessionQuiz = () => {
     return (
       <div className="pre-quiz-container">
         <div className="error">{error}</div>
-        <button onClick={() => navigate(`/dialogue/${pairId}`)}>跳过，直接进入对话</button>
       </div>
     );
   }

@@ -124,9 +124,11 @@ const Browse = () => {
   const fetchQuestions = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/questions?page=${currentPage}&limit=4`
-      );
+      let url = `http://localhost:3000/api/questions?page=${currentPage}&limit=4`;
+      if (mode !== "all") {
+        url += `&tagId=${mode}`;
+      }
+      const response = await fetch(url);
       const data = await response.json();
       setQuestions(data.questions || []);
       setTotalPages(Math.ceil(data.total / 4) || 1);
@@ -151,8 +153,16 @@ const Browse = () => {
           onChange={(e) => setMode(e.target.value)}
         >
           <option value="all">全部</option>
-          <option value="latest">最新</option>
-          <option value="popular">热门</option>
+          <option value="1">数学</option>
+          <option value="4">物理</option>
+          <option value="12">化学</option>
+          <option value="13">生物</option>
+          <option value="14">编程与计算机</option>
+          <option value="15">经管/社科</option>
+          <option value="16">电子与工程</option>
+          <option value="17">英语与学术写作</option>
+          <option value="18">科研</option>
+          <option value="19">其他</option>
         </select>
       </div>
 

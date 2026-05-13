@@ -1,6 +1,7 @@
 const OpenAI = require('openai');
 const queries = require('../models/queries');
 const pool = require('../models/pool');
+const onlineStatusService = require('./onlineStatusService');
 require('dotenv').config({ path: './config/.env' });
 
 // 初始化 OpenAI 客户端
@@ -29,14 +30,20 @@ const PRE_QUESTIONS_SYSTEM_PROMPT = `你是一个教学辅导专家，负责根�
   "questions": [
     {
       "question": "题目内容",
-      "options": ["选项A", "选项B", "选项C", "选项D"],
-      "topic": "关联知识点"
+      "options": ["选项A（正确答案）", "选项B（错误但合理）", "选项C（错误但合理）", "选项D（错误但合理）"],
+      "topic": "关联知识点",
+      "correct_index": 0
     }
   ]
 }
 
+## 正确答案设置规则（强制约束，违者无效）
+- correct_index 表示正确答案的索引（0=A, 1=B, 2=C, 3=D）
+- **分布要求**：第1题正确答案是A(correct_index=0)，第2题正确答案必须是B(correct_index=1)，第3题必须是C(correct_index=2)，第4题必须是D(correct_index=3)，第5题必须是D(correct_index=3)
+- 5道题的correct_index依次必须是：[0, 1, 2, 3, 3]，不得更改
+- 选项A必须是唯一正确的答案，其他选项必须看起来合理但错误
+
 ## 注意事项
-- 不要在题目中透露正确答案
 - 选项应该是有一定区分度的，不能明显错误
 - 题目应该既能检验基本理解，又能启发深入思考`;
 
@@ -192,7 +199,7 @@ async function generatePreQuestionTemplates(questionId) {
 
     // 构建模板
     const templates = result.questions.map((q, i) => ({
-      question: { question: q.question, options: q.options, topic: q.topic },
+      question: { question: q.question, options: q.options, topic: q.topic, correct_index: q.correct_index },
       position: i + 1
     }));
 
@@ -269,7 +276,7 @@ async function generatePreQuestions(pairId) {
       ];
 
       try {
-        const result = await callAI(context, 0.5, 1500);
+        const result = await callAI(context, 0.8, 2000);
         console.log('[SurveyService] AI返回结果:', JSON.stringify(result, null, 2));
 
         if (!result.questions || !Array.isArray(result.questions)) {
@@ -288,9 +295,9 @@ async function generatePreQuestions(pairId) {
           console.log('[SurveyService] 已过滤无效题目，剩余:', result.questions.length);
         }
 
-        // 统一结构：确保每个模板都有 { question: { question, options, topic }, position }
+        // 统一结构：确保每个模板都有 { question: { question, options, topic, correct_index }, position }
         templates = result.questions.map((q, i) => ({
-          question: { question: q.question, options: q.options, topic: q.topic },
+          question: { question: q.question, options: q.options, topic: q.topic, correct_index: q.correct_index },
           position: i + 1
         }));
         console.log('[SurveyService] 处理后的模板:', JSON.stringify(templates, null, 2));
@@ -309,13 +316,14 @@ async function generatePreQuestions(pairId) {
       const finalQuestion = {
         question: typeof questionObj === 'string' ? questionObj : (questionObj.question || JSON.stringify(questionObj)),
         options: questionObj.options || [],
-        topic: questionObj.topic || topicName || ''
+        topic: questionObj.topic || topicName || '',
+        correct_index: typeof questionObj.correct_index === 'number' ? questionObj.correct_index : 0
       };
       console.log('[SurveyService] 保存题目:', JSON.stringify(finalQuestion));
       const saved = await queries.survey.createPreQuestion({
         pair_id: pairId,
         question: finalQuestion,
-        correct_index: -1, // 热身题目不提供正确答案
+        correct_index: finalQuestion.correct_index,
         position: t.position || i + 1
       });
       savedQuestions.push(saved);
@@ -341,6 +349,13 @@ async function generatePostSurvey(pairId) {
     const pair = await queries.pair.getById(pairId);
     if (!pair) {
       return { success: false, error: '结对不存在' };
+    }
+
+    // 检查是否已存在问卷（使用最新的，忽略状态）
+    const existingSurvey = await queries.survey.getLatestPostSurvey(pairId);
+    if (existingSurvey) {
+      console.log(`[SurveyService] 结对 ${pairId} 已存在问卷(ID:${existingSurvey.id})，返回现有问卷`);
+      return { success: true, survey: existingSurvey, existing: true };
     }
 
     // 获取热身题目（用于原题复用）
@@ -414,13 +429,24 @@ async function generatePostSurvey(pairId) {
     const allQuestions = [...knowledgeQuestions, ...teacherEval, ...studentEval, ...teachingEval];
 
     // 保存到数据库
-    const survey = await queries.survey.createPostSurvey({
-      pair_id: pairId,
-      questions: allQuestions,
-      fixed_components: fixedComponents,
-      status: 'pending',
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7天后过期
-    });
+    let survey;
+    try {
+      survey = await queries.survey.createPostSurvey({
+        pair_id: pairId,
+        questions: allQuestions,
+        fixed_components: fixedComponents,
+        status: 'pending',
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7天后过期
+      });
+    } catch (createError) {
+      // 如果是唯一约束冲突，说明其他请求已经创建了问卷，查询并返回现有的
+      if (createError.code === '23505') {
+        console.log(`[SurveyService] 结对 ${pairId} 问卷已存在（并发创建），返回现有问卷`);
+        const existingSurvey = await queries.survey.getLatestPostSurvey(pairId);
+        return { success: true, survey: existingSurvey, existing: true };
+      }
+      throw createError;
+    }
 
     console.log(`[SurveyService] 生成了问卷，包含 ${knowledgeQuestions.length} 道知识题和 ${allQuestions.length - knowledgeQuestions.length} 道评价题`);
 
@@ -439,23 +465,62 @@ async function generatePostSurvey(pairId) {
 
       // 只有在没有 existingNotifications 时才发送通知
       if (!existingNotifications || existingNotifications.length === 0) {
+        const surveyTitle = '请填写课后问卷';
+
+        // 获取问题标题
+        let questionTitle = '';
+        console.log(`[SurveyService] pair.question_id = ${pair.question_id}`);
+        if (pair.question_id) {
+          const question = await queries.getQuestionById(pair.question_id);
+          console.log(`[SurveyService] 查询问题结果:`, question);
+          if (question) {
+            questionTitle = question.title || '';
+            console.log(`[SurveyService] questionTitle = "${questionTitle}"`);
+          }
+        } else {
+          console.log(`[SurveyService] pair.question_id 为空，跳过获取问题标题`);
+        }
+
+        const surveyContent = questionTitle
+          ? `来自"${questionTitle}"，您也可以到该对话的"查看总结"点击"问卷反馈"填写`
+          : '请填写课后问卷，您也可以到对话的"查看总结"点击"问卷反馈"填写';
+        console.log(`[SurveyService] 最终 surveyContent = "${surveyContent}"`);
+
         // 发送问卷提醒给老师
         await queriesModule.notification.create(
           teacherId,
           'survey_reminder',
           pairId,
-          '请填写课后问卷',
-          `来自"${pair.question_title}"的课后问卷`
+          surveyTitle,
+          surveyContent
         );
+
+        // 通过 Socket.IO 实时发送通知给老师
+        onlineStatusService.sendNotificationToUser(teacherId, {
+          type: 'survey_reminder',
+          related_id: pairId,
+          title: surveyTitle,
+          content: surveyContent,
+          question_title: questionTitle
+        });
 
         // 发送问卷提醒给学生
         await queriesModule.notification.create(
           studentId,
           'survey_reminder',
           pairId,
-          '请填写课后问卷',
-          `来自"${pair.question_title}"的课后问卷`
+          surveyTitle,
+          surveyContent
         );
+
+        // 通过 Socket.IO 实时发送通知给学生
+        onlineStatusService.sendNotificationToUser(studentId, {
+          type: 'survey_reminder',
+          related_id: pairId,
+          title: surveyTitle,
+          content: surveyContent,
+          question_title: questionTitle
+        });
 
         console.log(`[SurveyService] 已向结对 ${pairId} 双方发送问卷提醒通知`);
       } else {

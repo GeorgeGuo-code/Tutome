@@ -10,7 +10,7 @@
  */
 
 const pool = require('../models/pool');
-require('dotenv').config({ path: './config/.env' });
+require('dotenv').config({ path: '../config/.env' });
 
 // 格式化日期
 function formatDate(date) {
@@ -64,33 +64,64 @@ async function exportPreSurveyData(pairId = null) {
 
 // 导出对话后问卷数据
 async function exportPostSurveyData(pairId = null) {
+  // 去重：每个pair只取最新的那一份问卷，每个用户只取最新回答
   let query = `
+    WITH latest_survey_per_pair AS (
+      SELECT DISTINCT ON (pair_id)
+        id as survey_id,
+        pair_id,
+        questions,
+        status
+      FROM post_surveys
+  `;
+
+  if (pairId) {
+    query += ` WHERE pair_id = $1`;
+  }
+
+  query += `
+      ORDER BY pair_id, created_at DESC
+    ),
+    latest_responses AS (
+      SELECT DISTINCT ON (survey_id, user_id)
+        survey_id,
+        user_id,
+        user_role,
+        answers,
+        score,
+        ai_review_result,
+        submitted_at,
+        pair_id
+      FROM post_responses
+      ORDER BY survey_id, user_id, submitted_at DESC
+    )
     SELECT
       p.id as pair_id,
       p.teacher_id,
       p.student_id,
-      ps.id as survey_id,
-      ps.questions,
-      ps.status,
-      pr.user_id,
-      pr.user_role,
-      pr.answers,
-      pr.score,
-      pr.ai_review_result,
-      pr.submitted_at
+      lsp.survey_id,
+      lsp.questions,
+      lsp.status,
+      lr.user_id,
+      lr.user_role,
+      lr.answers,
+      lr.score,
+      lr.ai_review_result,
+      lr.submitted_at,
+      lr.pair_id
     FROM pairs p
-    JOIN post_surveys ps ON ps.pair_id = p.id
-    LEFT JOIN post_responses pr ON pr.survey_id = ps.id
+    JOIN latest_survey_per_pair lsp ON lsp.pair_id = p.id
+    LEFT JOIN latest_responses lr ON lr.survey_id = lsp.survey_id
     WHERE 1=1
   `;
 
   const params = [];
   if (pairId) {
-    query += ` AND p.id = $1`;
+    query += ` AND p.id = $${params.length + 1}`;
     params.push(pairId);
   }
 
-  query += ` ORDER BY p.id, ps.id, pr.user_id`;
+  query += ` ORDER BY p.id, lr.user_id`;
 
   const result = await pool.query(query, params);
   return result.rows;
@@ -131,12 +162,13 @@ function generatePreSurveyReport(data, usernames) {
     // 题目
     const qKey = row.question_id;
     if (!pair.questions.has(qKey)) {
-      const question = typeof row.question === 'string' ? JSON.parse(row.question) : row.question;
+      const qData = typeof row.question === 'string' ? JSON.parse(row.question) : row.question;
       pair.questions.set(qKey, {
         id: row.question_id,
         position: row.position,
-        question: question.question || question,
-        options: question.options || [],
+        questionText: qData.question || qData,
+        options: qData.options || [],
+        topic: qData.topic || '未知',
         correct_index: row.correct_index
       });
     }
@@ -172,8 +204,9 @@ function generatePreSurveyReport(data, usernames) {
 
     const sortedQuestions = Array.from(pair.questions.values()).sort((a, b) => a.position - b.position);
     sortedQuestions.forEach(q => {
-      const topic = q.question.topic || '未知';
-      report += `| ${q.position} | ${q.question.substring(0, 50)}${q.question.length > 50 ? '...' : ''} | ${String.fromCharCode(65 + q.correct_index)} | ${topic} |\n`;
+      const topic = q.topic || '未知';
+      const correctAnswer = q.correct_index === -1 ? '无' : String.fromCharCode(65 + q.correct_index);
+      report += `| ${q.position} | ${q.questionText.substring(0, 50)}${q.questionText.length > 50 ? '...' : ''} | ${correctAnswer} | ${topic} |\n`;
     });
 
     report += '\n';
@@ -182,15 +215,14 @@ function generatePreSurveyReport(data, usernames) {
     report += `#### 题目详情与用户回答\n\n`;
 
     sortedQuestions.forEach(q => {
-      const question = q.question;
-      const options = question.options || [];
+      const options = q.options || [];
 
       report += `--- \n\n`;
-      report += `**题目 ${q.position}:** ${question.question}\n\n`;
+      report += `**题目 ${q.position}:** ${q.questionText}\n\n`;
 
       report += `**选项:**\n`;
       options.forEach((opt, idx) => {
-        const marker = idx === q.correct_index ? ' ✅ (正确答案)' : '';
+        const marker = q.correct_index === -1 ? '' : (idx === q.correct_index ? ' ✅ (正确答案)' : '');
         report += `- ${String.fromCharCode(65 + idx)}. ${opt}${marker}\n`;
       });
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './NotificationPopup.css';
 
-const NotificationPopup = ({ notifications, onRemove }) => {
+const NotificationPopup = ({ notifications, onRemove, onNotificationClick }) => {
   // 自动移除通知（5秒后）
   useEffect(() => {
     notifications.forEach((notification) => {
@@ -19,7 +19,9 @@ const NotificationPopup = ({ notifications, onRemove }) => {
 
   return (
     <div className="notification-popup-container">
-      {notifications.map((notification) => {
+      {notifications
+        .filter(notification => notification.type !== 'survey_reminder')
+        .map((notification) => {
         console.log('通知对象:', notification);
         console.log('通知类型:', notification.type);
 
@@ -60,7 +62,13 @@ const NotificationPopup = ({ notifications, onRemove }) => {
         } else if (notification.type === 'survey_reminder') {
           notificationContent = (
             <span className="notification-popup-text">
-              {notification.title || '请填写课后问卷'}
+              {notification.content || notification.title || '请填写课后问卷'}
+            </span>
+          );
+        } else if (notification.type === 'private_message') {
+          notificationContent = (
+            <span className="notification-popup-text">
+              {notification.title || '收到私信'}
             </span>
           );
         } else {
@@ -76,13 +84,85 @@ const NotificationPopup = ({ notifications, onRemove }) => {
           );
         }
 
+        const handleClick = () => {
+          if (onNotificationClick) {
+            onNotificationClick(notification);
+          }
+        };
+
+        // survey_reminder 特殊处理：不使用点击关闭，显示"知道了"按钮
+        if (notification.type === 'survey_reminder') {
+          return (
+            <div
+              key={notification.id}
+              className={`notification-popup-item notification-${notification.type}`}
+            >
+              <div className="notification-popup-content">
+                {notificationContent}
+                <button
+                  className="notification-popup-acknowledge"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(notification.id);
+                  }}
+                >
+                  知道了
+                </button>
+              </div>
+            </div>
+          );
+        }
+
+        // private_message 特殊处理：灰色背景，两个按钮
+        if (notification.type === 'private_message') {
+          return (
+            <div
+              key={notification.id}
+              className={`notification-popup-item notification-${notification.type}`}
+            >
+              <div className="notification-popup-content">
+                {notificationContent}
+                <div className="notification-private-actions">
+                  <button
+                    className="notification-popup-reply"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onNotificationClick) {
+                        onNotificationClick(notification, 'reply');
+                      }
+                    }}
+                  >
+                    回复
+                  </button>
+                  <button
+                    className="notification-popup-acknowledge"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemove(notification.id);
+                    }}
+                  >
+                    知道了
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
         return (
-          <div key={notification.id} className={`notification-popup-item notification-${notification.type}`}>
+          <div
+            key={notification.id}
+            className={`notification-popup-item notification-${notification.type}`}
+            onClick={handleClick}
+          >
             <div className="notification-popup-content">
               {notificationContent}
               <button
                 className="notification-popup-close"
-                onClick={() => onRemove(notification.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove(notification.id);
+                }}
               >
                 ×
               </button>

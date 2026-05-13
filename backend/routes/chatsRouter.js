@@ -81,4 +81,10 @@ router.post('/api/chats/:pairId/accept-end', chatsController.acceptEndRequest);
 router.post('/api/chats/:pairId/reject-end', chatsController.rejectEndRequest);
 router.get('/api/chats/:pairId/time', chatsController.getTeachingTime);
 
+// 私信相关
+router.post('/api/private-messages', upload.single('image'), chatsController.sendPrivateMessage);
+router.get('/api/private-messages', chatsController.getPrivateMessages);
+router.get('/api/private-messages/conversation/:otherUserId', chatsController.getPrivateConversation);
+router.get('/api/users/nickname/:nickname', chatsController.findUserByNicknameController);
+
 module.exports = router;

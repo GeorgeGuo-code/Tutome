@@ -215,6 +215,9 @@ function sendNotificationToUser(userId, notification) {
     return;
   }
 
+  console.log(`[Socket.IO] 准备向用户 ${userId} 发送通知:`, JSON.stringify(notification));
+  console.log(`[Socket.IO] 用户 ${userId} 所在房间: user:${userId}`);
+
   // 向特定用户发送通知
   ioInstance.to(`user:${userId}`).emit('notification', notification);
   console.log(`已向用户 ${userId} 推送通知:`, notification.title);

@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Home from './pages/home';
 import Login from './pages/login';
@@ -62,6 +62,19 @@ export default function App() {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
+  const navigate = useNavigate();
+
+  const handleNotificationClick = (notification, action) => {
+    removeNotification(notification.id);
+    if (notification.type === 'pair_application' || notification.type === 'end_request') {
+      navigate('/personal', { state: { activeTab: 'notifications' } });
+    } else if (notification.type === 'pair_accepted') {
+      navigate('/personal', { state: { activeTab: 'history', scrollTo: 'in-progress' } });
+    } else if (notification.type === 'private_message' && action === 'reply') {
+      navigate('/personal', { state: { activeTab: 'notifications', openPrivateMessage: true, replyToNickname: notification.senderNickname } });
+    }
+  };
+
   return (
     <>
       <Routes>
@@ -80,6 +93,7 @@ export default function App() {
       <NotificationPopup
         notifications={notifications}
         onRemove={removeNotification}
+        onNotificationClick={handleNotificationClick}
       />
     </>
   );

@@ -849,6 +849,18 @@ const queries = {
       return result.rows[0] || null;
     },
 
+    // 根据ID获取用户信息
+    findById: async (userId) => {
+      const result = await pool.query(
+        `SELECT u.id, u.username, up.nickname, up.avatar_url
+         FROM users u
+         LEFT JOIN user_profiles up ON u.id = up.user_id
+         WHERE u.id = $1`,
+        [userId]
+      );
+      return result.rows[0] || null;
+    },
+
     // 新增或更新用户资料
     upsertProfile: async (userId, { nickname, bio, avatar_url }) => {
       const result = await pool.query(
@@ -970,6 +982,19 @@ const queries = {
       } finally {
         client.release();
       }
+    },
+
+    // 根据昵称或用户名查找用户
+    findByNickname: async (nickname) => {
+      const result = await pool.query(
+        `SELECT u.id, u.username, up.nickname, up.avatar_url
+         FROM users u
+         LEFT JOIN user_profiles up ON u.id = up.user_id
+         WHERE up.nickname = $1 OR u.username = $1
+         LIMIT 1`,
+        [nickname]
+      );
+      return result.rows[0] || null;
     }
   },
 
@@ -1236,9 +1261,10 @@ const queries = {
     // 获取结对的聊天记录
     getByPairId: async (pairId) => {
       const result = await pool.query(
-        `SELECT m.*, u.username as sender_nickname
+        `SELECT m.*, COALESCE(up.nickname, u.username) as sender_nickname
          FROM messages m
          JOIN users u ON m.sender_id = u.id
+         LEFT JOIN user_profiles up ON u.id = up.user_id
          WHERE m.pair_id = $1
          ORDER BY m.created_at ASC`,
         [pairId]
@@ -1249,15 +1275,91 @@ const queries = {
     // 获取结对最后一条消息
     getLastByPairId: async (pairId) => {
       const result = await pool.query(
-        `SELECT m.*, u.username as sender_nickname
+        `SELECT m.*, COALESCE(up.nickname, u.username) as sender_nickname
          FROM messages m
          JOIN users u ON m.sender_id = u.id
+         LEFT JOIN user_profiles up ON u.id = up.user_id
          WHERE m.pair_id = $1
          ORDER BY m.created_at DESC
          LIMIT 1`,
         [pairId]
       );
       return result.rows[0];
+    }
+  },
+
+  // 私信相关查询
+  privateMessage: {
+    // 发送私信
+    create: async (senderId, receiverId, content, imageUrl) => {
+      const result = await pool.query(
+        `INSERT INTO private_messages (sender_id, receiver_id, content, image_url)
+         VALUES ($1, $2, $3, $4) RETURNING *`,
+        [senderId, receiverId, content, imageUrl]
+      );
+      return result.rows[0];
+    },
+
+    // 获取私信列表（发送和接收的）
+    getListByUserId: async (userId, options = {}) => {
+      const { limit = 50, offset = 0 } = options;
+      const result = await pool.query(
+        `SELECT pm.*,
+                CASE WHEN pm.sender_id = $1 THEN 'sent' ELSE 'received' END as direction,
+                COALESCE(sp.nickname, su.username) as sender_nickname,
+                COALESCE(rp.nickname, ru.username) as receiver_nickname
+         FROM private_messages pm
+         JOIN users su ON pm.sender_id = su.id
+         JOIN users ru ON pm.receiver_id = ru.id
+         LEFT JOIN user_profiles sp ON su.id = sp.user_id
+         LEFT JOIN user_profiles rp ON ru.id = rp.user_id
+         WHERE pm.sender_id = $1 OR pm.receiver_id = $1
+         ORDER BY pm.created_at DESC
+         LIMIT $2 OFFSET $3`,
+        [userId, limit, offset]
+      );
+      return result.rows;
+    },
+
+    // 获取与某个用户的私信历史
+    getConversationBetweenUsers: async (userId1, userId2, options = {}) => {
+      const { limit = 50, offset = 0 } = options;
+      const result = await pool.query(
+        `SELECT pm.*,
+                COALESCE(sp.nickname, su.username) as sender_nickname,
+                COALESCE(rp.nickname, ru.username) as receiver_nickname
+         FROM private_messages pm
+         JOIN users su ON pm.sender_id = su.id
+         JOIN users ru ON pm.receiver_id = ru.id
+         LEFT JOIN user_profiles sp ON su.id = sp.user_id
+         LEFT JOIN user_profiles rp ON ru.id = rp.user_id
+         WHERE (pm.sender_id = $1 AND pm.receiver_id = $2)
+            OR (pm.sender_id = $2 AND pm.receiver_id = $1)
+         ORDER BY pm.created_at ASC
+         LIMIT $3 OFFSET $4`,
+        [userId1, userId2, limit, offset]
+      );
+      return result.rows;
+    },
+
+    // 标记所有来自某用户的私信为已读
+    markAllAsReadFromUser: async (senderId, receiverId) => {
+      const result = await pool.query(
+        `UPDATE private_messages SET is_read = TRUE, updated_at = NOW()
+         WHERE sender_id = $1 AND receiver_id = $2 RETURNING *`,
+        [senderId, receiverId]
+      );
+      return result.rows;
+    },
+
+    // 获取未读私信数量
+    getUnreadCount: async (userId) => {
+      const result = await pool.query(
+        `SELECT COUNT(*) as count FROM private_messages
+         WHERE receiver_id = $1 AND is_read = FALSE`,
+        [userId]
+      );
+      return parseInt(result.rows[0].count);
     }
   },
 
@@ -1294,13 +1396,38 @@ const queries = {
                      WHEN p.end_requested_by = u_teacher.id THEN u_teacher.username
                      ELSE u_student.username
                    END
+                 WHEN n.type = 'private_message' THEN
+                   COALESCE(sp.nickname, su.username)
                  ELSE NULL
-               END as actor_username
+               END as actor_username,
+               CASE
+                 WHEN n.type = 'private_message' THEN
+                   pm.sender_id
+                 ELSE NULL
+               END as sender_id,
+               CASE
+                 WHEN n.type = 'private_message' THEN
+                   COALESCE(sp.nickname, su.username)
+                 ELSE NULL
+               END as sender_nickname,
+               CASE
+                 WHEN n.type = 'private_message' THEN
+                   pm.image_url
+                 ELSE NULL
+               END as image_url,
+               CASE
+                 WHEN n.type = 'private_message' AND pm.image_url IS NOT NULL THEN
+                   TRUE
+                 ELSE FALSE
+               END as has_image
         FROM notifications n
-        LEFT JOIN pairs p ON n.related_id = p.id
+        LEFT JOIN pairs p ON n.related_id = p.id AND n.type IN ('pair_application', 'end_request')
         LEFT JOIN users u_teacher ON p.teacher_id = u_teacher.id
         LEFT JOIN users u_student ON p.student_id = u_student.id
         LEFT JOIN questions q ON p.question_id = q.id
+        LEFT JOIN private_messages pm ON n.type = 'private_message' AND n.related_id = pm.id
+        LEFT JOIN users su ON pm.sender_id = su.id
+        LEFT JOIN user_profiles sp ON su.id = sp.user_id
         WHERE n.user_id = $1
       `;
       const params = [userId];
@@ -1385,6 +1512,16 @@ const queries = {
         `UPDATE notifications SET status = 'archived', updated_at = NOW()
          WHERE related_id = $1 AND type = $2 RETURNING *`,
         [relatedId, type]
+      );
+      return result.rows;
+    },
+
+    // 根据 related_id、type 和 user_id 归档特定用户的通知
+    archiveByRelatedIdAndUser: async (relatedId, type, userId) => {
+      const result = await pool.query(
+        `UPDATE notifications SET status = 'archived', updated_at = NOW()
+         WHERE related_id = $1 AND type = $2 AND user_id = $3 RETURNING *`,
+        [relatedId, type, userId]
       );
       return result.rows;
     },
@@ -1671,8 +1808,13 @@ const queries = {
       return result.rows[0];
     },
     getPostSurveysByPairId: async (pairId) => {
-      const result = await pool.query('SELECT * FROM post_surveys WHERE pair_id = $1 ORDER BY created_at DESC', [pairId]);
+      const result = await pool.query('SELECT * FROM post_surveys WHERE pair_id = $1 AND status = $2 ORDER BY created_at DESC', [pairId, 'pending']);
       return result.rows;
+    },
+    // 获取最新的有效问卷（无论状态）
+    getLatestPostSurvey: async (pairId) => {
+      const result = await pool.query('SELECT * FROM post_surveys WHERE pair_id = $1 ORDER BY created_at DESC LIMIT 1', [pairId]);
+      return result.rows[0] || null;
     },
     getPostSurveyById: async (surveyId) => {
       const result = await pool.query('SELECT * FROM post_surveys WHERE id = $1', [surveyId]);
@@ -1687,10 +1829,10 @@ const queries = {
       const result = await pool.query('UPDATE post_surveys SET status = $1 WHERE id = $2 RETURNING *', [status, surveyId]);
       return result.rows[0];
     },
-    createPostResponse: async ({ survey_id, user_id, user_role, answers, score, ai_review_result }) => {
+    createPostResponse: async ({ survey_id, pair_id, user_id, user_role, answers, score, ai_review_result }) => {
       const result = await pool.query(
-        `INSERT INTO post_responses (survey_id, user_id, user_role, answers, score, ai_review_result) VALUES ($1, $2, $3, $4::jsonb, $5, $6::jsonb) RETURNING *`,
-        [survey_id, user_id, user_role, JSON.stringify(answers), score, JSON.stringify(ai_review_result || {})]
+        `INSERT INTO post_responses (survey_id, pair_id, user_id, user_role, answers, score, ai_review_result) VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7::jsonb) RETURNING *`,
+        [survey_id, pair_id, user_id, user_role, JSON.stringify(answers), score, JSON.stringify(ai_review_result || {})]
       );
       return result.rows[0];
     },

@@ -156,4 +156,38 @@ export const rewardService = {
   },
 };
 
+// 私信相关 API
+export const messageService = {
+  // 发送私信
+  sendPrivateMessage: async (receiverNickname, content, imageUrl) => {
+    const response = await request('/private-messages', {
+      method: 'POST',
+      body: JSON.stringify({ receiverNickname, content, imageUrl }),
+    });
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 获取私信列表
+  getPrivateMessages: async (page = 1, limit = 50) => {
+    const response = await request(`/private-messages?page=${page}&limit=${limit}`);
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 获取与某用户的对话
+  getPrivateConversation: async (otherUserId, page = 1, limit = 50) => {
+    const response = await request(`/private-messages/conversation/${otherUserId}?page=${page}&limit=${limit}`);
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 根据昵称查询用户
+  findUserByNickname: async (nickname) => {
+    const response = await request(`/users/nickname/${encodeURIComponent(nickname)}`);
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+};
+
 export default authService;

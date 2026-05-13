@@ -340,7 +340,12 @@ const Post = () => {
   const handleBack = () => {
     // 从 location.state 获取来源页面
     const fromPage = location.state?.from || '/browse';
-    navigate(fromPage);
+    const activeTab = location.state?.activeTab;
+    if (activeTab) {
+      navigate(fromPage, { state: { activeTab } });
+    } else {
+      navigate(fromPage);
+    }
   };
 
   if (loading) {
@@ -519,49 +524,60 @@ const Post = () => {
               </div>
             )}
 
-            {/* 问卷反馈区域 */}
-            {surveyFeedback && surveyFeedback.score !== undefined && (
-              <div className="feedback-section">
-                <div
-                  className="feedback-toggle"
-                  onClick={() => setFeedbackExpanded(!feedbackExpanded)}
-                >
-                  <span className="feedback-toggle-text">📋 问卷反馈</span>
-                  <span className="feedback-toggle-icon">
-                    正确率：{(surveyFeedback.score * 100).toFixed(0)}%
-                  </span>
-                  <span className="feedback-toggle-arrow">{feedbackExpanded ? '∧' : '›'}</span>
-                </div>
-
-                {feedbackExpanded && (
-                  <div className="feedback-content">
-                    {surveyFeedback.wrongQuestions && surveyFeedback.wrongQuestions.length > 0 ? (
-                      <>
-                        <div className="feedback-title">错误题目分析</div>
-                        {surveyFeedback.wrongQuestions.map((item, index) => (
-                          <div key={index} className="feedback-wrong-item">
-                            <div className="feedback-wrong-question">
-                              <span className="feedback-wrong-label">题目：</span>
-                              {item.question}
-                            </div>
-                            <div className="feedback-wrong-answer">
-                              <span className="feedback-wrong-label">我的答案：</span>
-                              {item.myAnswer}
-                            </div>
-                            <div className="feedback-wrong-explanation">
-                              <span className="feedback-wrong-label">解析：</span>
-                              {item.explanation}
-                            </div>
-                          </div>
-                        ))}
-                      </>
-                    ) : (
-                      <div className="feedback-empty">恭喜！全部答对</div>
-                    )}
-                  </div>
+            {/* 问卷反馈区域 - 无论是否填写都显示 */}
+            <div className="feedback-section">
+              <div
+                className="feedback-toggle"
+                onClick={() => {
+                  if (!surveyFeedback || surveyFeedback.score === undefined) {
+                    // 未填写，跳转到问卷页面
+                    navigate(`/quiz/post/${validPairId}`);
+                  } else {
+                    setFeedbackExpanded(!feedbackExpanded);
+                  }
+                }}
+              >
+                <span className="feedback-toggle-text">📋 问卷反馈</span>
+                {surveyFeedback && surveyFeedback.score !== undefined ? (
+                  <>
+                    <span className="feedback-toggle-icon">
+                      正确率：{(surveyFeedback.score * 100).toFixed(0)}%
+                    </span>
+                    <span className="feedback-toggle-arrow">{feedbackExpanded ? '∧' : '›'}</span>
+                  </>
+                ) : (
+                  <span className="feedback-toggle-arrow">点击填写 ›</span>
                 )}
               </div>
-            )}
+
+              {feedbackExpanded && surveyFeedback && surveyFeedback.wrongQuestions && (
+                <div className="feedback-content">
+                  {surveyFeedback.wrongQuestions.length > 0 ? (
+                    <>
+                      <div className="feedback-title">错误题目分析</div>
+                      {surveyFeedback.wrongQuestions.map((item, index) => (
+                        <div key={index} className="feedback-wrong-item">
+                          <div className="feedback-wrong-question">
+                            <span className="feedback-wrong-label">题目：</span>
+                            {item.question}
+                          </div>
+                          <div className="feedback-wrong-answer">
+                            <span className="feedback-wrong-label">我的答案：</span>
+                            {item.myAnswer}
+                          </div>
+                          <div className="feedback-wrong-explanation">
+                            <span className="feedback-wrong-label">解析：</span>
+                            {item.explanation}
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="feedback-empty">恭喜！全部答对</div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <div className="modal-buttons">
               <button

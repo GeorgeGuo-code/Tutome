@@ -45,6 +45,36 @@
   border-left: 4px solid #409eff;
 }
 
+/* 私信通知 - 灰色背景 */
+.notification-popup-item.notification-private_message {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-left: 4px solid #9ca3af;
+}
+
+/* 私信按钮容器 */
+.notification-private-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 回复按钮 */
+.notification-popup-reply {
+  background: #667eea;
+  border: none;
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.notification-popup-reply:hover {
+  background: #5568d3;
+}
+
 .notification-popup-item.removing {
   animation: slideOut 0.3s ease-out forwards;
 }
@@ -103,6 +133,23 @@
 .notification-popup-close:hover {
   background: #f5f5f5;
   color: #666;
+}
+
+/* 知道了按钮 */
+.notification-popup-acknowledge {
+  background: #409eff;
+  border: none;
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.notification-popup-acknowledge:hover {
+  background: #66b1ff;
 }
 
 /* 滑入动画 */
