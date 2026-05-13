@@ -38,7 +38,7 @@
 
 .filter-select:focus {
   outline: none;
-  border-color: #93C5FD;
+  border-color: #B0BCC8;
   box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.3);
 }
 
@@ -147,13 +147,13 @@
 .view-details {
   font-size: 14px;
   font-weight: 500;
-  color: #1D4ED8;
+  color: #2D3B4E;
   text-decoration: none;
   transition: all 0.2s ease;
 }
 
 .view-details:hover {
-  color: #2563EB;
+  color: #33445C;
   text-decoration: underline;
 }
 
@@ -182,9 +182,9 @@
 }
 
 .page-btn.active {
-  background: #3B82F6;
+  background: #335A7A;
   color: white;
-  border-color: #2563EB;
+  border-color: #33445C;
 }
 
 .page-btn:disabled {

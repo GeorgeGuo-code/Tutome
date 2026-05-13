@@ -75,7 +75,7 @@
 
 .tag {
   padding: 6px 14px;
-  background:linear-gradient(135deg, #667eea 0%, #7a99e6 100%);
+  background:linear-gradient(135deg, #335A7A 0%, #8FA3B3 100%);
   color: white;
   font-size: 13px;
   font-weight: 500;
@@ -140,13 +140,13 @@
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
   text-decoration: none;
 }
 
 .dialogue-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(51, 90, 122, 0.4);
 }
 
 .dialogue-btn:active {
@@ -264,12 +264,12 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
 }
 
 .success-modal-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(51, 90, 122, 0.4);
 }
 
 .success-modal-btn:active {
@@ -355,7 +355,7 @@
 }
 
 .link-item a {
-  color: #3B82F6;
+  color: #335A7A;
   text-decoration: none;
 }
 
@@ -368,7 +368,7 @@
 }
 
 .btn-confirm {
-  background: #3B82F6;
+  background: #335A7A;
   color: white;
   border: none;
   padding: 10px 24px;
@@ -379,7 +379,7 @@
 }
 
 .btn-confirm:hover {
-  background: #2563EB;
+  background: #33445C;
 }
 
 /* 模态框样式 */

@@ -43,7 +43,7 @@
 
 .form-group input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #335A7A;
 }
 
 .submit-btn {
@@ -56,7 +56,11 @@
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: transform .2s,box-shadow .2s
+    transition: transform .2s,box-shadow .2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
 }
 
 .submit-btn:hover {

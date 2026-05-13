@@ -21,14 +21,14 @@
 
 /* 结对申请 - 浅蓝底 + 蓝边框 + 蓝字 */
 .notification-popup-item.notification-pair_application {
-  background: #ecf5ff;
+  background: #F5EEF1;
   border: 1px solid #6b7280;
   border-left: 4px solid #6b7280
 }
 
 /* 结对已接受 - 浅绿底 + 绿边框 + 绿字 */
 .notification-popup-item.notification-pair_accepted {
-  background: #f0f9ff;
+  background: #F5EEF1;
   border: 1px solid #6b7280;
   border-left: 4px solid #6b7280
 }
@@ -40,9 +40,9 @@
 
 /* 问卷提醒 - 蓝色左边框 */
 .notification-popup-item.notification-survey_reminder {
-  background: #ecf5ff;
+  background: #F5EEF1;
   border: 1px solid #6b7280;
-  border-left: 4px solid #409eff;
+  border-left: 4px solid #8FA3B3;
 }
 
 /* 私信通知 - 灰色背景 */
@@ -103,7 +103,7 @@
 
 /* 结对申请 - 蓝色 */
 .notification-pair {
-  color: #409eff;
+  color: #8FA3B3;
   font-weight: 600;
 }
 

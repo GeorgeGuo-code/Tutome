@@ -48,9 +48,9 @@
 
 .form-select:focus,.form-input:focus,.form-textarea:focus {
     outline: none;
-    border-color: #2563eb;
+    border-color: #33445C;
     background-color: #fff;
-    box-shadow: 0 0 0 3px #2563eb1a
+    box-shadow: 0 0 0 3px #33445C1a
 }
 
 .form-select {
@@ -71,7 +71,7 @@
 .submit-btn {
     width: 120px;
     height: 40px;
-    background-color: #2563eb;
+    background-color: #33445C;
     color: #fff;
     font-size: 16px;
     font-weight: 600;
@@ -83,9 +83,9 @@
 }
 
 .submit-btn:hover {
-    background-color: #1d4ed8;
+    background-color: #2D3B4E;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px #2563eb4d
+    box-shadow: 0 4px 12px #33445C4d
 }
 
 .submit-btn:active {
@@ -180,7 +180,7 @@
 
 .success-modal-btn {
   padding: 12px 32px;
-  background: linear-gradient(135deg, #667eea 0%, #3b3d3e 100%);
+  background: linear-gradient(135deg, #335A7A 0%, #3b3d3e 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -188,12 +188,12 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
 }
 
 .success-modal-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(51, 90, 122, 0.4);
 }
 
 .success-modal-btn:active {

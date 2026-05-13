@@ -55,7 +55,7 @@
 .form-input:focus,
 .form-select:focus {
   outline: none;
-  border-color: #2563EB;
+  border-color: #33445C;
   background-color: white;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
@@ -173,7 +173,7 @@
 
 .select-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
 }
 
 .pair-info {
@@ -197,7 +197,7 @@
 
 .enter-dialogue-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
 }
 
 .questions-list {
@@ -468,12 +468,12 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
 }
 
 .success-modal-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(51, 90, 122, 0.4);
 }
 
 .success-modal-btn:active {
@@ -604,8 +604,8 @@
 }
 
 .owner-badge--self {
-  background: #E0E7FF;
-  color: #3730A3;
+  background: #F0E4E8;
+  color: #335A7A;
 }
 
 .owner-badge--partner {

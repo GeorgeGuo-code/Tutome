@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { requireAuth } from "../services/auth";
+import { checkAuth } from "../services/auth";
 import "./home.css";
 import FeatureTipModal from '../components/FeatureTipModal';
 
 const Home = () => {
   const navigate = useNavigate();
+  const isLoggedIn = checkAuth();
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
     const hasSeenHomeTip = localStorage.getItem('hasSeenHomeTip');
@@ -33,42 +35,25 @@ const Home = () => {
     '轮播图点击可查看对应详情内容'
   ];
 
-  
-  const handleEnter = () => {
-    if (requireAuth()) {
-      navigate("/personal");
+  const handleAuthAction = (navigatePath, navigateState) => {
+    if (!checkAuth()) {
+      setShowLoginModal(true);
+      return;
     }
+    navigate(navigatePath, navigateState || {});
   };
 
-  const handleAskClick = () => {
-    if (requireAuth()) {
-      navigate("/ask");
-    }
-  };
+  const handleEnter = () => handleAuthAction("/personal");
 
-  const handleDialogueClick = () => {
-    if (requireAuth()) {
-      navigate("/personal", { state: { scrollTo: 'in-progress' } });
-    }
-  };
+  const handleAskClick = () => handleAuthAction("/ask");
 
-  const handleBrowseClick = () => {
-    if (requireAuth()) {
-      navigate("/browse");
-    }
-  };
+  const handleDialogueClick = () => handleAuthAction("/personal", { state: { scrollTo: 'in-progress' } });
 
-  const handleMatchClick = () => {
-    if (requireAuth()) {
-      navigate("/match");
-    }
-  };
+  const handleBrowseClick = () => handleAuthAction("/browse");
 
-  const handlePersonalClick = () => {
-    if (requireAuth()) {
-      navigate("/personal");
-    }
-  };
+  const handleMatchClick = () => handleAuthAction("/match");
+
+  const handlePersonalClick = () => handleAuthAction("/personal");
 
   const handleFeynmanClick = () => {
     setShowAboutModal(true);
@@ -76,6 +61,40 @@ const Home = () => {
 
   const closeAboutModal = () => {
     setShowAboutModal(false);
+  };
+
+  // 登录提示模态框
+  const LoginPromptModal = () => {
+    if (!showLoginModal) return null;
+    return (
+      <div className="modal-overlay" onClick={() => setShowLoginModal(false)}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <button className="modal-close" onClick={() => setShowLoginModal(false)}>×</button>
+          <div className="modal-body" style={{ textAlign: 'center' }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: '#1a1a2e', marginBottom: 16 }}>请先登录</h2>
+            <p style={{ color: '#666', marginBottom: 24 }}>登录后即可使用完整功能</p>
+            <button
+              style={{
+                padding: '10px 40px',
+                background: '#A69298',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 8,
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+              onClick={() => {
+                setShowLoginModal(false);
+                navigate('/login');
+              }}
+            >
+              去登录
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // 关于模态框
@@ -115,7 +134,7 @@ const Home = () => {
       {/* Hero 区 */}
       <section className="hero">
         <h1 className="hero-title">TUTOME</h1>
-        <button className="hero-btn" onClick={handleEnter}>ENTER</button>
+        <button className={`hero-btn${isLoggedIn ? ' hero-btn-logged-in' : ''}`} onClick={handleEnter}>ENTER</button>
       </section>
 
       {/* About us */}
@@ -157,6 +176,8 @@ const Home = () => {
 
       {/* 关于模态框 */}
       <AboutModal />
+      {/* 登录提示模态框 */}
+      <LoginPromptModal />
             <FeatureTipModal
         visible={showTipModal}
         title="首页使用说明"
