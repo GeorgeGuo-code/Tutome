@@ -1,0 +1,662 @@
+.reward-exchange-page {
+  min-height: 100vh;
+  background-color: #F5F7FA;
+  padding: 120px 20px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.exchange-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.exchange-back-btn {
+  padding: 8px 16px;
+  background: transparent;
+  color: #335A7A;
+  border: 1px solid #335A7A;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.exchange-back-btn:hover {
+  background: #335A7A;
+  color: white;
+}
+
+.exchange-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1F2937;
+  margin: 0;
+}
+
+.exchange-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  padding: 32px;
+}
+
+.exchange-empty {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.exchange-empty p {
+  font-size: 16px;
+  color: #6B7280;
+  margin-bottom: 20px;
+}
+
+.exchange-go-btn {
+  display: inline-block;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
+  color: white;
+  border-radius: 24px;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
+}
+
+.exchange-go-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(51, 90, 122, 0.4);
+}
+
+.exchange-tip {
+  font-size: 14px;
+  color: #6B7280;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.exchange-rewards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.exchange-reward-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: #F9FAFB;
+  border-radius: 12px;
+  border: 2px solid #E5E7EB;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.exchange-reward-item:hover {
+  border-color: #335A7A;
+  background: #F5EEF1;
+}
+
+.exchange-reward-item.wechat {
+  border-color: #F59E0B;
+}
+
+.exchange-reward-item.wechat:hover {
+  border-color: #D97706;
+  background: #FFFBEB;
+}
+
+/* 按 rarity 设置边框颜色 */
+.exchange-reward-item.sss {
+  border-color: #EF4444;
+}
+
+.exchange-reward-item.sss:hover {
+  border-color: #DC2626;
+  background: #FEF2F2;
+}
+
+.exchange-reward-item.ss {
+  border-color: #F59E0B;
+}
+
+.exchange-reward-item.ss:hover {
+  border-color: #D97706;
+  background: #FFFBEB;
+}
+
+.exchange-reward-item.s {
+  border-color: #9333EA;
+}
+
+.exchange-reward-item.s:hover {
+  border-color: #7C22CE;
+  background: #FAF5FF;
+}
+
+.exchange-reward-item.a {
+  border-color: #10B981;
+}
+
+.exchange-reward-item.a:hover {
+  border-color: #059669;
+  background: #ECFDF5;
+}
+
+.exchange-reward-icon {
+  font-size: 40px;
+  flex-shrink: 0;
+}
+
+.exchange-reward-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.exchange-reward-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1F2937;
+  margin-bottom: 4px;
+}
+
+.exchange-reward-desc {
+  font-size: 14px;
+  color: #6B7280;
+}
+
+.exchange-reward-count {
+  font-size: 18px;
+  font-weight: 600;
+  color: #335A7A;
+  padding: 8px 16px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* 兑奖表单弹窗 */
+.exchange-form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease;
+}
+
+.exchange-form-modal {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 420px;
+  overflow: hidden;
+  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.exchange-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.exchange-form-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1F2937;
+  margin: 0;
+}
+
+.exchange-form-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  color: #9CA3AF;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.exchange-form-close:hover {
+  background: #F3F4F6;
+  color: #374151;
+}
+
+.exchange-form-body {
+  padding: 24px;
+}
+
+.exchange-form-reward {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  background: #F9FAFB;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.exchange-form-icon {
+  font-size: 32px;
+}
+
+.exchange-form-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1F2937;
+}
+
+.exchange-form-item {
+  margin-bottom: 16px;
+}
+
+.exchange-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.exchange-form-item label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.exchange-form-item input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1F2937;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.exchange-form-item input:focus {
+  outline: none;
+  border-color: #335A7A;
+  box-shadow: 0 0 0 3px rgba(51, 90, 122, 0.1);
+}
+
+.exchange-form-item input::placeholder {
+  color: #9CA3AF;
+}
+
+/* 支付宝提示 */
+.alipay-notice {
+  padding: 16px;
+  background: #FEF3C7;
+  border-radius: 8px;
+  color: #92400E;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* 选择框样式 */
+.exchange-form-item select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1F2937;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.exchange-form-item select:focus {
+  outline: none;
+  border-color: #335A7A;
+  box-shadow: 0 0 0 3px rgba(51, 90, 122, 0.1);
+}
+
+/* 兑换数量选择器 */
+.exchange-count-selector {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: fit-content;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.exchange-count-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: #F3F4F6;
+  color: #374151;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.exchange-count-btn:hover:not(:disabled) {
+  background: #E5E7EB;
+}
+
+.exchange-count-btn:disabled {
+  color: #9CA3AF;
+  cursor: not-allowed;
+}
+
+.exchange-count-value {
+  min-width: 60px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1F2937;
+  padding: 0 12px;
+  line-height: 40px;
+}
+
+.exchange-count-hint {
+  font-size: 12px;
+  color: #9CA3AF;
+  margin-top: 8px;
+}
+
+.exchange-form-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #E5E7EB;
+  background: #F9FAFB;
+}
+
+.exchange-form-submit {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
+}
+
+.exchange-form-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(51, 90, 122, 0.4);
+}
+
+.exchange-form-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .reward-exchange-page {
+    padding: 100px 16px 32px;
+  }
+
+  .exchange-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .exchange-content {
+    padding: 20px;
+  }
+
+  .exchange-reward-item {
+    padding: 16px;
+  }
+
+  .exchange-reward-icon {
+    font-size: 32px;
+  }
+
+  .exchange-reward-count {
+    font-size: 16px;
+    padding: 6px 12px;
+  }
+
+  .exchange-form-modal {
+    width: 95%;
+    max-width: none;
+    margin: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .reward-exchange-page {
+    padding: 90px 12px 24px;
+  }
+
+  .exchange-title {
+    font-size: 20px;
+  }
+
+  .exchange-reward-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .exchange-form-body {
+    padding: 20px;
+  }
+}
+
+/* 兑奖记录区域 */
+.exchange-history-section {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  margin-top: 24px;
+  overflow: hidden;
+}
+
+.exchange-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.exchange-history-header:hover {
+  background: #F9FAFB;
+}
+
+.exchange-history-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1F2937;
+  margin: 0;
+}
+
+.exchange-history-toggle {
+  font-size: 14px;
+  color: #6B7280;
+  transition: transform 0.2s ease;
+}
+
+.exchange-history-content {
+  border-top: 1px solid #E5E7EB;
+  padding: 20px 24px;
+}
+
+.exchange-history-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9CA3AF;
+  font-size: 14px;
+}
+
+.exchange-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.exchange-history-item {
+  background: #F9FAFB;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #E5E7EB;
+}
+
+.exchange-history-item-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.exchange-history-icon {
+  font-size: 28px;
+}
+
+.exchange-history-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1F2937;
+  flex: 1;
+}
+
+.exchange-history-time {
+  font-size: 12px;
+  color: #9CA3AF;
+}
+
+.exchange-history-item-body {
+  margin-bottom: 16px;
+}
+
+.exchange-history-info-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.exchange-history-info-row:last-child {
+  margin-bottom: 0;
+}
+
+.exchange-history-label {
+  font-size: 14px;
+  color: #6B7280;
+  min-width: 80px;
+}
+
+.exchange-history-value {
+  font-size: 14px;
+  color: #1F2937;
+  font-weight: 500;
+}
+
+.exchange-history-item-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.exchange-history-edit-btn {
+  padding: 8px 16px;
+  background: transparent;
+  color: #335A7A;
+  border: 1px solid #335A7A;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.exchange-history-edit-btn:hover {
+  background: #335A7A;
+  color: white;
+}
+
+.exchange-history-edited {
+  font-size: 13px;
+  font-weight: 500;
+  color: #9CA3AF;
+  padding: 8px 16px;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .exchange-history-header {
+    padding: 16px 20px;
+  }
+
+  .exchange-history-content {
+    padding: 16px 20px;
+  }
+
+  .exchange-history-item {
+    padding: 16px;
+  }
+
+  .exchange-history-item-header {
+    flex-wrap: wrap;
+  }
+
+  .exchange-history-time {
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  .exchange-history-info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .exchange-history-label {
+    min-width: auto;
+  }
+}

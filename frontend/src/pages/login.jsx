@@ -23,14 +23,19 @@ const Login = () => {
         body: JSON.stringify({ username, password }),
       });
 
-      const data = await response.json();
-
       if (response.ok) {
+        const data = await response.json();
         setMessage(isLogin ? "登录成功!" : "注册成功!");
         if (isLogin && data.token) {
+          // 清除旧的登录信息
+          localStorage.removeItem("token");
+          localStorage.removeItem("username");
+          localStorage.removeItem("userId");
+
+          // 设置新的登录信息
           localStorage.setItem("token", data.token);
           localStorage.setItem("username", username);
-          
+
           // 解析 token 获取用户 ID
           try {
             const tokenPayload = JSON.parse(atob(data.token.split('.')[1]));
@@ -39,13 +44,30 @@ const Login = () => {
           } catch (err) {
             console.error('解析用户ID失败:', err);
           }
-          
+
           setTimeout(() => {
             window.location.href = "/";
           }, 1000);
+        } else if (!isLogin) {
+          // 注册成功后1秒后自动跳转到登录界面
+          setTimeout(() => {
+            setIsLogin(true);
+            setMessage("");
+            setUsername("");
+            setPassword("");
+          }, 1000);
         }
       } else {
-        setMessage(data.message || "操作失败");
+        // 尝试解析 JSON，如果失败则使用文本
+        let errorMessage = "操作失败";
+        try {
+          const data = await response.json();
+          errorMessage = data.message || errorMessage;
+        } catch {
+          // 如果不是 JSON，尝试获取文本
+          errorMessage = await response.text();
+        }
+        setMessage(errorMessage);
       }
     } catch (error) {
       setMessage("服务器错误,请稍后重试");

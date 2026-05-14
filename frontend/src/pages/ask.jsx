@@ -1,37 +1,7 @@
-import React, { useState,useEffect } from "react";
+import React, { useState } from "react";
 import "./ask.css";
-// 新增：引入弹窗组件
-import FeatureTipModal from '../components/FeatureTipModal';
 
 const Ask = () => {
-    // 新增弹窗状态
-  const [showTipModal, setShowTipModal] = useState(false);
-    // 新增首次加载触发逻辑
-  useEffect(() => {
-    const hasSeenAskTip = localStorage.getItem('hasSeenAskTip');
-    if (!hasSeenAskTip) {
-      setShowTipModal(true);
-    }
-  }, []);
-    // 新增关闭弹窗函数
-  const handleCloseModal = () => {
-    setShowTipModal(false);
-    localStorage.setItem('hasSeenAskTip', 'true');
-  };
-
-  // 新增提问板块配置
-  const askFeatures = [
-    '可发布你遇到的编程问题、技术难点',
-    '支持输入问题标题、详细描述和相关标签',
-    '提交后问题会展示在浏览板块，供其他用户解答',
-    '可随时在个人中心查看自己发布的提问'
-  ];
-  const askNotes = [
-    '提问前请先搜索是否有类似问题，避免重复提问',
-    '问题描述需清晰、具体，便于其他用户理解',
-    '请勿发布无关、广告或违规内容，否则会被删除',
-    '登录后才能发布提问，未登录用户会跳转登录页'
-  ];
   const [subject, setSubject] = useState("");
   const [difficulty, setDifficulty] = useState("");
   const [progress, setProgress] = useState("");
@@ -39,6 +9,8 @@ const Ask = () => {
   const [content, setContent] = useState("");
   const [role, setRole] = useState("student"); // 新增：提问者身份，默认为"学生"
   const [message, setMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [targetPage, setTargetPage] = useState(null);
 
   // 学科到标签 ID 的映射
   const subjectToTagId = {
@@ -103,20 +75,23 @@ const Ask = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage("发布成功!");
-        setTimeout(() => {
-          setTitle("");
-          setContent("");
-          setSubject("");
-          setDifficulty("");
-          setProgress("");
-          setMessage("");
-        }, 2000);
+        // 清空表单
+        setTitle("");
+        setContent("");
+        setSubject("");
+        setDifficulty("");
+        setProgress("");
+        setMessage("");
+        // 显示成功弹窗
+        setSuccessMessage("✅ 提问发布成功！");
+        setTargetPage("/browse");
       } else {
-        setMessage(data.message || "发布失败");
+        setSuccessMessage(data.message || "发布失败");
+        setTargetPage(null);
       }
     } catch (error) {
-      setMessage("服务器错误,请稍后重试");
+      setSuccessMessage("服务器错误，请稍后重试");
+      setTargetPage(null);
       console.error("Error:", error);
     }
   };
@@ -224,13 +199,39 @@ const Ask = () => {
           </button>
         </form>
       </div>
-       <FeatureTipModal
-        visible={showTipModal}
-        title="提问板块使用说明"
-        features={askFeatures}
-        notes={askNotes}
-        onClose={handleCloseModal}
-      />
+
+      {/* 成功提示弹窗 */}
+      {successMessage && (
+        <div className="success-modal-mask" onClick={() => {}}>
+          <div className="success-modal">
+            <div className="success-modal-icon">✓</div>
+            <div className="success-modal-message">{successMessage}</div>
+            <div className="success-modal-actions">
+              <button
+                className="success-modal-btn"
+                onClick={() => {
+                  setSuccessMessage(null);
+                  if (targetPage) {
+                    window.location.href = targetPage;
+                    setTargetPage(null);
+                  }
+                }}
+              >
+                好的
+              </button>
+              <button
+                className="success-modal-btn success-modal-btn-secondary"
+                onClick={() => {
+                  setSuccessMessage(null);
+                  setTargetPage(null);
+                }}
+              >
+                返回
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

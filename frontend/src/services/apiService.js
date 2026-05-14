@@ -65,4 +65,136 @@ export const authService = {
   },
 };
 
+// 用户资料相关 API
+export const userService = {
+  // 获取我的资料
+  getMyProfile: async () => {
+    const response = await request('/users/me/profile');
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 更新我的资料
+  updateMyProfile: async (data) => {
+    const response = await request('/users/me/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    return { success: response.ok, data: result };
+  },
+
+  // 获取学科列表
+  getTopics: async () => {
+    const response = await request('/topics');
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 获取难度标签列表
+  getDifficultyTags: async () => {
+    const response = await request('/tags/difficulty');
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+};
+
+// 奖励相关 API
+export const rewardService = {
+  // 获取用户抽奖信息
+  getRewardInfo: async () => {
+    const response = await request('/reward/info');
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 抽取奖励
+  drawReward: async (drawMode) => {
+    const response = await request('/reward/draw', {
+      method: 'POST',
+      body: JSON.stringify({ drawMode }),
+    });
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 记录抽取结果
+  recordReward: async (rewards) => {
+    const response = await request('/reward/record', {
+      method: 'POST',
+      body: JSON.stringify({ rewards }),
+    });
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 兑换奖励
+  exchangeReward: async (data) => {
+    const response = await request('/reward/exchange', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    return { success: response.ok, data: result };
+  },
+
+  // 获取兑换记录列表
+  getExchangeRecords: async () => {
+    const response = await request('/reward/exchanges');
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 更新兑换记录
+  updateExchangeRecord: async (id, data) => {
+    const response = await request(`/reward/exchange/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    return { success: response.ok, data: result };
+  },
+
+  // 获取用户抽奖统计
+  getDrawStats: async () => {
+    const response = await request('/reward/stats');
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+};
+
+// 私信相关 API
+export const messageService = {
+  // 发送私信
+  sendPrivateMessage: async (receiverNickname, content, imageUrl) => {
+    const response = await request('/private-messages', {
+      method: 'POST',
+      body: JSON.stringify({ receiverNickname, content, imageUrl }),
+    });
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 获取私信列表
+  getPrivateMessages: async (page = 1, limit = 50) => {
+    const response = await request(`/private-messages?page=${page}&limit=${limit}`);
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 获取与某用户的对话
+  getPrivateConversation: async (otherUserId, page = 1, limit = 50) => {
+    const response = await request(`/private-messages/conversation/${otherUserId}?page=${page}&limit=${limit}`);
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+
+  // 根据昵称查询用户
+  findUserByNickname: async (nickname) => {
+    const response = await request(`/users/nickname/${encodeURIComponent(nickname)}`);
+    const data = await response.json();
+    return { success: response.ok, data };
+  },
+};
+
 export default authService;

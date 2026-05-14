@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import "./post.css";
-import FeatureTipModal from '../components/FeatureTipModal';
 
 const Post = () => {
   const [question, setQuestion] = useState(null);
@@ -12,32 +11,14 @@ const Post = () => {
   const [currentUserId, setCurrentUserId] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const [showTipModal, setShowTipModal] = useState(false);
-
-  useEffect(() => {
-    const hasSeenPostTip = localStorage.getItem('hasSeenPostTip');
-    if (!hasSeenPostTip) {
-      setShowTipModal(true);
-    }
-  }, []);
-
-  const handleCloseModal = () => {
-    setShowTipModal(false);
-    localStorage.setItem('hasSeenPostTip', true);
-  };
-
-  const postFeatures = [
-    '查看问题的完整标题与详细描述',
-    '查看问题所属科目、难度标签',
-    '可查看其他用户的回答',
-    '可进入对话与答主交流'
-  ];
-
-  const postNotes = [
-    '请文明提问与回答',
-    '禁止发布广告、违规内容',
-    '未登录可能无法查看完整信息'
-  ];
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [targetPage, setTargetPage] = useState(null);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [summaryData, setSummaryData] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [surveyFeedback, setSurveyFeedback] = useState(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackExpanded, setFeedbackExpanded] = useState(false);
 
   // 学科到 topicId 的映射
   const subjectToTopicId = {
@@ -155,6 +136,80 @@ const Post = () => {
     }
   };
 
+  // 获取对话总结
+  const fetchSummary = async (pairId) => {
+    setSummaryLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert('请先登录');
+        return;
+      }
+
+      const response = await fetch(
+        `http://localhost:3000/api/ai/summary/${pairId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || '获取总结失败');
+      }
+
+      const data = await response.json();
+      console.log('总结数据:', data);
+
+      if (data.success) {
+        if (data.data) {
+          setSummaryData(data.data);
+          setShowSummaryModal(true);
+        } else {
+          alert('暂无总结内容');
+        }
+      } else {
+        alert(data.message || '获取总结失败');
+      }
+    } catch (error) {
+      console.error('获取总结失败:', error);
+      alert(error.message || '获取总结失败');
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  // 获取问卷反馈
+  const fetchSurveyFeedback = async (pairId) => {
+    setFeedbackLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const response = await fetch(
+        `http://localhost:3000/api/survey/post/${pairId}/feedback`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          setSurveyFeedback(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('获取问卷反馈失败:', error);
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
   const handleDialogueClick = async (e) => {
     e.preventDefault();
 
@@ -237,24 +292,33 @@ const Post = () => {
         });
 
         if (associateResponse.ok) {
-          setValidPairId(pairId);
-          navigate(`/dialogue/${pairId}`);
+          // 显示成功弹窗
+          setSuccessMessage(`✅ 已向 ${question.username || question.user_name} 发起结对申请\n\n请前往"个人中心"的"我的通知"查看对方是否同意`);
+          setTargetPage('/browse');
         } else {
-          alert('结对创建成功，但关联问题失败，请重试');
+          setSuccessMessage('结对创建成功，但关联问题失败，请重试');
+          setTargetPage(null);
         }
       } else {
-        alert(data.error || data.message || '创建结对失败，请重试');
+        setSuccessMessage(data.error || data.message || '创建结对失败，请重试');
+        setTargetPage(null);
       }
     } catch (error) {
       console.error('创建结对失败:', error);
-      alert('服务器错误，请稍后重试');
+      setSuccessMessage('服务器错误，请稍后重试');
+      setTargetPage(null);
     }
   };
 
   const handleBack = () => {
     // 从 location.state 获取来源页面
     const fromPage = location.state?.from || '/browse';
-    navigate(fromPage);
+    const activeTab = location.state?.activeTab;
+    if (activeTab) {
+      navigate(fromPage, { state: { activeTab } });
+    } else {
+      navigate(fromPage);
+    }
   };
 
   if (loading) {
@@ -298,26 +362,200 @@ const Post = () => {
         </div>
 
         <div className="post-actions">
-          <button
-            onClick={handleDialogueClick}
-            className="dialogue-btn"
-            disabled={pairStatus === 'completed'}
-            style={{
-              backgroundColor: pairStatus === 'completed' ? '#9CA3AF' : undefined,
-              cursor: pairStatus === 'completed' ? 'not-allowed' : undefined
-            }}
-          >
-            {pairStatus === 'completed' ? '已结束' : (validPairId ? '继续对话' : '创建结对')}
-          </button>
+          {pairStatus === 'completed' && validPairId ? (
+            <>
+              <Link
+                to={`/dialogue/${validPairId}`}
+                className="dialogue-btn view-dialogue-link"
+              >
+                查看对话
+              </Link>
+              <button
+                onClick={() => {
+                  fetchSummary(validPairId);
+                  fetchSurveyFeedback(validPairId);
+                }}
+                className="dialogue-btn"
+                disabled={summaryLoading}
+                style={{ marginLeft: '10px' }}
+              >
+                {summaryLoading ? '加载中...' : '查看总结'}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleDialogueClick}
+              className="dialogue-btn"
+              disabled={pairStatus === 'completed'}
+              style={{
+                backgroundColor: pairStatus === 'completed' ? '#9CA3AF' : undefined,
+                cursor: pairStatus === 'completed' ? 'not-allowed' : undefined
+              }}
+            >
+              {validPairId ? '继续对话' : '创建结对'}
+            </button>
+          )}
         </div>
       </div>
-      <FeatureTipModal
-        visible={showTipModal}
-        title="帖子详情使用说明"
-        features={postFeatures}
-        notes={postNotes}
-        onClose={handleCloseModal}
-      />
+
+      {/* 成功提示弹窗 */}
+      {successMessage && (
+        <div className="success-modal-mask" onClick={() => {}}>
+          <div className="success-modal">
+            <div className="success-modal-icon">✓</div>
+            <div className="success-modal-message">{successMessage}</div>
+            <div className="success-modal-actions">
+              <button
+                className="success-modal-btn"
+                onClick={() => {
+                  setSuccessMessage(null);
+                  if (targetPage) {
+                    navigate(targetPage);
+                    setTargetPage(null);
+                  }
+                }}
+              >
+                好的
+              </button>
+              <button
+                className="success-modal-btn success-modal-btn-secondary"
+                onClick={() => {
+                  setSuccessMessage(null);
+                  setTargetPage(null);
+                }}
+              >
+                返回
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 总结弹窗 */}
+      {showSummaryModal && summaryData && (
+        <div className="modal-overlay" onClick={() => setShowSummaryModal(false)}>
+          <div className="modal-content summary-modal" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">教学对话总结</h3>
+
+            {/* 整体评价 */}
+            {summaryData.summary_text && (
+              <div className="summary-section">
+                <h4 className="summary-section-title">📝 整体评价</h4>
+                <p className="summary-text">{summaryData.summary_text}</p>
+              </div>
+            )}
+
+            {/* 核心知识点 */}
+            {summaryData.key_learnings && summaryData.key_learnings.length > 0 && (
+              <div className="summary-section">
+                <h4 className="summary-section-title">📚 核心知识点</h4>
+                <ul className="summary-list">
+                  {summaryData.key_learnings.map((learning, index) => (
+                    <li key={index} className="summary-item learning-item">
+                      {learning}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 问题汇总 */}
+            {summaryData.problem_summary && summaryData.problem_summary.length > 0 && (
+              <div className="summary-section">
+                <h4 className="summary-section-title">⚠️ 问题汇总</h4>
+                <ul className="summary-list">
+                  {summaryData.problem_summary.map((problem, index) => (
+                    <li key={index} className="summary-item problem-item">
+                      {problem}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 相关链接 */}
+            {summaryData.related_links && summaryData.related_links.length > 0 && (
+              <div className="summary-section">
+                <h4 className="summary-section-title">🔗 相关学习资源</h4>
+                <ul className="summary-list">
+                  {summaryData.related_links.map((link, index) => (
+                    <li key={index} className="summary-item link-item">
+                      <a href={link.url} target="_blank" rel="noopener noreferrer">
+                        {link.title}
+                      </a>
+                      {link.description && <span className="link-description"> - {link.description}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 问卷反馈区域 - 无论是否填写都显示 */}
+            <div className="feedback-section">
+              <div
+                className="feedback-toggle"
+                onClick={() => {
+                  if (!surveyFeedback || surveyFeedback.score === undefined) {
+                    // 未填写，跳转到问卷页面
+                    navigate(`/quiz/post/${validPairId}`);
+                  } else {
+                    setFeedbackExpanded(!feedbackExpanded);
+                  }
+                }}
+              >
+                <span className="feedback-toggle-text">📋 问卷反馈</span>
+                {surveyFeedback && surveyFeedback.score !== undefined ? (
+                  <>
+                    <span className="feedback-toggle-icon">
+                      正确率：{(surveyFeedback.score * 100).toFixed(0)}%
+                    </span>
+                    <span className="feedback-toggle-arrow">{feedbackExpanded ? '∧' : '›'}</span>
+                  </>
+                ) : (
+                  <span className="feedback-toggle-arrow">点击填写 ›</span>
+                )}
+              </div>
+
+              {feedbackExpanded && surveyFeedback && surveyFeedback.wrongQuestions && (
+                <div className="feedback-content">
+                  {surveyFeedback.wrongQuestions.length > 0 ? (
+                    <>
+                      <div className="feedback-title">错误题目分析</div>
+                      {surveyFeedback.wrongQuestions.map((item, index) => (
+                        <div key={index} className="feedback-wrong-item">
+                          <div className="feedback-wrong-question">
+                            <span className="feedback-wrong-label">题目：</span>
+                            {item.question}
+                          </div>
+                          <div className="feedback-wrong-answer">
+                            <span className="feedback-wrong-label">我的答案：</span>
+                            {item.myAnswer}
+                          </div>
+                          <div className="feedback-wrong-explanation">
+                            <span className="feedback-wrong-label">解析：</span>
+                            {item.explanation}
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="feedback-empty">恭喜！全部答对</div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="modal-buttons">
+              <button
+                className="btn-confirm"
+                onClick={() => setShowSummaryModal(false)}
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

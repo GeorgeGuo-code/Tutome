@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "./browse.css";
-import FeatureTipModal from '../components/FeatureTipModal';
 
 const Browse = () => {
-  const [showTipModal, setShowTipModal] = useState(false);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState("all");
@@ -36,30 +34,6 @@ const Browse = () => {
       console.log('Total pages changed from', prevTotalPages, 'to', totalPages, '- recalculating');
       setPrevTotalPages(totalPages);
     }
-
-      useEffect(() => {
-    const hasSeenBrowseTip = localStorage.getItem('hasSeenBrowseTip');
-    if (!hasSeenBrowseTip) {
-      setShowTipModal(true);
-    }
-  }, []);
-  // 新增：关闭弹窗函数
-  const handleCloseModal = () => {
-    setShowTipModal(false);
-    localStorage.setItem('hasSeenBrowseTip', 'true');
-  };
-  // 新增：浏览板块配置
-  const browseFeatures = [
-    '查看所有用户发布的问题列表',
-    '支持按标签、发布时间、热度筛选问题',
-    '点击问题卡片可进入详情页查看完整内容',
-    '可对感兴趣的问题进行收藏、回答'
-  ];
-  const browseNotes = [
-    '未登录用户仅可浏览问题，无法回答或收藏',
-    '问题列表会实时更新，显示最新发布的内容',
-    '请勿发布无关评论，遵守平台使用规范'
-  ];
     // 如果总页数小于5，显示所有页
     if (totalPages < maxPagesToShow) {
       const allPages = [];
@@ -121,9 +95,11 @@ const Browse = () => {
   const fetchQuestions = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/questions?page=${currentPage}&limit=4`
-      );
+      let url = `http://localhost:3000/api/questions?page=${currentPage}&limit=4`;
+      if (mode !== "all") {
+        url += `&tagId=${mode}`;
+      }
+      const response = await fetch(url);
       const data = await response.json();
       setQuestions(data.questions || []);
       setTotalPages(Math.ceil(data.total / 4) || 1);
@@ -148,8 +124,16 @@ const Browse = () => {
           onChange={(e) => setMode(e.target.value)}
         >
           <option value="all">全部</option>
-          <option value="latest">最新</option>
-          <option value="popular">热门</option>
+          <option value="1">数学</option>
+          <option value="4">物理</option>
+          <option value="12">化学</option>
+          <option value="13">生物</option>
+          <option value="14">编程与计算机</option>
+          <option value="15">经管/社科</option>
+          <option value="16">电子与工程</option>
+          <option value="17">英语与学术写作</option>
+          <option value="18">科研</option>
+          <option value="19">其他</option>
         </select>
       </div>
 
@@ -220,13 +204,6 @@ const Browse = () => {
           &gt;
         </button>
       </div>
-      <FeatureTipModal
-        visible={showTipModal}
-        title="浏览板块使用说明"
-        features={browseFeatures}
-        notes={browseNotes}
-        onClose={handleCloseModal}
-      />
     </div>
   );
 };

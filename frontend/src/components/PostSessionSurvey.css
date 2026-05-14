@@ -1,0 +1,433 @@
+.post-survey-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.loading,
+.error-message {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.error-message h2 {
+  color: #e53935;
+  margin-bottom: 20px;
+}
+
+.error-message button {
+  background: #335A7A;
+  color: white;
+  border: none;
+  padding: 12px 32px;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.survey-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.survey-header h1 {
+  font-size: 32px;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.survey-header p {
+  color: #666;
+  font-size: 16px;
+}
+
+.expires-hint {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #999;
+}
+
+.survey-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.section h2 {
+  font-size: 20px;
+  color: #333;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #335A7A;
+}
+
+.questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.question-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.question-number {
+  font-size: 14px;
+  color: #335A7A;
+  font-weight: 600;
+}
+
+.difficulty {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.difficulty-1 {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.difficulty-2 {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.difficulty-3 {
+  background: #fce4ec;
+  color: #c2185b;
+}
+
+.question-text {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.option:hover {
+  border-color: #335A7A;
+  background: #f5f5f5;
+}
+
+.option.selected {
+  border-color: #335A7A;
+  background: #F5EEF1;
+}
+
+.option-letter {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border-radius: 50%;
+  font-weight: bold;
+  color: #666;
+  margin-right: 12px;
+}
+
+.option.selected .option-letter {
+  background: #335A7A;
+  color: white;
+}
+
+.option-text {
+  flex: 1;
+  font-size: 15px;
+  color: #333;
+}
+
+/* 评价题样式 */
+.evaluation-section .question-card {
+  padding: 16px 20px;
+}
+
+.evaluation-card .question-text {
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+
+.rating-options {
+  display: flex;
+  gap: 12px;
+}
+
+.rating-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rating-option:hover {
+  border-color: #335A7A;
+  background: #f5f5f5;
+}
+
+.rating-option.selected {
+  border-color: #335A7A;
+  background: #F5EEF1;
+}
+
+.rating-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: #333;
+}
+
+.rating-option.selected .rating-value {
+  color: #335A7A;
+}
+
+.rating-label {
+  font-size: 12px;
+  color: #999;
+}
+
+/* 提交按钮 */
+.survey-footer {
+  margin-top: 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.submit-btn {
+  background: #335A7A;
+  color: white;
+  border: none;
+  padding: 16px 48px;
+  font-size: 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: #33445C;
+}
+
+.submit-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.later-btn {
+  background: transparent;
+  color: #666;
+  border: 1px solid #ccc;
+  padding: 12px 32px;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.later-btn:hover {
+  background: #f5f5f5;
+  border-color: #999;
+  color: #333;
+}
+
+.hint {
+  margin-top: 8px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* 结果页面 */
+.result-container {
+  padding: 40px 0;
+}
+
+.result-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.score-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #335A7A, #8FA3B3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.score-value {
+  font-size: 36px;
+  font-weight: bold;
+  color: white;
+}
+
+.result-header h2 {
+  font-size: 28px;
+  color: #333;
+}
+
+.ai-review {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ai-review h3 {
+  font-size: 18px;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.overall-comment {
+  color: #666;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.results-list {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.results-list h3 {
+  font-size: 18px;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.result-item {
+  display: flex;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.result-item.correct {
+  background: #e8f5e9;
+}
+
+.result-item.incorrect {
+  background: #ffebee;
+}
+
+.result-status {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin-right: 16px;
+}
+
+.result-item.correct .result-status {
+  background: #4caf50;
+  color: white;
+}
+
+.result-item.incorrect .result-status {
+  background: #e53935;
+  color: white;
+}
+
+.result-content {
+  flex: 1;
+}
+
+.result-question {
+  font-size: 15px;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.result-answer {
+  font-size: 14px;
+  color: #666;
+}
+
+.result-correct {
+  font-size: 14px;
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+.result-feedback {
+  font-size: 14px;
+  color: #335A7A;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.continue-btn {
+  display: block;
+  width: 100%;
+  max-width: 300px;
+  margin: 32px auto 0;
+  background: #335A7A;
+  color: white;
+  border: none;
+  padding: 14px 32px;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.continue-btn:hover {
+  background: #33445C;
+}
+
+/* LaTeX 公式样式 */
+.latex-display {
+  display: block;
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+.latex-inline {
+  display: inline;
+}
