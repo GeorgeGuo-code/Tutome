@@ -2,38 +2,14 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { checkAuth } from "../services/auth";
 import "./home.css";
-import FeatureTipModal from '../components/FeatureTipModal';
+import { GuidePromptModal } from '../components/InteractiveGuide';
 
-const Home = () => {
+const Home = ({ guideActive, onGuideActiveChange }) => {
   const navigate = useNavigate();
   const isLoggedIn = checkAuth();
   const [showAboutModal, setShowAboutModal] = useState(false);
-  const [showTipModal, setShowTipModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-
-  useEffect(() => {
-    const hasSeenHomeTip = localStorage.getItem('hasSeenHomeTip');
-    if (!hasSeenHomeTip) {
-      setShowTipModal(true);
-    }
-  }, []);
-
-  const handleCloseModal = () => {
-    setShowTipModal(false);
-    localStorage.setItem('hasSeenHomeTip', 'true');
-  };
-
-  const homeFeatures = [
-    '展示平台核心功能入口和推荐内容',
-    '轮播图展示热门问题或平台公告',
-    '可快速跳转到提问、浏览、匹配等核心板块',
-    '无需登录即可查看首页内容'
-  ];
-  const homeNotes = [
-    '首页内容会根据平台更新动态调整',
-    '部分功能按钮需登录后才能使用',
-    '轮播图点击可查看对应详情内容'
-  ];
+  const [showGuidePrompt, setShowGuidePrompt] = useState(false);
 
   const handleAuthAction = (navigatePath, navigateState) => {
     if (!checkAuth()) {
@@ -43,7 +19,59 @@ const Home = () => {
     navigate(navigatePath, navigateState || {});
   };
 
-  const handleEnter = () => handleAuthAction("/personal");
+  const handleEnter = () => {
+    // 清空引导状态，避免之前的引导状态干扰
+    sessionStorage.removeItem('guideActive');
+    sessionStorage.removeItem('guideStep');
+    onGuideActiveChange(false);
+
+    // 标记已点击Enter
+    localStorage.setItem('hasClickedEnter', 'true');
+
+    // 未登录用户先登录
+    if (!checkAuth()) {
+      // 设置标记，登录后返回时显示引导提示
+      sessionStorage.setItem('showGuideOnReturn', 'true');
+      setShowLoginModal(true);
+      return;
+    }
+
+    // 已登录用户直接显示引导提示弹窗（标亮Enter按钮）
+    setShowGuidePrompt(true);
+  };
+
+  // 检查是否从登录页返回，显示引导提示
+  useEffect(() => {
+    const showGuideOnReturn = sessionStorage.getItem('showGuideOnReturn');
+    if (showGuideOnReturn === 'true' && checkAuth() && !localStorage.getItem('guideDeclined')) {
+      sessionStorage.removeItem('showGuideOnReturn');
+      // 延迟一点显示，避免渲染冲突
+      setTimeout(() => setShowGuidePrompt(true), 100);
+    }
+  }, []);
+
+  const handleStartGuide = () => {
+    setShowGuidePrompt(false);
+    sessionStorage.setItem('guideActive', 'true');
+    sessionStorage.setItem('guideStep', '0');
+    onGuideActiveChange(true);
+  };
+
+  const handleDeclineGuide = () => {
+    setShowGuidePrompt(false);
+    localStorage.setItem('guideDeclined', 'true');
+    // 拒绝引导后留在主页，不需要跳转
+  };
+
+  const handleGuideComplete = () => {
+    onGuideActiveChange(false);
+    sessionStorage.removeItem('guideActive');
+    navigate('/personal');
+  };
+
+  const handleGuideNavigate = (path) => {
+    navigate(path);
+  };
 
   const handleAskClick = () => handleAuthAction("/ask");
 
@@ -107,21 +135,27 @@ const Home = () => {
         "费曼学习法"是由诺奖得主理查德·费曼提出的一种高效学习方法，可以总结为"以教促学"，这是"老师"与"学生"都能获益的学习方式，而且效果很好。
       </p>
       <p style="line-height: 1.8; color: #333; margin-bottom: 16px;">
-        但是我们注意到，目前使用此方法的人不多，尤其对比较内向的人而言，因为他们缺乏教导对象。本网站试图改善这一情况，让更多人能实践费曼学习法。
+        但是我们注意到，目前使用此方法的人不多，尤其对比较内向的人而言，因为他们缺乏教导对象。本网站试图改善这一情况，为更多人提供结对学习的机会。
+      </p>
+      <p style="line-height: 1.8; color: #333; margin-bottom: 16px;">
+        同时，本网站引入AI系统，帮助用户进行对话总结、测试生成等，希望提高学习效率，并有效评估学习成果。
       </p>
       <p style="line-height: 1.8; color: #333; margin-bottom: 20px;">
         我们将评估教学的效果，并继续改善网站体验，希望能让更多人掌握这种方法，提高学习效率。
       </p>
+      <p style="line-height: 1.8; color: #333; margin-bottom: 20px;">
+        如果您遇到任何问题或有任何建议，请随时联系我们。（向“管理员”发送私信）
+      </p>
       <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;" />
-      <p style="font-size: 14px; color: #999; text-align: center;">（目前版本：Ver 1.0.0）</p>
+      <p style="font-size: 14px; color: #999; text-align: center;">（目前版本：Ver 2.0.0）</p>
     `;
 
     return (
       <div className="modal-overlay" onClick={closeAboutModal}>
         <div className="modal-content" onClick={(e) => e.stopPropagation()}>
           <button className="modal-close" onClick={closeAboutModal}>×</button>
-          <div 
-            className="modal-body" 
+          <div
+            className="modal-body"
             dangerouslySetInnerHTML={{ __html: aboutContent }}
           />
         </div>
@@ -167,7 +201,7 @@ const Home = () => {
             <p>以教验知，求是求真</p>
           </div>
 
-          <div className="card" onClick={handlePersonalClick}>
+          <div className="card" onClick={handlePersonalClick} data-guide="personal-card">
             <h3>我的主页</h3>
             <p>学迹成章，知至知终</p>
           </div>
@@ -178,12 +212,11 @@ const Home = () => {
       <AboutModal />
       {/* 登录提示模态框 */}
       <LoginPromptModal />
-            <FeatureTipModal
-        visible={showTipModal}
-        title="首页使用说明"
-        features={homeFeatures}
-        notes={homeNotes}
-        onClose={handleCloseModal}
+      {/* 引导提示弹窗 */}
+      <GuidePromptModal
+        visible={showGuidePrompt}
+        onStart={handleStartGuide}
+        onDecline={handleDeclineGuide}
       />
     </div>
   );

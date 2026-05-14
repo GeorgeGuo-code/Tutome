@@ -313,10 +313,10 @@
   animation: fadeIn 0.2s ease;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
+/* 模态框显示时隐藏引导遮罩 */
+.dialogue-container.modal-showing .guide-highlight-overlay {
+  display: none !important;
+}
   to {
     opacity: 1;
   }
@@ -1077,4 +1077,16 @@
   border: 1px solid #E5E7EB;
   border-radius: 8px;
   color: #6B7280;
+}
+
+/* 引导模式隐藏错误状态 */
+.dialogue-container.guide-mode .error-state {
+  background: transparent;
+  border: none;
+  color: #666;
+}
+.dialogue-container.guide-mode .error-state .error-icon,
+.dialogue-container.guide-mode .error-state .error-message,
+.dialogue-container.guide-mode .error-state .error-hint {
+  display: none;
 }

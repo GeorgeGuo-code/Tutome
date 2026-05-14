@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import "./match.css";
-import FeatureTipModal from '../components/FeatureTipModal';
 import socketService from '../services/socketService';
 
 /** 开发时通过 Vite 代理访问 /api；与 apiService 一致可用环境变量覆盖 */
@@ -21,24 +20,11 @@ const Match = () => {
   const [questionsMine, setQuestionsMine] = useState([]);
   const [questionsTheirs, setQuestionsTheirs] = useState([]);
   const [showQuestions, setShowQuestions] = useState(false);
-  const [showTipModal, setShowTipModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
   const [targetPage, setTargetPage] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [requireMatchingQuestions, setRequireMatchingQuestions] = useState(true);
-
-  useEffect(() => {
-    const hasSeenMatchTip = localStorage.getItem('hasSeenMatchTip');
-    if (!hasSeenMatchTip) {
-      setShowTipModal(true);
-    }
-  }, []);
-
-  const handleCloseModal = () => {
-    setShowTipModal(false);
-    localStorage.setItem('hasSeenMatchTip', 'true');
-  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -66,18 +52,6 @@ const Match = () => {
       socketService.disconnect();
     };
   }, []);
-
-  const matchFeatures = [
-    '根据双方学习偏好（感兴趣/擅长学科、难度偏好）与在线状态筛选',
-    '学生找老师：我的求助题 或 对方的带学帖；老师找学生：我的带学帖 或 对方的求助题',
-    '题目区分「我发布的 / 对方发布的」，并标注求助向、带学向',
-    '任选一条合适题目即可发起结对申请',
-  ];
-  const matchNotes = [
-    '匹配功能需登录后才能使用',
-    '请在个人资料中完善感兴趣/擅长学科与难度偏好以提升匹配质量',
-    '发起申请前可留意对方是否在线',
-  ];
 
   // 学科到 topicId（结对申请用，需与后端 topics 表一致）
   const subjectToTopicId = {
@@ -519,13 +493,6 @@ const Match = () => {
           </button>
         </form>
       </div>
-      <FeatureTipModal
-        visible={showTipModal}
-        title="匹配板块使用说明"
-        features={matchFeatures}
-        notes={matchNotes}
-        onClose={handleCloseModal}
-      />
 
       {successMessage && (
         <div className="success-modal-mask" onClick={() => {}}>

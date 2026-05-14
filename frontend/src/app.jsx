@@ -13,11 +13,21 @@ import PreSessionQuiz from './components/PreSessionQuiz';
 import PostSessionSurvey from './components/PostSessionSurvey';
 import Navbar from './components/Navbar';
 import NotificationPopup from './components/NotificationPopup';
+import InteractiveGuide from './components/InteractiveGuide';
 import socketService from './services/socketService';
 import './app.css';
 
 export default function App() {
   const [notifications, setNotifications] = useState([]);
+  const [guideActive, setGuideActive] = useState(false);
+
+  // 监听 sessionStorage 变化以恢复引导状态
+  useEffect(() => {
+    const savedGuideActive = sessionStorage.getItem('guideActive');
+    if (savedGuideActive === 'true') {
+      setGuideActive(true);
+    }
+  }, []);
 
   // 调试：监听notifications状态变化
   useEffect(() => {
@@ -75,10 +85,20 @@ export default function App() {
     }
   };
 
+  const handleGuideComplete = () => {
+    setGuideActive(false);
+    sessionStorage.removeItem('guideActive');
+    sessionStorage.removeItem('guideStep');
+  };
+
+  const handleGuideNavigate = (path) => {
+    navigate(path);
+  };
+
   return (
     <>
       <Routes>
-        <Route path="/" element={<><Navbar showMinimal={true} /><Home /></>} />
+        <Route path="/" element={<><Navbar showMinimal={true} /><Home guideActive={guideActive} onGuideActiveChange={setGuideActive} /></>} />
         <Route path="/login" element={<><Navbar showLoginOnly={true} /><Login /></>} />
         <Route path="/ask" element={<><Navbar /><Ask /></>} />
         <Route path="/browse" element={<><Navbar /><Browse /></>} />
@@ -94,6 +114,12 @@ export default function App() {
         notifications={notifications}
         onRemove={removeNotification}
         onNotificationClick={handleNotificationClick}
+      />
+      <InteractiveGuide
+        active={guideActive}
+        onComplete={handleGuideComplete}
+        onNavigate={handleGuideNavigate}
+        guideModeRef={null}
       />
     </>
   );

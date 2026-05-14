@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "./browse.css";
-import FeatureTipModal from '../components/FeatureTipModal';
 
 const Browse = () => {
-  const [showTipModal, setShowTipModal] = useState(false);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState("all");
@@ -23,33 +21,6 @@ const Browse = () => {
   useEffect(() => {
     fetchQuestions();
   }, [currentPage, mode]);
-
-  // 显示提示弹窗
-  useEffect(() => {
-    const hasSeenBrowseTip = localStorage.getItem('hasSeenBrowseTip');
-    if (!hasSeenBrowseTip) {
-      setShowTipModal(true);
-    }
-  }, []);
-
-  // 关闭弹窗函数
-  const handleCloseModal = () => {
-    setShowTipModal(false);
-    localStorage.setItem('hasSeenBrowseTip', 'true');
-  };
-
-  // 浏览板块配置
-  const browseFeatures = [
-    '查看所有用户发布的问题列表',
-    '支持按标签、发布时间、热度筛选问题',
-    '点击问题卡片可进入详情页查看完整内容',
-    '可对感兴趣的问题进行收藏、回答'
-  ];
-  const browseNotes = [
-    '未登录用户仅可浏览问题，无法回答或收藏',
-    '问题列表会实时更新，显示最新发布的内容',
-    '请勿发布无关评论，遵守平台使用规范'
-  ];
 
   // 更新可见页码
   useEffect(() => {
@@ -233,13 +204,6 @@ const Browse = () => {
           &gt;
         </button>
       </div>
-      <FeatureTipModal
-        visible={showTipModal}
-        title="浏览板块使用说明"
-        features={browseFeatures}
-        notes={browseNotes}
-        onClose={handleCloseModal}
-      />
     </div>
   );
 };

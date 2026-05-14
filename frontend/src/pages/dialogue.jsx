@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./dialogue.css";
 import 'katex/dist/katex.min.css';
-import FeatureTipModal from '../components/FeatureTipModal';
+import InteractiveGuide from '../components/InteractiveGuide';
 import socketService from '../services/socketService';
 import { parseLatexContent } from '../utils/renderLatex';
 
@@ -18,7 +18,6 @@ const Dialogue = () => {
   const [endRequestedBy, setEndRequestedBy] = useState(null); // 谁申请结束
   const [showEndConfirmModal, setShowEndConfirmModal] = useState(false); // 显示确认模态框
   const [showEndRequestModal, setShowEndRequestModal] = useState(false); // 显示收到申请的模态框
-  const [showTipModal, setShowTipModal] = useState(false); // 显示功能说明弹窗
   const [isReviewing, setIsReviewing] = useState(false); // 是否正在进行轮次审查
   const [isSummarizing, setIsSummarizing] = useState(false); // 是否正在生成总结
   const [summary, setSummary] = useState(null); // 总结的容
@@ -36,40 +35,126 @@ const Dialogue = () => {
   const messagesAreaRef = useRef(null);
   const pollingIntervalRef = useRef(null); // 轮询定时器引用
   const previousMessagesLengthRef = useRef(0); // 跟踪之前的消息数量
-  // 新增：首次进入对话页面触发弹窗
-  useEffect(() => {
-    // 专属 localStorage key，避免和其他板块冲突
-    const hasSeenDialogueTip = localStorage.getItem('hasSeenDialogueTip');
-    if (!hasSeenDialogueTip) {
-      setShowTipModal(true);
-    }
-  }, []);
 
-  // 新增：关闭弹窗并标记已查看
-  const handleCloseModal = () => {
-    setShowTipModal(false);
-    localStorage.setItem('hasSeenDialogueTip', 'true');
+  // 引导模式相关状态
+  const [guideMode, setGuideMode] = useState(false);
+  const [guideActive, setGuideActive] = useState(false);
+  // 从 sessionStorage 读取引导步骤，默认为19（ai-review-btn 高亮步骤）
+  const [guideStep, setGuideStep] = useState(() => {
+    const savedStep = sessionStorage.getItem('guideStep');
+    return savedStep ? parseInt(savedStep, 10) : 19;
+  });
+
+  const guideModeRef = useRef({
+    handleGuideAction: (action) => {
+      console.log('[GuideMode] action:', action);
+      switch (action) {
+        case 'enter-quiz':
+          // 模拟进入热身测试页面
+          navigate(`/quiz/pre/guide-demo`);
+          break;
+        case 'submit-quiz':
+          // 模拟提交热身测试
+          // 直接进入对话
+          break;
+        case 'enter-dialogue':
+          // 进入对话页面，使用引导专用的pairId
+          navigate(`/dialogue/guide-demo`);
+          break;
+        case 'show-messages':
+          // 显示预制消息
+          setMessages(mockGuideMessages);
+          setPairStatus('active');
+          setLoading(false);
+          break;
+        default:
+          break;
+      }
+    }
+  });
+
+  // 引导模式：注册全局引导动作处理器到 window
+  useEffect(() => {
+    if (guideMode) {
+      window.guideActionHandler = (action) => {
+        console.log('[GuideMode] action:', action);
+        switch (action) {
+          case 'enter-quiz':
+            navigate(`/quiz/pre/guide-demo`);
+            break;
+          case 'submit-quiz':
+            break;
+          case 'enter-dialogue':
+            navigate(`/dialogue/guide-demo`);
+            break;
+          case 'show-messages':
+            setMessages(mockGuideMessages);
+            setPairStatus('active');
+            setLoading(false);
+            break;
+          default:
+            break;
+        }
+      };
+    }
+    return () => {
+      if (guideMode) {
+        window.guideActionHandler = null;
+      }
+    };
+  }, [guideMode, navigate]);
+
+  // 预制的引导消息数据
+  const mockGuideMessages = [
+    { id: 1, pair_id: 'guide-demo', sender_id: 1, sender_role: 'student', content: '你好，我想请教一个关于Python装饰器的问题', created_at: new Date().toISOString() },
+    { id: 2, pair_id: 'guide-demo', sender_id: 2, sender_role: 'tutor', content: '好的，请说', created_at: new Date().toISOString() },
+    { id: 3, pair_id: 'guide-demo', sender_id: 1, sender_role: 'student', content: '装饰器的作用是什么？如何定义一个装饰器？', created_at: new Date().toISOString() },
+    { id: 4, pair_id: 'guide-demo', sender_id: 2, sender_role: 'tutor', content: '装饰器用于修改函数或类的行为。简单示例：\n\ndef my_decorator(func):\n    def wrapper():\n        print("函数执行前")\n        func()\n        print("函数执行后")\n    return wrapper', created_at: new Date().toISOString() },
+    { id: 5, pair_id: 'guide-demo', sender_id: 1, sender_role: 'student', content: '那我用 @property 可以直接修改属性值吗？', created_at: new Date().toISOString() },
+    { id: 6, pair_id: 'guide-demo', sender_id: 2, sender_role: 'tutor', content: '@property是用于定义getter的，要定义setter需要使用@xxx.setter', created_at: new Date().toISOString() }
+  ];
+
+  // 检查是否为引导模式
+  useEffect(() => {
+    if (pairId === 'guide-demo') {
+      setGuideMode(true);
+      // 如果 sessionStorage 中有引导状态，也激活引导组件
+      if (sessionStorage.getItem('guideActive') === 'true') {
+        setGuideActive(true);
+      }
+      // 显示预制消息
+      setMessages(mockGuideMessages);
+      setPairStatus('active');
+      setLoading(false);
+      // 预制AI审查结果
+      setRoundReviews([
+        { id: 1, round: 1, reviewed: true, review: { has_error: false, summary: '讨论装饰器基础概念' } },
+        { id: 2, round: 2, reviewed: true, review: { has_error: true, error_details: [{ errorType: '概念混淆' }, { errorType: '用法错误' }] } }
+      ]);
+    }
+  }, [pairId]);
+
+  // 引导流程控制回调
+  const handleGuideComplete = () => {
+    setGuideActive(false);
+    sessionStorage.removeItem('guideActive');
+    sessionStorage.removeItem('guideStep');
   };
 
-  // 新增：对话板块功能说明和注意事项（适配你的场景）
-  const dialogueFeatures = [
-    '与匹配的解答者/提问者实时文字交流',
-    '支持发送代码片段、问题相关截图（如有）',
-    '聊天记录自动保存，可在个人中心（Personal）查看',
-    '可标记消息已读/未读，支持限时撤回消息'
-  ];
-  const dialogueNotes = [
-    '仅可与匹配用户或问题相关方对话，无法随意发起聊天',
-    '请勿发送广告、辱骂等违规内容，否则限制对话功能',
-    '未登录状态下无法进入对话页面，会自动跳转登录页',
-    '网络异常时聊天记录可能延迟加载，可刷新页面'
-  ];
+  const handleGuideNavigate = (path) => {
+    navigate(path);
+  };
 
   // 验证 Pair ID 并启动轮询
   useEffect(() => {
     if (!pairId || isNaN(parseInt(pairId))) {
       setError("无效的结对 ID");
       setLoading(false);
+      return;
+    }
+
+    // 引导模式不需要检查热身测试
+    if (guideMode) {
       return;
     }
 
@@ -231,6 +316,14 @@ const Dialogue = () => {
   }, [roundReviews]);
 
   const fetchMessages = async (isInitialLoad = false) => {
+    // 引导模式：使用模拟消息，不调用 API
+    if (guideMode) {
+      setMessages(mockGuideMessages);
+      setPairStatus('active');
+      setLoading(false);
+      return;
+    }
+
     // 只在首次加载时显示 loading 状态
     if (isInitialLoad) {
       setLoading(true);
@@ -478,6 +571,12 @@ const Dialogue = () => {
 
   // 确认结束对话框（显示确认模态框）
   const handleConfirmEnd = () => {
+    if (guideMode) {
+      // 引导模式：模拟对方同意
+      alert('对方同意了您的结束申请');
+      setPairStatus('completed');
+      return;
+    }
     setShowEndConfirmModal(true);
   };
 
@@ -571,6 +670,11 @@ const Dialogue = () => {
 
   // 进行轮次审查
   const reviewRounds = async () => {
+    // 引导模式：跳过 API 调用
+    if (guideMode) {
+      return true;
+    }
+
     try {
       setIsReviewing(true);
       const token = localStorage.getItem("token");
@@ -637,6 +741,11 @@ const Dialogue = () => {
 
   // 获取轮次审查结果
   const fetchRoundReviews = async () => {
+    // 引导模式：使用预制的审查结果
+    if (guideMode) {
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
@@ -753,7 +862,7 @@ const Dialogue = () => {
   };
 
   return (
-    <div className={`dialogue-container ${reviewPanelOpen ? 'review-panel-open' : ''}`}>
+    <div className={`dialogue-container ${reviewPanelOpen ? 'review-panel-open' : ''} ${guideMode ? 'guide-mode' : ''} ${(showEndConfirmModal || showEndRequestModal || showSummaryModal) ? 'modal-showing' : ''}`}>
       {/* AI 审查栏 */}
       <div className={`review-panel ${reviewPanelOpen ? 'expanded' : 'collapsed'}`}>
         <div className="review-panel-header" onClick={toggleReviewPanel}>
@@ -843,6 +952,7 @@ const Dialogue = () => {
       <div
         className={`review-panel-expand-hint ${reviewPanelOpen ? '' : 'visible'}`}
         onClick={toggleReviewPanel}
+        data-guide="ai-review-btn"
       >
         🔍 AI审查
       </div>
@@ -853,6 +963,7 @@ const Dialogue = () => {
           <button
             className="end-dialogue-btn"
             onClick={handleConfirmEnd}
+            data-guide="end-dialogue-btn"
           >
             结束对话
           </button>
@@ -1172,13 +1283,6 @@ const Dialogue = () => {
           </div>
         </div>
       )}
-      <FeatureTipModal
-        visible={showTipModal}
-        title="对话交流使用说明"
-        features={dialogueFeatures}
-        notes={dialogueNotes}
-        onClose={handleCloseModal}
-      />
 
       {/* 图片预览模态框 */}
       {imagePreviewModal && (
@@ -1194,6 +1298,16 @@ const Dialogue = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* 引导组件 */}
+      {guideMode && guideActive && (
+        <InteractiveGuide
+          active={guideActive}
+          onComplete={handleGuideComplete}
+          onNavigate={handleGuideNavigate}
+          startingStep={guideStep}
+        />
       )}
     </div>
   );

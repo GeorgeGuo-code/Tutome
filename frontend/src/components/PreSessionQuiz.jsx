@@ -18,8 +18,30 @@ const PreSessionQuiz = () => {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
 
+  // 引导模式检测
+  const isGuideMode = pairId === 'guide-demo';
+
+  // 检查是否为引导流程中的quiz（从引导页导航过来）
+  const isGuideFlowQuiz = sessionStorage.getItem('guideActive') === 'true' && isGuideMode;
+
+  // 引导模式使用的模拟题目
+  const guideQuestions = [
+    { id: 1, question: JSON.stringify({ question: '装饰器的主要作用是什么？', options: ['修改函数行为', '提高运行速度', '减少内存占用', '增加代码复杂度'] }) },
+    { id: 2, question: JSON.stringify({ question: '@property 装饰器用于定义什么？', options: ['Setter方法', 'Getter方法', '静态方法', '类方法'] }) },
+    { id: 3, question: JSON.stringify({ question: 'Python 中如何定义一个简单的装饰器？', options: ['使用 @decorator 语法', '使用 function 关键字', '使用 class 关键字', '使用 lambda 表达式'] }) },
+    { id: 4, question: JSON.stringify({ question: '装饰器可以接收参数吗？', options: ['可以', '不可以', '仅在特定情况下可以', '仅Python 3.10+可以'] }) },
+    { id: 5, question: JSON.stringify({ question: '以下哪个是装饰器的正确使用方式？', options: ['@my_decorator', '#my_decorator', '$my_decorator', '&my_decorator'] }) }
+  ];
+
   // 获取题目
   const fetchQuestions = useCallback(async () => {
+    // 引导模式直接使用模拟题目
+    if (isGuideMode) {
+      setQuestions(guideQuestions);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
@@ -117,6 +139,19 @@ const PreSessionQuiz = () => {
     if (submitting || submitted) return;
 
     setSubmitting(true);
+
+    // 引导模式直接跳转回 dialogue 页面继续引导
+    if (isGuideMode) {
+      setSubmitted(true);
+      setTimeout(() => {
+        // 只更新 guideStep 为 17，让 dialogue 能正确恢复引导状态
+        // 不清除 guideActive，让 dialogue 知道还在引导流程中
+        sessionStorage.setItem('guideStep', '17');
+        navigate(`/dialogue/${pairId}`);
+      }, 1500);
+      setSubmitting(false);
+      return;
+    }
 
     try {
       const token = localStorage.getItem('token');
@@ -342,7 +377,7 @@ const PreSessionQuiz = () => {
           <p className="hint">请完成所有题目后再提交</p>
         )}
       </div>
-    </div>
+    </div>  
   );
 };
 

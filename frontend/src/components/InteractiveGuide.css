@@ -1,0 +1,228 @@
+/* 引导提示弹窗样式 */
+.guide-prompt-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.guide-prompt-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px 32px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  max-width: 320px;
+}
+
+.guide-prompt-content p {
+  margin: 0 0 20px 0;
+  font-size: 16px;
+  color: #333;
+  text-align: center;
+}
+
+.guide-prompt-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* 引导弹窗样式 */
+.guide-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.guide-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 480px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.guide-modal-title {
+  margin: 0;
+  padding: 20px 24px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 1px solid #eee;
+}
+
+.guide-modal-content {
+  padding: 20px 24px;
+}
+
+.guide-modal-content p {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  color: #555;
+  line-height: 1.7;
+}
+
+.guide-modal-content p:last-child {
+  margin-bottom: 0;
+}
+
+.guide-section {
+  margin-bottom: 16px;
+}
+
+.guide-section h4 {
+  margin: 0 0 8px 0;
+  font-size: 15px;
+  color: #333;
+}
+
+.guide-section p {
+  margin: 0;
+  color: #666;
+}
+
+.guide-list-item {
+  padding-left: 16px;
+  position: relative;
+}
+
+.guide-list-item::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #8FA3B3;
+}
+
+.guide-hint {
+  color: #888;
+  font-size: 13px;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+.guide-modal-note {
+  padding: 12px 24px;
+  font-size: 12px;
+  color: #999;
+  background: #fafafa;
+  border-top: 1px solid #eee;
+}
+
+.guide-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* 通用按钮样式 */
+.guide-btn {
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.guide-btn-primary {
+  background: #8FA3B3;
+  color: #fff;
+}
+
+.guide-btn-primary:hover {
+  background: #7a8fa3;
+}
+
+.guide-btn-secondary {
+  background: #e8e8e8;
+  color: #666;
+}
+
+.guide-btn-secondary:hover {
+  background: #ddd;
+}
+
+/* 高亮遮罩样式 */
+.guide-highlight-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9998;
+  pointer-events: none;
+}
+
+.guide-highlight-mask {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.guide-highlight-hole {
+  pointer-events: none;
+}
+
+.guide-highlight-tip {
+  background: #fff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  text-align: center;
+  pointer-events: auto;
+  max-width: 360px;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+.guide-highlight-tip p {
+  margin: 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.guide-highlight-arrow {
+  width: 0;
+  height: 0;
+  margin: 8px auto 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid #fff;
+}
+
+/* 引导激活时的全局样式 */
+body.guide-active {
+  overflow: hidden;
+}
+
+/* 步骤指示器 */
+.guide-step-indicator {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  z-index: 10001;
+}

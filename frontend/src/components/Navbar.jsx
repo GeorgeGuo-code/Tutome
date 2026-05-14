@@ -117,7 +117,7 @@ export default function Navbar({ showMinimal = false, showLoginOnly = false }) {
               {isAuthenticated && username ? (
                 <>
                   <NavLink to="/personal" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}>个人中心</NavLink>
-                  <NavLink to="/ask" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}>提问</NavLink>
+                  <NavLink to="/ask" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`} data-guide="ask-link">提问</NavLink>
                   <NavLink to="/browse" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}>浏览</NavLink>
                   <NavLink to="/match" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}>匹配</NavLink>
                   <div className="nav-dropdown">

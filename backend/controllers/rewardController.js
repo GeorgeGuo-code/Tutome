@@ -180,12 +180,17 @@ async function drawReward(req, res) {
       stockMap[row.reward_id] = row.stock;
     });
 
-    // 调整概率：库存为0的奖品概率归零，转移到一元红包
+    // 调整概率：库存为0的奖品概率归零
+    // 国誉文具(id=1)和精品笔记本(id=2)耗尽后概率转为一元红包(id=3)
+    // 一元红包(id=3)耗尽后概率转为小零食(id=4)
     let totalProbability = 0;
     const adjustedPool = rewardsPool.map(reward => {
+      if (reward.rarity === 'none') return { ...reward, probability: 0 };
       if ((reward.id === 1 || reward.id === 2) && (stockMap[reward.id] || 0) <= 0) {
-        // 库存耗尽，概率设为0
-        return { ...reward, probability: 0 };
+        return { ...reward, probability: 0 }; // 概率归零
+      }
+      if (reward.id === 3 && (stockMap[reward.id] || 0) <= 0) {
+        return { ...reward, probability: 0 }; // 一元红包耗尽，概率归零
       }
       return { ...reward };
     });
@@ -212,21 +217,37 @@ async function drawReward(req, res) {
       // 更新保底计数
       stats.total_draws++;
       stats.red_pocket_pity++;
-      stats.notebook_pity++;
+      // 只有笔记本保底未用完时才增加计数
+      if (!stats.notebook_pity_used) {
+        stats.notebook_pity++;
+      }
 
       // 判断是否触发保底（只在抽到非红包/非笔记本/非文具时触发替换）
       const isLowReward = selectedReward.id === 4 || selectedReward.id === 5; // 小零食或谢谢参与
 
-      // 5次保底：红包（id=3）- 无限触发
-      if (stats.red_pocket_pity >= 5 && isLowReward) {
+      // 5次保底：红包（id=3）- 无限触发（库存为0时不触发）
+      if (stats.red_pocket_pity >= 5 && isLowReward && (stockMap[3] || 0) > 0) {
         selectedReward = rewardsPool.find(r => r.id === 3); // 强制红包
         stats.red_pocket_pity = 0; // 重置保底计数
         console.log(`[drawReward] 保底触发：5次内必出红包`);
+      } else if (stats.red_pocket_pity >= 5 && isLowReward && (stockMap[3] || 0) <= 0) {
+        // 一元红包库存耗尽，跳过保底，让普通抽取处理
+        stats.red_pocket_pity = 0; // 重置保底计数避免一直触发
       }
 
       // 10次保底：精品笔记本（id=2）- 只能触发1次
       if (stats.notebook_pity >= 10 && isLowReward && selectedReward.id !== 3 && !stats.notebook_pity_used) {
-        selectedReward = rewardsPool.find(r => r.id === 2); // 强制笔记本
+        // 库存为0时不允许触发保底，直接跳过
+        const notebookStock = stockMap[2] || 0;
+        if (notebookStock > 0) {
+          selectedReward = rewardsPool.find(r => r.id === 2); // 强制笔记本
+        } else if ((stockMap[3] || 0) > 0) {
+          // 笔记本没库存，强制一元红包（保底依然用掉）
+          selectedReward = rewardsPool.find(r => r.id === 3);
+        } else {
+          // 红包也没库存，强制小零食（保底依然用掉）
+          selectedReward = rewardsPool.find(r => r.id === 4);
+        }
         stats.notebook_pity = 0;
         stats.notebook_pity_used = true; // 标记笔记本保底已使用
         console.log(`[drawReward] 保底触发：10次内必出笔记本（笔记本保底已用完）`);
@@ -243,12 +264,13 @@ async function drawReward(req, res) {
         rewardRarity: selectedReward.rarity
       });
 
-      // 扣除库存（仅针对有库存限制的奖品）
-      if (selectedReward.id === 1 || selectedReward.id === 2 || selectedReward.id === 3) {
+      // 扣除库存（仅针对有库存限制的奖品，且库存大于0）
+      if ((selectedReward.id === 1 || selectedReward.id === 2 || selectedReward.id === 3) && (stockMap[selectedReward.id] || 0) > 0) {
         await client.query(
           `UPDATE reward_stocks SET stock = stock - 1, updated_at = CURRENT_TIMESTAMP WHERE reward_id = $1`,
           [selectedReward.id]
         );
+        stockMap[selectedReward.id]--; // 更新本地库存映射
       }
     }
 

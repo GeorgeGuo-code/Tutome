@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./personal.css";
-import FeatureTipModal from '../components/FeatureTipModal';
+import { InteractiveGuide } from '../components/InteractiveGuide';
 import { userService, rewardService, messageService } from '../services/apiService';
 import { HistoryIcon, NotificationIcon, HomeIcon, GiftIcon } from '../components/icons';
 
@@ -447,7 +447,7 @@ const ProfileSection = () => {
       {/* 个人主页头部 */}
       <div className="profile-section-header">
         <h2 className="profile-section-title">个人主页</h2>
-        <button className="profile-section-edit-btn" onClick={handleOpenEditModal}>
+        <button className="profile-section-edit-btn" onClick={handleOpenEditModal} data-guide="edit-profile">
           修改
         </button>
       </div>
@@ -1640,9 +1640,12 @@ const RewardInfoModal = ({ visible, onClose, stockMap }) => {
 
   const item1Stock = stockMap[1] ?? 3;
   const item2Stock = stockMap[2] ?? 5;
-  const hasStockDepleted = item1Stock <= 0 || item2Stock <= 0;
+  const item3Stock = stockMap[3] ?? 100;
+  const hasTopDepleted = item1Stock <= 0 || item2Stock <= 0;
+  const hasRedPocketDepleted = item3Stock <= 0;
   const reducedProb = (item1Stock <= 0 ? 1 : 0) + (item2Stock <= 0 ? 4 : 0);
   const hongbaoCurrentProb = 20 + reducedProb;
+  const snackCurrentProb = 25 + (hasRedPocketDepleted ? 20 : 0);
 
   return (
     <div className="reward-info-overlay" onClick={onClose}>
@@ -1675,26 +1678,31 @@ const RewardInfoModal = ({ visible, onClose, stockMap }) => {
               </div>
               <div className="reward-info-item">
                 <span className="reward-info-rarity s">S</span>
-                <span className="reward-info-name">一元红包</span>
-                {hasStockDepleted ? (
-                  <span className="reward-info-prob" style={{color: '#10B981'}}>{hongbaoCurrentProb}% ↑</span>
+                <span className="reward-info-name">一元红包（库存{item3Stock}件）</span>
+                {item3Stock > 0 ? (
+                  hasTopDepleted ? (
+                    <span className="reward-info-prob" style={{color: '#10B981'}}>{hongbaoCurrentProb}% ↑</span>
+                  ) : (
+                    <span className="reward-info-prob">20%</span>
+                  )
                 ) : (
-                  <span className="reward-info-prob">20%</span>
+                  <span className="reward-info-prob" style={{color: '#EF4444'}}>0%（已售罄）</span>
                 )}
               </div>
               <div className="reward-info-item">
                 <span className="reward-info-rarity a">A</span>
                 <span className="reward-info-name">小零食</span>
-                <span className="reward-info-prob">25%</span>
+                <span className="reward-info-prob" style={hasRedPocketDepleted ? {color: '#10B981'} : {}}>{snackCurrentProb}%{hasRedPocketDepleted ? ' ↑' : ''}</span>
               </div>
             </div>
           </div>
 
-          {hasStockDepleted && (
+          {(hasTopDepleted || hasRedPocketDepleted) && (
             <div className="reward-info-section">
               <h4 className="reward-info-section-title">库存说明</h4>
               <ul className="reward-info-rules">
-                <li>实物奖品库存耗尽后，其概率将全部转移至一元红包</li>
+                {hasTopDepleted && <li>实物奖品库存耗尽后，其概率将全部转移至一元红包</li>}
+                {hasRedPocketDepleted && <li>一元红包库存耗尽后，其概率将全部转移至小零食</li>}
               </ul>
             </div>
           )}
@@ -1704,6 +1712,30 @@ const RewardInfoModal = ({ visible, onClose, stockMap }) => {
             <ul className="reward-info-rules">
               <li>单抽消耗 1 张抽奖券，五抽消耗 5 张</li>
               <li>每次抽取相互独立，概率不受影响</li>
+            </ul>
+          </div>
+
+          <div className="reward-info-section">
+            <h4 className="reward-info-section-title">保底机制</h4>
+            <ul className="reward-info-rules">
+              <li>每5次抽取至少获得1个1元红包及以上品质的奖品</li>
+              <li>前10次抽奖至少获得1个精品笔记本及以上品质的奖品</li>
+            </ul>
+          </div>
+
+          <div className="reward-info-section">
+            <h4 className="reward-info-section-title">兑换方式</h4>
+            <ul className="reward-info-rules">
+              <li>实物奖品通过邮箱（紫金港）或快递（其他地区）方式寄送</li>
+              <li>红包通过私信“支付宝口令红包”发放。请及时查看私信口令，避免过期。如果过期，私信“管理员”，将在核实后重新发放</li>
+            </ul>
+          </div>
+
+          <div className="reward-info-section">
+            <h4 className="reward-info-section-title">额外说明</h4>
+            <ul className="reward-info-rules">
+              <li>请勿通过低质量对话刷取抽奖券，发现将取消兑换资格</li>
+              <li>如果活动结束后国誉文具礼盒、精品笔记本有剩余，将按照有效对话次数进行分配</li>
             </ul>
           </div>
         </div>
@@ -2016,14 +2048,16 @@ const RewardSection = () => {
               ></div>
             </div>
             <div className="pity-hint">
-              {drawStats.red_pocket_pity >= 5 ? '下次抽取必得红包！' : `还需 ${5 - drawStats.red_pocket_pity} 次触发保底`}
+              {drawStats.red_pocket_pity >= 5 ? (
+                (stockMap[3] ?? 0) > 0 ? '下次抽取必得红包！' : '红包数量不足'
+              ) : `还需 ${5 - drawStats.red_pocket_pity} 次触发保底`}
             </div>
           </div>
           <div className="pity-item">
             <div className="pity-item-header">
               <span className="pity-icon">📓</span>
               <span className="pity-name">笔记本保底</span>
-              <span className="pity-count">{drawStats.notebook_pity}/10</span>
+              <span className="pity-count">{drawStats.notebook_pity_used ? '10/10' : `${Math.min(drawStats.notebook_pity, 10)}/10`}</span>
             </div>
             <div className="pity-bar">
               <div
@@ -2080,14 +2114,16 @@ const RewardSection = () => {
 // 主组件
 const Personal = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
-  const [showTipModal, setShowTipModal] = useState(false);
+  const [guideActive, setGuideActive] = useState(false);
   const currentToken = localStorage.getItem('token'); // 获取当前 token
 
+  // 检测是否从引导模式进入
   useEffect(() => {
-    const hasSeenPersonalTip = localStorage.getItem('hasSeenPersonalTip');
-    if (!hasSeenPersonalTip) {
-      setShowTipModal(true);
+    const isGuideActive = sessionStorage.getItem('guideActive');
+    if (isGuideActive === 'true') {
+      setGuideActive(true);
     }
   }, []);
 
@@ -2123,25 +2159,18 @@ const Personal = () => {
     }
   }, [activeTab, currentToken]);
 
-  const handleCloseModal = () => {
-    setShowTipModal(false);
-    localStorage.setItem('hasSeenPersonalTip', 'true');
+  const handleGuideComplete = () => {
+    setGuideActive(false);
+    sessionStorage.removeItem('guideActive');
+    navigate('/personal');
   };
 
-  const personalFeatures = [
-    '查看个人基本信息（用户名、头像、注册时间）',
-    '管理自己发布的提问、回答、收藏内容',
-    '修改个人资料和密码',
-    '查看消息通知（回答提醒、对话提醒）'
-  ];
-  const personalNotes = [
-    '仅可修改自己的个人信息，无法查看他人隐私',
-    '删除提问/回答后无法恢复，请谨慎操作',
-    '密码修改后需重新登录，请牢记新密码'
-  ];
+  const handleGuideNavigate = (path) => {
+    navigate(path);
+  };
 
   return (
-    <><div className="personal-container">
+    <div className="personal-container">
       <div className="personal-header">
         <span className="breadcrumb-text">个人中心</span>
       </div>
@@ -2160,6 +2189,7 @@ const Personal = () => {
           <button
             className={`sidebar-item ${activeTab === 'history' ? 'active' : ''}`}
             onClick={() => setActiveTab('history')}
+            data-guide="my-history"
           >
             <HistoryIcon />
             <span className="sidebar-text">我的足迹</span>
@@ -2167,6 +2197,7 @@ const Personal = () => {
           <button
             className={`sidebar-item ${activeTab === 'notifications' ? 'active' : ''}`}
             onClick={() => setActiveTab('notifications')}
+            data-guide="my-notifications"
           >
             <NotificationIcon />
             <span className="sidebar-text">我的通知</span>
@@ -2174,6 +2205,7 @@ const Personal = () => {
           <button
             className={`sidebar-item ${activeTab === 'reward' ? 'active' : ''}`}
             onClick={() => setActiveTab('reward')}
+            data-guide="reward-center"
           >
             <GiftIcon />
             <span className="sidebar-text">奖励中心</span>
@@ -2188,15 +2220,8 @@ const Personal = () => {
         {activeTab === 'notifications' && <NotificationsSection location={location} />}
         {activeTab === 'reward' && <RewardSection />}
       </div>
-    </div><FeatureTipModal
-        visible={showTipModal}
-        title="个人中心使用说明"
-        features={personalFeatures}
-        notes={personalNotes}
-        onClose={handleCloseModal} 
-      />
     </div>
-  </>
+  </div>
   );
 }
 
