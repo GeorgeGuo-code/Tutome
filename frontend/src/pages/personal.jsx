@@ -638,7 +638,7 @@ const HistorySection = ({ location }) => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:3000/api/questions/my-history?page=1&limit=1000`,
+        `/api/questions/my-history?page=1&limit=1000`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -668,7 +668,7 @@ const HistorySection = ({ location }) => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:3000/api/questions/${questionId}`,
+        `/api/questions/${questionId}`,
         {
           method: 'DELETE',
           headers: {
@@ -998,7 +998,7 @@ const NotificationsSection = ({ location: locationProp }) => {
         formData.append('content', privateMessageContent.trim());
         formData.append('image', privateMessageImage);
 
-        const response = await fetch('http://localhost:3000/api/private-messages', {
+        const response = await fetch('/api/private-messages', {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -1069,7 +1069,7 @@ const NotificationsSection = ({ location: locationProp }) => {
       }
 
       const response = await fetch(
-        "http://localhost:3000/api/notifications?status=pending&limit=50",
+        "/api/notifications?status=pending&limit=50",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -1104,7 +1104,7 @@ const NotificationsSection = ({ location: locationProp }) => {
       }
 
       const response = await fetch(
-        "http://localhost:3000/api/notifications/unread-count",
+        "/api/notifications/unread-count",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -1129,7 +1129,7 @@ const NotificationsSection = ({ location: locationProp }) => {
 
       const token = localStorage.getItem("token");
       const response = await fetch(
-        "http://localhost:3000/api/pairs/accept",
+        "/api/pairs/accept",
         {
           method: 'POST',
           headers: {
@@ -1180,7 +1180,7 @@ const NotificationsSection = ({ location: locationProp }) => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:3000/api/pairs/${pairId}/reject`,
+        `/api/pairs/${pairId}/reject`,
         {
           method: 'POST',
           headers: {
@@ -1212,7 +1212,7 @@ const NotificationsSection = ({ location: locationProp }) => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:3000/api/chats/${pairId}/accept-end`,
+        `/api/chats/${pairId}/accept-end`,
         {
           method: 'POST',
           headers: {
@@ -1244,7 +1244,7 @@ const NotificationsSection = ({ location: locationProp }) => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:3000/api/chats/${pairId}/reject-end`,
+        `/api/chats/${pairId}/reject-end`,
         {
           method: 'POST',
           headers: {
@@ -1276,7 +1276,7 @@ const NotificationsSection = ({ location: locationProp }) => {
     try {
       const token = localStorage.getItem("token");
       await fetch(
-        `http://localhost:3000/api/notifications/${notificationId}/read`,
+        `/api/notifications/${notificationId}/read`,
         {
           method: 'PATCH',
           headers: {

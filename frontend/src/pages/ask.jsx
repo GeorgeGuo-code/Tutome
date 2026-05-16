@@ -58,7 +58,7 @@ const Ask = () => {
     if (progress) tagIds.push(progressToTagId[progress]);
 
     try {
-      const response = await fetch("http://localhost:3000/api/questions", {
+      const response = await fetch("/api/questions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

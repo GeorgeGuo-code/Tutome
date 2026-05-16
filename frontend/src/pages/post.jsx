@@ -76,7 +76,7 @@ const Post = () => {
         setCurrentUserId(getCurrentUserId());
       }
 
-      const response = await fetch(`http://localhost:3000/api/questions/${id}`, {
+      const response = await fetch(`/api/questions/${id}`, {
         headers
       });
 
@@ -109,7 +109,7 @@ const Post = () => {
 
       // 只查找问题关联的结对
       if (questionId) {
-        const response = await fetch(`http://localhost:3000/api/pairs/question/${questionId}`, {
+        const response = await fetch(`/api/pairs/question/${questionId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -147,7 +147,7 @@ const Post = () => {
       }
 
       const response = await fetch(
-        `http://localhost:3000/api/ai/summary/${pairId}`,
+        `/api/ai/summary/${pairId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -189,7 +189,7 @@ const Post = () => {
       if (!token) return;
 
       const response = await fetch(
-        `http://localhost:3000/api/survey/post/${pairId}/feedback`,
+        `/api/survey/post/${pairId}/feedback`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -260,7 +260,7 @@ const Post = () => {
       const questionRole = question.role || 'student';
       const userRole = questionRole === 'student' ? 'teacher' : 'student';
 
-      const response = await fetch('http://localhost:3000/api/pairs/apply', {
+      const response = await fetch('/api/pairs/apply', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -280,7 +280,7 @@ const Post = () => {
         const pairId = data.id;
 
         // 关联问题到结对
-        const associateResponse = await fetch(`http://localhost:3000/api/pairs/${pairId}/associate`, {
+        const associateResponse = await fetch(`/api/pairs/${pairId}/associate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

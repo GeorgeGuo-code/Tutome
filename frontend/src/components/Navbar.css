@@ -1,10 +1,11 @@
-/* 导航栏样式 */
-.navbar {
+/* ========== 桌面端顶部导航栏 ========== */
+.navbar-desktop {
   background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
   z-index: 1000;
+  display: none;
 }
 
 .nav-container {
@@ -63,7 +64,6 @@
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
 }
 
-/* 下拉菜单样式 */
 .nav-dropdown {
   position: relative;
   display: inline-block;
@@ -120,42 +120,184 @@
   border-radius: 10px;
 }
 
-.dropdown-item:last-child {
-  border-bottom: none;
-}
-
 .dropdown-item:hover {
   background: linear-gradient(135deg, rgba(51, 90, 122, 0.1) 0%, rgba(166, 146, 152, 0.1) 100%);
   color: #335A7A;
   transform: translateX(4px);
 }
 
-.dropdown-item:hover {
-  background: #f0f0f0;
+/* ========== 移动端底部 Tab 栏 ========== */
+.navbar-mobile {
+  display: flex;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid #E5E7EB;
+  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.mobile-tabs {
+  display: flex;
+  width: 100%;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.mobile-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 8px;
+  min-width: 56px;
+  min-height: 48px;
+  border: none;
+  background: transparent;
+  color: #9CA3AF;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.mobile-tab:active {
+  opacity: 0.7;
+}
+
+.mobile-tab-active {
   color: #335A7A;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .nav-container {
-    padding: 1rem;
-  }
-
-  .nav-logo {
-    font-size: 1.5rem;
-  }
-
-  .nav-links {
-    gap: 1rem;
-  }
-
-  .nav-link {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.9rem;
-  }
+.mobile-tab-icon {
+  font-size: 22px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
 }
 
-/* 修改密码模态框样式 */
+.mobile-tab-label {
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* ========== 移动端侧滑菜单 ========== */
+.mobile-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 2000;
+  animation: fadeIn 0.2s ease;
+}
+
+.mobile-menu {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 16px 16px 0 0;
+  z-index: 2001;
+  animation: slideUp 0.3s ease;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.mobile-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.mobile-menu-username {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1F2937;
+}
+
+.mobile-menu-close {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #F3F4F6;
+  border-radius: 50%;
+  font-size: 22px;
+  color: #6B7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-menu-close:active {
+  background: #E5E7EB;
+}
+
+.mobile-menu-items {
+  padding: 12px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: none;
+  background: #F9FAFB;
+  border-radius: 12px;
+  font-size: 16px;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  width: 100%;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+}
+
+.mobile-menu-item:active {
+  background: #F3F4F6;
+}
+
+.mobile-menu-item svg,
+.mobile-menu-item-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.mobile-menu-item-danger {
+  color: #EF4444;
+  background: #FEF2F2;
+}
+
+.mobile-menu-item-danger:active {
+  background: #FEE2E2;
+}
+
+/* ========== 修改密码模态框 ========== */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -166,8 +308,9 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 2000;
+  z-index: 3000;
   animation: fadeIn 0.3s ease-in-out;
+  padding: 16px;
 }
 
 .modal-content {
@@ -176,11 +319,11 @@
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   max-width: 400px;
-  width: 90%;
-  animation: slideUp 0.3s ease-in-out;
+  width: 100%;
+  animation: modalSlideUp 0.3s ease-in-out;
 }
 
-@keyframes slideUp {
+@keyframes modalSlideUp {
   from {
     opacity: 0;
     transform: translateY(20px);
@@ -207,6 +350,7 @@
   margin-bottom: 0.5rem;
   color: #555;
   font-weight: 500;
+  font-size: 14px;
 }
 
 .form-group input {
@@ -216,6 +360,7 @@
   border-radius: 6px;
   font-size: 1rem;
   transition: border-color 0.3s ease;
+  -webkit-appearance: none;
 }
 
 .form-group input:focus {
@@ -257,6 +402,8 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .modal-button:disabled {
@@ -269,7 +416,7 @@
   color: #666;
 }
 
-.modal-button.secondary:hover:not(:disabled) {
+.modal-button.secondary:active:not(:disabled) {
   background: #e5e5e5;
 }
 
@@ -278,7 +425,29 @@
   color: white;
 }
 
-.modal-button.primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.4);
+.modal-button.primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* ========== 响应式：桌面端显示顶部导航 ========== */
+@media (min-width: 769px) {
+  .navbar-desktop {
+    display: block;
+  }
+
+  .navbar-mobile {
+    display: none;
+  }
+}
+
+/* ========== 桌面端特定 hover 效果 ========== */
+@media (hover: hover) {
+  .modal-button.secondary:hover:not(:disabled) {
+    background: #e5e5e5;
+  }
+
+  .modal-button.primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(51, 90, 122, 0.4);
+  }
 }

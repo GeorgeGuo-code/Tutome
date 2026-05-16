@@ -1,9 +1,15 @@
 .reward-exchange-page {
   min-height: 100vh;
   background-color: #F5F7FA;
-  padding: 120px 20px 40px;
+  padding: 16px 16px 32px;
   max-width: 1200px;
   margin: 0 auto;
+}
+
+@media (min-width: 769px) {
+  .reward-exchange-page {
+    padding: 120px 20px 40px;
+  }
 }
 
 .exchange-header {
@@ -16,7 +22,7 @@
 }
 
 .exchange-back-btn {
-  padding: 8px 16px;
+  padding: 10px 16px;
   background: transparent;
   color: #335A7A;
   border: 1px solid #335A7A;
@@ -24,6 +30,8 @@
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
   transition: all 0.2s ease;
 }
 

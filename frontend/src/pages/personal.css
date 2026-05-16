@@ -1,19 +1,26 @@
 .personal-container {
   min-height: 100vh;
   background-color: #F5F7FA;
-  padding: 120px 20px 40px;
-  max-width: 1200px;
+  padding: 16px 12px 32px;
+  max-width: 100%;
   margin: 0 auto;
 }
 
+@media (min-width: 769px) {
+  .personal-container {
+    padding: 120px 32px 40px;
+    max-width: 1400px;
+  }
+}
+
 .personal-header {
-  margin-bottom: 32px;
-  padding-bottom: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
   border-bottom: 1px solid #E5E7EB;
 }
 
 .breadcrumb-text {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   color: #1F2937;
 }
@@ -21,20 +28,43 @@
 /* 左右分栏布局 */
 .personal-content-wrapper {
   display: flex;
-  gap: 24px;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 16px;
 }
 
 /* 左侧导航栏 */
 .personal-sidebar {
-  width: 200px;
+  width: 100%;
   flex-shrink: 0;
   background: white;
   border-radius: 8px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  padding: 16px;
-  position: sticky;
-  top: 120px;
+  padding: 12px;
+  position: static;
+}
+
+@media (min-width: 769px) {
+  .personal-sidebar {
+    width: 200px;
+    position: sticky;
+    top: 120px;
+    padding: 16px;
+  }
+
+  .personal-content-wrapper {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 24px;
+  }
+
+  .personal-header {
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+  }
+
+  .breadcrumb-text {
+    font-size: 20px;
+  }
 }
 
 .sidebar-nav {
@@ -57,6 +87,8 @@
   text-align: left;
   font-size: 15px;
   color: #6B7280;
+  min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .sidebar-item:hover {
@@ -87,9 +119,17 @@
 /* 个人主页样式 */
 .profile-section {
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  padding: 20px;
+}
+
+@media (min-width: 769px) {
+  .profile-section {
+    padding: 32px 36px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  }
 }
 
 /* 加载和错误状态 */
@@ -129,10 +169,37 @@
 /* 用户信息卡片 */
 .profile-header {
   display: flex;
-  gap: 24px;
-  padding-bottom: 32px;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  padding-bottom: 20px;
   border-bottom: 1px solid #E5E7EB;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 769px) {
+  .profile-header {
+    flex-direction: row;
+    align-items: flex-start;
+    text-align: left;
+    gap: 24px;
+    padding-bottom: 28px;
+    margin-bottom: 28px;
+  }
+
+  .profile-avatar {
+    width: 100px;
+    height: 100px;
+  }
+
+  .avatar-emoji {
+    font-size: 48px;
+  }
+
+  .profile-nickname {
+    font-size: 24px;
+  }
 }
 
 /* 个人主页头部 */
@@ -140,9 +207,16 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
-  padding-bottom: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
   border-bottom: 1px solid #E5E7EB;
+}
+
+@media (min-width: 769px) {
+  .profile-section-header {
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+  }
 }
 
 .profile-section-title {
@@ -337,8 +411,8 @@
 
 .profile-avatar {
   flex-shrink: 0;
-  width: 100px;
-  height: 100px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   overflow: hidden;
   background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
@@ -360,7 +434,7 @@
 }
 
 .avatar-emoji {
-  font-size: 48px;
+  font-size: 30px;
   font-weight: 600;
   color: white;
 }
@@ -371,7 +445,7 @@
 }
 
 .profile-nickname {
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 600;
   color: #1F2937;
   margin: 0 0 8px 0;
@@ -414,8 +488,22 @@
 /* 学科偏好网格 */
 .preferences-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 32px;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+@media (min-width: 600px) {
+  .preferences-grid {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+  }
+}
+
+@media (min-width: 769px) {
+  .preferences-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
 }
 
 .preference-column {
@@ -492,85 +580,14 @@
   box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
 }
 
-/* 响应式设计 - 个人主页 */
-@media (max-width: 768px) {
-  .profile-section {
-    padding: 24px;
-  }
-
-  .profile-header {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .profile-avatar {
-    width: 80px;
-    height: 80px;
-  }
-
-  .avatar-emoji {
-    font-size: 36px;
-  }
-
-  .profile-nickname {
-    font-size: 20px;
-  }
-
-  .preferences-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .difficulty-tags {
-    gap: 8px;
-  }
-
-  .difficulty-tag {
-    font-size: 13px;
-    padding: 6px 12px;
-  }
+/* 移动端难度偏好标签细化 */
+.difficulty-tags {
+  gap: 8px;
 }
 
-@media (max-width: 480px) {
-  .profile-section {
-    padding: 20px;
-  }
-
-  .profile-header {
-    gap: 16px;
-    padding-bottom: 24px;
-    margin-bottom: 24px;
-  }
-
-  .profile-avatar {
-    width: 64px;
-    height: 64px;
-  }
-
-  .avatar-emoji {
-    font-size: 28px;
-  }
-
-  .profile-nickname {
-    font-size: 18px;
-  }
-
-  .profile-username {
-    font-size: 13px;
-  }
-
-  .profile-bio {
-    font-size: 13px;
-  }
-
-  .preference-column {
-    padding: 16px;
-  }
-
-  .topic-item {
-    font-size: 13px;
-  }
+.difficulty-tag {
+  font-size: 13px;
+  padding: 6px 12px;
 }
 
 /* 历史记录区域 */
@@ -958,7 +975,7 @@
 }
 
 .notification-btn {
-  padding: 8px 16px;
+  padding: 10px 16px;
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -966,6 +983,8 @@
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .notification-btn-reject {
@@ -1128,101 +1147,110 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-/* 响应式 */
-@media (max-width: 768px) {
-  .personal-container {
-    padding: 100px 16px 32px;
-  }
+/* 移动端：sidebar 内导航横向排列 */
+.sidebar-nav {
+  flex-direction: row;
+  gap: 8px;
+}
 
-  .personal-content-wrapper {
-    flex-direction: column;
-  }
+.sidebar-item {
+  flex: 1;
+  justify-content: center;
+  padding: 10px 12px;
+  font-size: 14px;
+}
 
-  .personal-sidebar {
-    width: 100%;
-    position: static;
-  }
+.sidebar-icon {
+  font-size: 16px;
+}
 
+.history-card {
+  padding: 16px;
+}
+
+.history-header {
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-tags-inline {
+  width: 100%;
+}
+
+.tag-small {
+  font-size: 10px;
+  padding: 3px 8px;
+}
+
+.pagination {
+  gap: 4px;
+}
+
+.page-btn {
+  width: 32px;
+  height: 32px;
+  font-size: 13px;
+}
+
+.notification-item {
+  flex-direction: column;
+}
+
+.notification-actions {
+  flex-direction: row;
+  width: 100%;
+}
+
+.notification-btn {
+  flex: 1;
+}
+
+@media (min-width: 769px) {
   .sidebar-nav {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .sidebar-item {
+    flex: 0;
+    justify-content: flex-start;
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+
+  .sidebar-icon {
+    font-size: 18px;
+  }
+
+  .history-card {
+    padding: 24px;
+  }
+
+  .history-header {
     flex-direction: row;
     gap: 12px;
   }
 
-  .sidebar-item {
-    flex: 1;
-    justify-content: center;
-  }
-
-  .history-card {
-    padding: 20px;
-  }
-
-  .pagination {
-    gap: 4px;
-  }
-
-  .page-btn {
-    width: 32px;
-    height: 32px;
-    font-size: 13px;
-  }
-
-  .notification-item {
-    flex-direction: column;
-  }
-
-  .notification-actions {
-    flex-direction: row;
-    width: 100%;
-  }
-
-  .notification-btn {
-    flex: 1;
-  }
-}
-
-@media (max-width: 480px) {
-  .personal-container {
-    padding: 90px 12px 24px;
-  }
-
-  .personal-header {
-    margin-bottom: 24px;
-  }
-
-  .breadcrumb-text {
-    font-size: 18px;
-  }
-
-  .sidebar-nav {
-    gap: 8px;
-  }
-
-  .sidebar-item {
-    padding: 10px 12px;
-    font-size: 14px;
-  }
-
-  .sidebar-icon {
-    font-size: 16px;
-  }
-
-  .history-card {
-    padding: 16px;
-  }
-
-  .history-header {
-    flex-direction: column;
-    gap: 8px;
-  }
-
   .history-tags-inline {
-    width: 100%;
+    width: auto;
   }
 
   .tag-small {
-    font-size: 10px;
-    padding: 3px 8px;
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+
+  .notification-item {
+    flex-direction: row;
+  }
+
+  .notification-actions {
+    flex-direction: column;
+    width: auto;
+  }
+
+  .notification-btn {
+    flex: 0;
   }
 }
 
@@ -1280,16 +1308,23 @@
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  z-index: 1000;
-  padding: 20px;
+  z-index: 3000;
+  padding: 0;
+}
+
+@media (min-width: 769px) {
+  .profile-edit-modal-mask {
+    align-items: center;
+    padding: 20px;
+  }
 }
 
 .profile-edit-modal {
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
   width: 100%;
   max-width: 600px;
   max-height: 90vh;
@@ -1298,6 +1333,13 @@
   flex-direction: column;
   position: relative;
   z-index: 1;
+}
+
+@media (min-width: 769px) {
+  .profile-edit-modal {
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
 }
 
 .profile-edit-modal-header {
@@ -1321,8 +1363,8 @@
   font-size: 28px;
   color: #6B7280;
   cursor: pointer;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1330,6 +1372,7 @@
   transition: all 0.2s ease;
   padding: 0;
   line-height: 1;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .profile-edit-modal-close:hover:not(:disabled) {

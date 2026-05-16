@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { checkAuth, requireAuth } from '../services/auth';
+import { HomeIcon, PenIcon, SearchIcon, HandshakeIcon, UserIcon, MenuIcon, KeyIcon } from './icons';
 import './Navbar.css';
 
 export default function Navbar({ showMinimal = false, showLoginOnly = false }) {
   const [showChangePasswordModal, setShowChangePasswordModal] = React.useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [passwordForm, setPasswordForm] = React.useState({
     currentPassword: '',
     newPassword: '',
@@ -15,8 +17,13 @@ export default function Navbar({ showMinimal = false, showLoginOnly = false }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const username = localStorage.getItem('username');
+  const location = useLocation();
 
-  // 检查登录状态，如果过期则清除
+  // 关闭移动端菜单（路由变化时）
+  React.useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
   const isAuthenticated = checkAuth();
 
   const handleLogout = () => {
@@ -42,7 +49,7 @@ export default function Navbar({ showMinimal = false, showLoginOnly = false }) {
       const decoded = JSON.parse(atob(token.split('.')[1]));
       const userId = decoded.userId;
 
-      const response = await fetch(`http://localhost:3000/api/users/${userId}/change-password`, {
+      const response = await fetch(`/api/users/${userId}/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,43 +90,27 @@ export default function Navbar({ showMinimal = false, showLoginOnly = false }) {
     window.location.href = '/login';
   };
 
+  const navLinks = [
+    { to: '/ask', label: '提问', Icon: PenIcon, guideData: 'ask-link' },
+    { to: '/browse', label: '浏览', Icon: SearchIcon },
+    { to: '/match', label: '匹配', Icon: HandshakeIcon },
+    { to: '/personal', label: '我的', Icon: UserIcon, guideData: 'personal-card' },
+  ];
+
   return (
-    <nav className="navbar">
-      <div className="nav-container">
-        <Link to="/" className="nav-logo">
-          TUTOME
-        </Link>
-        <div className="nav-links">
-          {showLoginOnly ? (
-            // 登录界面导航栏（只保留主页）
-            <>
+    <>
+      {/* 桌面端顶部导航栏 */}
+      <nav className="navbar navbar-desktop">
+        <div className="nav-container">
+          <Link to="/" className="nav-logo">
+            TUTOME
+          </Link>
+          <div className="nav-links">
+            {showLoginOnly ? (
               <NavLink to="/" className="nav-link">主页</NavLink>
-            </>
-          ) : showMinimal ? (
-            // 简化版导航栏（主页）
-            <>
-              {isAuthenticated && username ? (
-                <div className="nav-dropdown">
-                  <span className="nav-link nav-username">{username}</span>
-                  <div className="dropdown-menu">
-                    <span className="dropdown-item" onClick={() => setShowChangePasswordModal(true)}>修改密码</span>
-                    <span className="dropdown-item" onClick={handleLogout}>退出登录</span>
-                  </div>
-                </div>
-              ) : (
-                <NavLink to="/login" className="nav-link">登录</NavLink>
-              )}
-            </>
-          ) : (
-            // 完整版导航栏
-            <>
-              <NavLink to="/" className="nav-link">主页</NavLink>
-              {isAuthenticated && username ? (
-                <>
-                  <NavLink to="/personal" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}>个人中心</NavLink>
-                  <NavLink to="/ask" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`} data-guide="ask-link">提问</NavLink>
-                  <NavLink to="/browse" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}>浏览</NavLink>
-                  <NavLink to="/match" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}>匹配</NavLink>
+            ) : showMinimal ? (
+              <>
+                {isAuthenticated && username ? (
                   <div className="nav-dropdown">
                     <span className="nav-link nav-username">{username}</span>
                     <div className="dropdown-menu">
@@ -127,20 +118,112 @@ export default function Navbar({ showMinimal = false, showLoginOnly = false }) {
                       <span className="dropdown-item" onClick={handleLogout}>退出登录</span>
                     </div>
                   </div>
-                </>
-              ) : (
-                <>
-                  <span className="nav-link" onClick={handleNotLoggedIn} style={{ cursor: 'pointer' }}>个人中心</span>
-                  <span className="nav-link" onClick={handleNotLoggedIn} style={{ cursor: 'pointer' }}>提问</span>
-                  <span className="nav-link" onClick={handleNotLoggedIn} style={{ cursor: 'pointer' }}>浏览</span>
-                  <span className="nav-link" onClick={handleNotLoggedIn} style={{ cursor: 'pointer' }}>匹配</span>
+                ) : (
                   <NavLink to="/login" className="nav-link">登录</NavLink>
-                </>
-              )}
-            </>
-          )}
+                )}
+              </>
+            ) : (
+              <>
+                <NavLink to="/" className="nav-link">主页</NavLink>
+                {isAuthenticated && username ? (
+                  <>
+                    {navLinks.map(link => (
+                      <NavLink
+                        key={link.to}
+                        to={link.to}
+                        className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}
+                        data-guide={link.guideData}
+                      >
+                        {link.label}
+                      </NavLink>
+                    ))}
+                    <div className="nav-dropdown">
+                      <span className="nav-link nav-username">{username}</span>
+                      <div className="dropdown-menu">
+                        <span className="dropdown-item" onClick={() => setShowChangePasswordModal(true)}>修改密码</span>
+                        <span className="dropdown-item" onClick={handleLogout}>退出登录</span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span className="nav-link" onClick={handleNotLoggedIn} style={{ cursor: 'pointer' }}>个人中心</span>
+                    <span className="nav-link" onClick={handleNotLoggedIn} style={{ cursor: 'pointer' }}>提问</span>
+                    <span className="nav-link" onClick={handleNotLoggedIn} style={{ cursor: 'pointer' }}>浏览</span>
+                    <span className="nav-link" onClick={handleNotLoggedIn} style={{ cursor: 'pointer' }}>匹配</span>
+                    <NavLink to="/login" className="nav-link">登录</NavLink>
+                  </>
+                )}
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      </nav>
+
+      {/* 移动端底部 Tab 栏 */}
+      {!showLoginOnly && (
+        <nav className="navbar-mobile">
+          <div className="mobile-tabs">
+            <NavLink to="/" className={({ isActive }) => `mobile-tab ${isActive ? 'mobile-tab-active' : ''}`}>
+              <span className="mobile-tab-icon"><HomeIcon size={22} /></span>
+              <span className="mobile-tab-label">主页</span>
+            </NavLink>
+            {isAuthenticated ? (
+              <>
+                {navLinks.map(link => {
+                  const IconComponent = link.Icon;
+                  return (
+                    <NavLink
+                      key={link.to}
+                      to={link.to}
+                      className={({ isActive }) => `mobile-tab ${isActive ? 'mobile-tab-active' : ''}`}
+                      data-guide={link.guideData}
+                    >
+                      <span className="mobile-tab-icon"><IconComponent size={22} /></span>
+                      <span className="mobile-tab-label">{link.label}</span>
+                    </NavLink>
+                  );
+                })}
+                <button
+                  className={`mobile-tab ${mobileMenuOpen ? 'mobile-tab-active' : ''}`}
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                >
+                  <span className="mobile-tab-icon">
+                    {showMinimal ? <UserIcon size={22} /> : <MenuIcon size={22} />}
+                  </span>
+                  <span className="mobile-tab-label">{showMinimal ? username || '我' : '菜单'}</span>
+                </button>
+              </>
+            ) : (
+              <NavLink to="/login" className={({ isActive }) => `mobile-tab ${isActive ? 'mobile-tab-active' : ''}`}>
+                <span className="mobile-tab-icon"><KeyIcon size={22} /></span>
+                <span className="mobile-tab-label">登录</span>
+              </NavLink>
+            )}
+          </div>
+        </nav>
+      )}
+
+      {/* 移动端侧滑菜单 */}
+      {mobileMenuOpen && (
+        <>
+          <div className="mobile-menu-overlay" onClick={() => setMobileMenuOpen(false)} />
+          <div className="mobile-menu">
+            <div className="mobile-menu-header">
+              <span className="mobile-menu-username">{username || '用户'}</span>
+              <button className="mobile-menu-close" onClick={() => setMobileMenuOpen(false)}>×</button>
+            </div>
+            <div className="mobile-menu-items">
+              <button className="mobile-menu-item" onClick={() => { setShowChangePasswordModal(true); setMobileMenuOpen(false); }}>
+                <KeyIcon size={20} /> 修改密码
+              </button>
+              <button className="mobile-menu-item mobile-menu-item-danger" onClick={handleLogout}>
+                <span className="mobile-menu-item-icon">→</span> 退出登录
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* 修改密码模态框 */}
       {showChangePasswordModal && (
@@ -198,6 +281,6 @@ export default function Navbar({ showMinimal = false, showLoginOnly = false }) {
           </div>
         </div>
       )}
-    </nav>
+    </>
   );
 }

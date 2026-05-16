@@ -95,7 +95,7 @@ const Browse = () => {
   const fetchQuestions = async () => {
     setLoading(true);
     try {
-      let url = `http://localhost:3000/api/questions?page=${currentPage}&limit=4`;
+      let url = `/api/questions?page=${currentPage}&limit=4`;
       if (mode !== "all") {
         url += `&tagId=${mode}`;
       }

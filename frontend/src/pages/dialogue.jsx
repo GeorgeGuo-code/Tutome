@@ -340,7 +340,7 @@ const Dialogue = () => {
       }
 
       const response = await fetch(
-        `http://localhost:3000/api/chats/${pairId}`,
+        `/api/chats/${pairId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -388,7 +388,7 @@ const Dialogue = () => {
       if (!token) return;
 
       const response = await fetch(
-        `http://localhost:3000/api/pairs/${pairId}`,
+        `/api/pairs/${pairId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -423,7 +423,7 @@ const Dialogue = () => {
         formData.append('content', inputText);
 
         const response = await fetch(
-          `http://localhost:3000/api/chats/${pairId}/image`,
+          `/api/chats/${pairId}/image`,
           {
             method: "POST",
             headers: {
@@ -444,7 +444,7 @@ const Dialogue = () => {
       } else {
         // 纯文本消息
         const response = await fetch(
-          `http://localhost:3000/api/chats/${pairId}`,
+          `/api/chats/${pairId}`,
           {
             method: "POST",
             headers: {
@@ -545,7 +545,7 @@ const Dialogue = () => {
       }
 
       const response = await fetch(
-        `http://localhost:3000/api/chats/${pairId}/request-end`,
+        `/api/chats/${pairId}/request-end`,
         {
           method: "POST",
           headers: {
@@ -590,7 +590,7 @@ const Dialogue = () => {
       }
 
       const response = await fetch(
-        `http://localhost:3000/api/chats/${pairId}/accept-end`,
+        `/api/chats/${pairId}/accept-end`,
         {
           method: "POST",
           headers: {
@@ -628,7 +628,7 @@ const Dialogue = () => {
       }
 
       const response = await fetch(
-        `http://localhost:3000/api/chats/${pairId}/reject-end`,
+        `/api/chats/${pairId}/reject-end`,
         {
           method: "POST",
           headers: {
@@ -685,7 +685,7 @@ const Dialogue = () => {
 
       // 获取所有轮次
       const roundsResponse = await fetch(
-        `http://localhost:3000/api/ai/rounds/${pairId}`,
+        `/api/ai/rounds/${pairId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -709,7 +709,7 @@ const Dialogue = () => {
         if (!round.reviewed && round.studentMessageId) {
           try {
             const reviewResponse = await fetch(
-              `http://localhost:3000/api/ai/round/round_${round.studentMessageId}`,
+              `/api/ai/round/round_${round.studentMessageId}`,
               {
                 method: 'POST',
                 headers: {
@@ -753,7 +753,7 @@ const Dialogue = () => {
       console.log('[fetchRoundReviews] 开始获取轮次审查结果, pairId:', pairId);
 
       const response = await fetch(
-        `http://localhost:3000/api/ai/rounds/${pairId}`,
+        `/api/ai/rounds/${pairId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -811,7 +811,7 @@ const Dialogue = () => {
       console.log('[总结] 开始生成对话总结');
 
       const response = await fetch(
-        'http://localhost:3000/api/ai/summary',
+        '/api/ai/summary',
         {
           method: 'POST',
           headers: {

@@ -5,8 +5,99 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f5f7fa;
   color: #333;
+  /* 移动端底部 Tab 栏高度 + 安全区 */
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 桌面端不需要底部 padding */
+@media (min-width: 769px) {
+  body {
+    padding-bottom: 0;
+  }
+}
+
+/* 全局滚动优化 */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* 移动端 Modal 打开时禁止 body 滚动 */
+body.modal-open {
+  overflow: hidden;
+}
+
+/* ========== 全局触摸交互优化 ========== */
+
+/* 所有可交互元素去除默认高亮 */
+button, a, input, textarea, select, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 表单元素防止 iOS 自动缩放 */
+input, textarea, select {
+  font-size: 16px;
+}
+
+/* 移动端最小触摸区域 */
+@media (max-width: 768px) {
+  button,
+  [role="button"],
+  .nav-link,
+  .sidebar-item,
+  input[type="submit"],
+  input[type="button"] {
+    min-height: 44px;
+  }
+
+  /* 表格/列表项更易点击 */
+  .user-card,
+  .question-card,
+  .history-card,
+  .notification-item {
+    cursor: pointer;
+  }
+}
+
+/* 移动端滚动优化 */
+@media (max-width: 768px) {
+  .messages-area,
+  .review-panel-content,
+  .modal-content,
+  .notification-list {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+  }
+}
+
+/* 仅在支持 hover 的设备上使用 hover 效果 */
+@media (hover: hover) {
+  .card:hover,
+  .user-card:hover,
+  .question-card:hover,
+  .history-card:hover,
+  .nav-link:hover,
+  button:hover {
+    /* hover 效果由各组件 CSS 定义 */
+  }
+}
+
+/* 触摸设备使用 active 替代 hover */
+@media (hover: none) {
+  .card:active,
+  .question-card:active,
+  .history-card:active {
+    transform: scale(0.99);
+  }
 }

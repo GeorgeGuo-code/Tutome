@@ -12,7 +12,7 @@ const Login = () => {
     setMessage("处理中...");
 
     const endpoint = isLogin ? "login" : "register";
-    const apiUrl = `http://localhost:3000/api/${endpoint}`;
+    const apiUrl = `/api/${endpoint}`;
 
     try {
       const response = await fetch(apiUrl, {
