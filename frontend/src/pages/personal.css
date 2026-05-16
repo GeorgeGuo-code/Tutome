@@ -2674,8 +2674,8 @@
 .private-message-input-group input:focus,
 .private-message-input-group textarea:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #335A7A;
+  box-shadow: 0 0 0 3px rgba(51, 90, 122, 0.1);
 }
 
 .private-message-input-group input:disabled,
@@ -2694,8 +2694,8 @@
 }
 
 .private-message-textarea-wrapper.dragging textarea {
-  border-color: #667eea;
-  background: #f0f0ff;
+  border-color: #335A7A;
+  background: rgba(51, 90, 122, 0.05);
 }
 
 .drag-overlay {
@@ -2704,14 +2704,14 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(102, 126, 234, 0.1);
-  border: 2px dashed #667eea;
+  background: rgba(51, 90, 122, 0.08);
+  border: 2px dashed #335A7A;
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
-  color: #667eea;
+  color: #335A7A;
   font-weight: 500;
   pointer-events: none;
 }
@@ -2771,7 +2771,7 @@
 
 .private-message-send-btn {
   padding: 10px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   color: white;
   border: none;
   border-radius: 6px;
@@ -2779,12 +2779,12 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.3);
 }
 
 .private-message-send-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(51, 90, 122, 0.4);
 }
 
 .private-message-send-btn:active:not(:disabled) {
@@ -2811,7 +2811,7 @@
   display: inline-flex;
   align-items: center;
   margin-left: 8px;
-  color: #667eea;
+  color: #335A7A;
   font-size: 13px;
 }
 
@@ -2821,7 +2821,7 @@
 }
 
 .notification-item.private-message-notification .image-indicator.clickable:hover {
-  color: #5568d3;
+  color: #3E4D60;
 }
 
 .notification-image-preview {
@@ -2844,11 +2844,13 @@
 
 /* 回复按钮 */
 .notification-btn-reply {
-  background: #667eea;
+  background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   color: white;
   border: none;
+  box-shadow: 0 2px 8px rgba(51, 90, 122, 0.25);
 }
 
 .notification-btn-reply:hover {
-  background: #5568d3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(51, 90, 122, 0.35);
 }
