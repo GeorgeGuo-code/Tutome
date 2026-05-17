@@ -80,6 +80,7 @@ const POST_SURVEY_SYSTEM_PROMPT = `你是一个教学评估专家，负责基于
   - **绝对禁止使用任何 Unicode 数学符号**（∫、≤、≥、²、³、π、θ 等）
 
 ### 第二部分：固定评价组件
+
 **学生评价老师**（3题，5分制）：
 1. 教学清晰度：老师是否能清楚地解释概念？
 2. 教学态度：老师的教学态度是否积极？
@@ -94,6 +95,17 @@ const POST_SURVEY_SYSTEM_PROMPT = `你是一个教学评估专家，负责基于
 1. 总体满意度：对本次教学的总体满意度
 2. 内容质量：教学内容是否丰富有价值
 3. 推荐意愿：是否愿意推荐给其他人
+
+**AI教学模式专用评价**（2题，用于替代学生评价老师的3题）：
+- 题目1（打分题 1/3/5）：与真人对话模式相比，AI对话模式是否让您压力减小？
+  - 选项：["1分", "3分", "5分"]
+  - 标签：["压力更大", "一样", "压力减小"]
+- 题目2（选择题 A/B/C）：与真人对话模式相比，AI对话模式是否让您学到更多内容？
+  - 选项：["A. 是的，让我学到更多", "B. 我觉得差不多", "C. 不，与真人对话收获更多"]
+
+**重要说明**：
+- 如果是AI教学模式，'fixedComponents.student_evaluation' 应使用上面的AI模式专用评价（2题）
+- 如果是正常教学模式，'fixedComponents.student_evaluation' 应使用学生评价老师的3题（5分制）
 
 ## 输出格式（严格JSON）
 - question 和 options 中的数学公式必须使用纯 LaTeX（ASCII格式）
@@ -505,19 +517,44 @@ async function generatePostSurvey(pairId) {
       component_type: 'teacher_evaluation'
     }));
 
-    const studentEval = (fixedComponents.student_evaluation || []).map((q, idx) => ({
-      id: knowledgeQuestions.length + 3 + idx,
-      ...q,
-      is_fixed: true,
-      component_type: 'student_evaluation'
-    }));
+    // AI教学模式：使用自定义评价题；正常教学模式：使用AI生成的student_evaluation
+    let studentEval;
+    let aiModeEval = [];
+    if (pair.is_ai_teaching) {
+      // AI教学模式：AI模式评价题合并到teachingEval部分
+      aiModeEval = [
+        {
+          id: knowledgeQuestions.length + 3,
+          component_type: 'ai_mode_evaluation',
+          is_fixed: true,
+          question: "与真人对话模式相比，AI对话模式是否让您压力减小？",
+          options: ["1分", "3分", "5分"],
+          option_labels: ["压力更大", "一样", "压力减小"]
+        },
+        {
+          id: knowledgeQuestions.length + 4,
+          component_type: 'ai_mode_evaluation',
+          is_fixed: true,
+          question: "与真人对话模式相比，AI对话模式是否让您学到更多内容？",
+          options: ["A. 是的，让我学到更多", "B. 我觉得差不多", "C. 不，与真人对话收获更多"]
+        }
+      ];
+      studentEval = [];
+    } else {
+      studentEval = (fixedComponents.student_evaluation || []).map((q, idx) => ({
+        id: knowledgeQuestions.length + 3 + idx,
+        ...q,
+        is_fixed: true,
+        component_type: 'student_evaluation'
+      }));
+    }
 
-    const teachingEval = (fixedComponents.teaching_evaluation || []).map((q, idx) => ({
+    const teachingEval = [...(fixedComponents.teaching_evaluation || []).map((q, idx) => ({
       id: knowledgeQuestions.length + 6 + idx,
       ...q,
       is_fixed: true,
       component_type: 'teaching_evaluation'
-    }));
+    })), ...aiModeEval];
 
     const allQuestions = [...knowledgeQuestions, ...teacherEval, ...studentEval, ...teachingEval];
 

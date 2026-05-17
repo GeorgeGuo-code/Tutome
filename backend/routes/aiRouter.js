@@ -18,4 +18,7 @@ aiRouter.post('/api/ai/round/:roundId', verifyJWT, aiController.reviewRound);
 // 获取对话总结
 aiRouter.get('/api/ai/summary/:pairId', verifyJWT, aiController.getConversationSummary);
 
+// AI学生追问
+aiRouter.post('/api/ai/student-ask', verifyJWT, aiController.studentAsk);
+
 module.exports = aiRouter;

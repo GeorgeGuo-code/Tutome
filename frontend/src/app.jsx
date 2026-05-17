@@ -57,6 +57,11 @@ export default function App() {
       console.log('收到实时通知:', notification);
       console.log('通知类型:', notification.type);
       console.log('申请人用户名:', notification.applicantUsername);
+      // round_review_completed 和 conversation_summary_completed 由 dialogue.jsx 处理，全局弹窗不需要显示（避免多标签页重复弹出）
+      if (notification.type === 'round_review_completed' || notification.type === 'conversation_summary_completed') {
+        console.log('跳过全局弹窗显示:', notification.type);
+        return;
+      }
       setNotifications((prev) => [notification, ...prev]);
     };
 

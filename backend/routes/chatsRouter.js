@@ -31,6 +31,9 @@ router.get('/api/pairs/:pairId', chatsController.getPairById);
 // 获取问题的结对
 router.get('/api/pairs/question/:questionId', chatsController.getPairByQuestionId);
 
+// 创建AI教学结对
+router.post('/api/pairs/ai-teaching', verifyJWT, chatsController.createAITeachingPair);
+
 // 自动关联结对到问题
 router.post('/api/pairs/:pairId/associate', verifyJWT, chatsController.associatePairWithQuestion);
 

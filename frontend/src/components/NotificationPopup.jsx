@@ -56,7 +56,7 @@ const NotificationPopup = ({ notifications, onRemove, onNotificationClick }) => 
         } else if (notification.type === 'student_error_detected') {
           notificationContent = (
             <span className="notification-popup-text">
-              检测到学生回答存在问题
+              检测到回答存在问题
             </span>
           );
         } else if (notification.type === 'survey_reminder') {

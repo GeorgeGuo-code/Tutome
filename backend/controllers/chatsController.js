@@ -437,8 +437,8 @@ const getMessages = async (req, res) => {
 // 发送消息
 const sendMessage = async (req, res) => {
     const { pairId } = req.params;
-    const { content } = req.body;
-    const senderId = req.user.userId;
+    const { content, senderRole } = req.body;
+    let senderId = req.user.userId;
 
     try {
         const pair = await queries.pair.getById(pairId);
@@ -455,18 +455,43 @@ const sendMessage = async (req, res) => {
             return res.status(403).json({ error: '无权发送消息' });
         }
 
-        const newMessage = await queries.message.create(pairId, senderId, content);
+        // AI学生消息不需要覆盖sender_id，保持原用户ID
+        // if (senderRole === 'ai_student') {
+        //     senderId = pair.teacher_id;  // AI学生的消息借用老师的ID
+        // }
 
-        // 判断是否需要触发轮次审查（学生发送且上一条是老师）
+        const newMessage = await queries.message.create(pairId, senderId, content, null, senderRole);
+
+        // 判断是否需要触发轮次审查（老师回复AI学生后触发）
         const messages = await queries.message.getByPairId(pairId);
         const lastMessage = messages.length > 1 ? messages[messages.length - 2] : null;
-        const shouldTriggerReview =
-            senderId !== pair.teacher_id && // 发送者是学生
-            lastMessage && lastMessage.sender_id === pair.teacher_id; // 上一条是老师
+        console.log('[发送消息] 审查触发诊断:', {
+            senderId,
+            senderRole,
+            teacherId: pair.teacher_id,
+            studentId: pair.student_id,
+            lastMessageSenderId: lastMessage?.sender_id,
+            lastMessageSenderRole: lastMessage?.sender_role,
+            messageCount: messages.length
+        });
+        let shouldTriggerReview =
+            senderId === pair.teacher_id && // 发送者是老师
+            lastMessage && // 有上一条消息
+            lastMessage.sender_id !== pair.teacher_id; // 上一条不是老师发的（包括正常学生或AI学生借用的sender_id）
+
+        // AI教学模式特殊处理：即使sender_id相同，也要检查sender_role
+        // AI学生的消息sender_role='ai_student'，但sender_id和老师相同（借用）
+        if (!shouldTriggerReview && pair.is_ai_teaching && lastMessage) {
+            // 如果上一条是AI学生发的消息，也触发审查
+            if (lastMessage.sender_role === 'ai_student') {
+                console.log('[发送消息] AI模式：检测到上一条是AI学生消息，触发审查');
+                shouldTriggerReview = true;
+            }
+        }
 
         if (shouldTriggerReview) {
-            // 异步触发轮次审查（不阻塞响应）
-            asyncRoundReviewer.triggerRoundReview(pairId, senderId);
+            console.log('[发送消息] 触发轮次审查条件满足，老师回复了AI学生的问题');
+            asyncRoundReviewer.triggerRoundReview(pairId, senderId, senderRole);
         }
 
         res.status(201).json(newMessage);
@@ -585,6 +610,13 @@ const requestEndTeaching = async (req, res) => {
 
         if (pair.status !== 'active') {
             return res.status(400).json({ error: '结对未激活或已结束' });
+        }
+
+        // AI教学模式：老师可以直接结束对话
+        if (pair.is_ai_teaching && pair.teacher_id === userId) {
+            const endedPair = await queries.pair.end(pairId);
+            asyncRoundReviewer.generateConversationSummaryAsync(pairId);
+            return res.json({ success: true, message: '对话已结束', pair: endedPair });
         }
 
         const updatedPair = await queries.pair.requestEnd(pairId, userId);
@@ -1040,6 +1072,56 @@ const findUserByNicknameController = async (req, res) => {
     }
 };
 
+// 创建AI教学结对
+const createAITeachingPair = async (req, res) => {
+    const { questionTitle, questionContent, tagIds } = req.body;
+    const userId = req.user.userId;
+
+    if (!questionTitle || !questionContent) {
+        return res.status(400).json({ error: '缺少必要参数' });
+    }
+
+    try {
+        // 检查用户的结对数量
+        const MAX_PAIRS = 10;
+        const limit = await queries.pair.checkUserPairLimit(userId, MAX_PAIRS);
+        if (!limit.canCreate) {
+            return res.status(400).json({
+                error: `已达到最大结对数量限制（${MAX_PAIRS}个）`,
+                message: `您当前已有${limit.currentCount}个活跃结对，无法创建更多`
+            });
+        }
+
+        // 创建AI教学结对
+        const pair = await queries.pair.createAITeachingPair(
+            userId,
+            questionTitle,
+            questionContent,
+            tagIds || []
+        );
+
+        // 异步生成热身题目（AI教学模式跳过）
+        surveyService.generatePreQuestions(parseInt(pair.id))
+            .then(preResult => {
+                if (preResult.success) {
+                    console.log('[AI教学结对] 生成热身题目完成');
+                }
+            })
+            .catch(err => {
+                console.error('[AI教学结对] 生成热身题目失败:', err);
+            });
+
+        res.status(201).json({
+            success: true,
+            pair: pair,
+            message: 'AI教学结对创建成功'
+        });
+    } catch (err) {
+        console.error('创建AI教学结对失败:', err);
+        res.status(500).json({ error: '创建失败' });
+    }
+};
+
 module.exports = {
     applyPair,
     acceptPair,
@@ -1061,5 +1143,6 @@ module.exports = {
     sendPrivateMessage,
     getPrivateMessages,
     getPrivateConversation,
-    findUserByNicknameController
+    findUserByNicknameController,
+    createAITeachingPair
 };

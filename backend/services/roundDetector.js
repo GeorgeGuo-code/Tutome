@@ -15,7 +15,9 @@ class RoundDetector {
 
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
-      const isTeacher = msg.sender_id === pair.teacher_id;
+      const isTeacher = msg.sender_role === 'ai_student'
+        ? false  // AI学生不算老师
+        : msg.sender_id === pair.teacher_id;
 
       if (!isTeacher) {
         // 学生发送消息：检查上一条消息是否来自老师
