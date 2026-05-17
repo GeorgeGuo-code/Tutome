@@ -19,13 +19,15 @@ const WINDOW_SIZE = 5;
  * 每当老师完成一轮回答时立即审查
  * @param {number} pairId - 结对ID
  * @param {number} senderId - 发送者ID
+ * @param {string} senderRole - 发送者角色
  */
-async function triggerRoundReview(pairId, senderId) {
+async function triggerRoundReview(pairId, senderId, senderRole) {
   try {
     console.log('[滑动窗口审查] ============');
     console.log('[滑动窗口] 触发轮次审查任务');
     console.log('[滑动窗口] 结对ID:', pairId);
     console.log('[滑动窗口] 发送者ID:', senderId);
+    console.log('[滑动窗口] 发送者角色:', senderRole);
 
     // 1. 获取结对信息
     const pair = await queries.pair.getById(pairId);
@@ -37,10 +39,10 @@ async function triggerRoundReview(pairId, senderId) {
     console.log('[滑动窗口] 结对信息: teacher_id=', pair.teacher_id, 'student_id=', pair.student_id);
     console.log('[滑动窗口] 将发送通知给: 学生=', pair.student_id, '老师=', pair.teacher_id);
 
-    // 只有学生发送消息才可能触发轮次审查（老师刚回答完）
-    if (senderId === pair.teacher_id) {
-      console.log('[滑动窗口] 发送者是老师，不触发轮次审查');
-      return { success: false, reason: '发送者是老师' };
+    // AI学生消息不触发轮次审查
+    if (senderRole === 'ai_student') {
+      console.log('[滑动窗口] 发送者是AI学生，不触发轮次审查');
+      return { success: false, reason: 'AI学生消息不触发审查' };
     }
 
     // 2. 获取结对的所有消息

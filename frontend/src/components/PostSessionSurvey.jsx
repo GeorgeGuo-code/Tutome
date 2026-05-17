@@ -245,11 +245,13 @@ const PostSessionSurvey = () => {
 
   // 根据用户角色过滤评价题
   // 老师：看到"对学生"的评价题
-  // 学生：看到"对老师"的评价题
+  // 学生：看到"对老师"的评价题（正常模式）或"AI模式评价"（AI教学模式）
   const myEvalQuestions = userRole === 'teacher'
     ? survey.questions.filter(q => q.component_type === 'student_evaluation')
     : survey.questions.filter(q => q.component_type === 'teacher_evaluation');
-  const teachingEvalQuestions = survey.questions.filter(q => q.component_type === 'teaching_evaluation');
+  const teachingEvalQuestions = survey.questions.filter(q =>
+    q.component_type === 'teaching_evaluation' || q.component_type === 'ai_mode_evaluation'
+  );
 
   // 计算需要回答的题目总数
   const totalQuestionsToAnswer = knowledgeQuestions.length + myEvalQuestions.length + teachingEvalQuestions.length;
@@ -324,50 +326,147 @@ const PostSessionSurvey = () => {
         {/* 固定评价组件 - 根据用户角色显示对应的评价题 */}
         {myEvalQuestions.length > 0 && (
           <div className="section evaluation-section">
-            <h2>{userRole === 'teacher' ? '对学生的评价' : '对老师的评价'}</h2>
+            <h2>{userRole === 'teacher' ? '对学生的评价' : (survey.questions.some(q => q.component_type === 'ai_mode_evaluation') ? 'AI教学模式评价' : '对老师的评价')}</h2>
             <div className="questions-list">
-              {myEvalQuestions.map((q, idx) => (
-                <div key={q.id} className="question-card evaluation-card">
-                  <div className="question-text">{q.question}</div>
-                  <div className="rating-options">
-                    {[1, 2, 3, 4, 5].map(score => (
-                      <div
-                        key={score}
-                        className={`rating-option ${answers[q.id] === score - 1 ? 'selected' : ''}`}
-                        onClick={() => handleSelect(q.id, score - 1)}
-                      >
-                        <span className="rating-value">{score}</span>
-                        <span className="rating-label">分</span>
+              {myEvalQuestions.map((q, idx) => {
+                // AI模式评价题 - 使用自定义UI
+                if (q.component_type === 'ai_mode_evaluation') {
+                  // 第一题：1/3/5打分题（压力减小）
+                  if (q.option_labels && q.option_labels.length === 3) {
+                    return (
+                      <div key={q.id} className="question-card evaluation-card">
+                        <div className="question-text">{q.question}</div>
+                        <div className="ai-rating-options">
+                          {[1, 3, 5].map((score, sIdx) => (
+                            <div
+                              key={score}
+                              className={`ai-rating-option ${answers[q.id] === sIdx ? 'selected' : ''}`}
+                              onClick={() => handleSelect(q.id, sIdx)}
+                            >
+                              <span className="ai-rating-value">{score}</span>
+                              <span className="ai-rating-label">{q.option_labels[sIdx]}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    ))}
+                    );
+                  }
+                  // 第二题：A/B/C选择题（学到更多）
+                  return (
+                    <div key={q.id} className="question-card evaluation-card">
+                      <div className="question-text">{q.question}</div>
+                      <div className="abc-options">
+                        {q.options.map((option, oIdx) => (
+                          <div
+                            key={oIdx}
+                            className={`abc-option ${answers[q.id] === oIdx ? 'selected' : ''}`}
+                            onClick={() => handleSelect(q.id, oIdx)}
+                          >
+                            <span className="abc-letter">{String.fromCharCode(65 + oIdx)}</span>
+                            <span className="abc-text">{option.replace(/^[A-C]\.\s*/, '')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                // 正常评价题 - 1-5分制
+                return (
+                  <div key={q.id} className="question-card evaluation-card">
+                    <div className="question-text">{q.question}</div>
+                    <div className="rating-options">
+                      {[1, 2, 3, 4, 5].map(score => (
+                        <div
+                          key={score}
+                          className={`rating-option ${answers[q.id] === score - 1 ? 'selected' : ''}`}
+                          onClick={() => handleSelect(q.id, score - 1)}
+                        >
+                          <span className="rating-value">{score}</span>
+                          <span className="rating-label">分</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
 
         {teachingEvalQuestions.length > 0 && (
           <div className="section evaluation-section">
-            <h2>对本次教学的评价</h2>
+            <h2>
+              {teachingEvalQuestions.some(q => q.component_type === 'ai_mode_evaluation')
+                ? '对本次教学及AI模式的评价'
+                : '对本次教学的评价'}
+            </h2>
             <div className="questions-list">
-              {teachingEvalQuestions.map((q, idx) => (
-                <div key={q.id} className="question-card evaluation-card">
-                  <div className="question-text">{q.question}</div>
-                  <div className="rating-options">
-                    {[1, 2, 3, 4, 5].map(score => (
-                      <div
-                        key={score}
-                        className={`rating-option ${answers[q.id] === score - 1 ? 'selected' : ''}`}
-                        onClick={() => handleSelect(q.id, score - 1)}
-                      >
-                        <span className="rating-value">{score}</span>
-                        <span className="rating-label">分</span>
+              {teachingEvalQuestions.map((q, idx) => {
+                console.log(`[Render] q${idx}:`, { component_type: q.component_type, option_labels: q.option_labels, options: q.options });
+                // AI模式评价题 - 使用自定义UI
+                if (q.component_type === 'ai_mode_evaluation') {
+                  // 第一题：1-5打分题（压力减小）
+                  if (q.option_labels && q.option_labels.length === 3) {
+                    console.log(`[Render] 使用1-5评分样式`);
+                    return (
+                      <div key={q.id} className="question-card evaluation-card">
+                        <div className="question-text">{q.question}</div>
+                        <div className="ai-rating-options">
+                          {[1, 2, 3, 4, 5].map((score) => {
+                            const labelMap = { 1: q.option_labels[0], 2: '压力稍大', 3: q.option_labels[1], 4: '压力略小', 5: q.option_labels[2] };
+                            return (
+                              <div
+                                key={score}
+                                className={`ai-rating-option ${answers[q.id] === score - 1 ? 'selected' : ''}`}
+                                onClick={() => handleSelect(q.id, score - 1)}
+                              >
+                                <span className="ai-rating-value">{score}</span>
+                                <span className="ai-rating-label">{labelMap[score]}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    ))}
+                    );
+                  }
+                  // 第二题：A/B/C选择题（学到更多）
+                  return (
+                    <div key={q.id} className="question-card evaluation-card">
+                      <div className="question-text">{q.question}</div>
+                      <div className="abc-options">
+                        {q.options.map((option, oIdx) => (
+                          <div
+                            key={oIdx}
+                            className={`abc-option ${answers[q.id] === oIdx ? 'selected' : ''}`}
+                            onClick={() => handleSelect(q.id, oIdx)}
+                          >
+                            <span className="abc-letter">{String.fromCharCode(65 + oIdx)}</span>
+                            <span className="abc-text">{option.replace(/^[A-C]\.\s*/, '')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                // 正常评价题 - 1-5分制
+                return (
+                  <div key={q.id} className="question-card evaluation-card">
+                    <div className="question-text">{q.question}</div>
+                    <div className="rating-options">
+                      {[1, 2, 3, 4, 5].map(score => (
+                        <div
+                          key={score}
+                          className={`rating-option ${answers[q.id] === score - 1 ? 'selected' : ''}`}
+                          onClick={() => handleSelect(q.id, score - 1)}
+                        >
+                          <span className="rating-value">{score}</span>
+                          <span className="rating-label">分</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

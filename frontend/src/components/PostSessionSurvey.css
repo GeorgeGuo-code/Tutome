@@ -221,6 +221,106 @@
   color: #999;
 }
 
+/* AI模式评价题样式 */
+.ai-rating-options {
+  display: flex;
+  gap: 12px;
+}
+
+.ai-rating-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.ai-rating-option:hover {
+  border-color: #6B9DAA;
+  background: #f5f5f5;
+}
+
+.ai-rating-option.selected {
+  border-color: #6B9DAA;
+  background: #E8F4F6;
+}
+
+.ai-rating-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+}
+
+.ai-rating-option.selected .ai-rating-value {
+  color: #6B9DAA;
+}
+
+.ai-rating-label {
+  font-size: 13px;
+  color: #666;
+  margin-top: 4px;
+  min-height: 20px;
+}
+
+/* ABC选项样式 */
+.abc-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.abc-option {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.abc-option:hover {
+  border-color: #6B9DAA;
+  background: #f5f5f5;
+}
+
+.abc-option.selected {
+  border-color: #6B9DAA;
+  background: #E8F4F6;
+}
+
+.abc-letter {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 16px;
+  color: #666;
+  margin-right: 14px;
+}
+
+.abc-option.selected .abc-letter {
+  background: #6B9DAA;
+  color: white;
+}
+
+.abc-text {
+  flex: 1;
+  font-size: 15px;
+  color: #333;
+}
+
 /* 提交按钮 */
 .survey-footer {
   margin-top: 40px;

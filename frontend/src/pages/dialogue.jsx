@@ -31,6 +31,8 @@ const Dialogue = () => {
   const [showReviewNotification, setShowReviewNotification] = useState(false); // 显示问题通知
   const notifiedErrorRoundsRef = useRef(new Set()); // 已显示过通知的问题轮次
   const [preQuizCompleted, setPreQuizCompleted] = useState(false); // 热身测试是否完成
+  const [isAITeachingMode, setIsAITeachingMode] = useState(false); // 是否为AI教学模式
+  const [isWaitingForAI, setIsWaitingForAI] = useState(false); // 是否正在等待AI回复
   const currentUserId = parseInt(localStorage.getItem("userId")) || null;
   const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
@@ -163,36 +165,42 @@ const Dialogue = () => {
     const checkPreQuiz = async () => {
       try {
         const token = localStorage.getItem('token');
+
+        // 获取pair状态
+        const pairResponse = await fetch(`/api/pairs/${pairId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        let isAiTeaching = false;
+        if (pairResponse.ok) {
+          const pairData = await pairResponse.json();
+          isAiTeaching = !!pairData.is_ai_teaching;
+          setIsAITeachingMode(isAiTeaching);
+        }
+
+        // 检查热身测试是否完成
         const response = await fetch(`/api/survey/pre/${pairId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const result = await response.json();
+
         if (result.success && result.data) {
-          // 只要当前用户完成了热身测试就标记
-          if (result.data.completed) {
+          const hasQuestions = result.data.questions && result.data.questions.length > 0;
+          const isCompleted = result.data.completed && hasQuestions;
+
+          if (isCompleted) {
+            // 完成热身测试，留在对话页面
+            console.log('[Dialogue] 热身测试已完成，留在对话页面');
             setPreQuizCompleted(true);
-          } else if (result.data.questions && result.data.questions.length > 0) {
-            // 有题目但未完成，跳转到热身问卷页面
-            console.log('[Dialogue] 热身问卷未完成，跳转到问卷页面');
-            navigate(`/quiz/pre/${pairId}`);
-            return;
-          } else {
-            // 没有题目（可能生成失败），也跳转到问卷页面尝试重新生成/获取
-            console.log('[Dialogue] 无热身题目，跳转到问卷页面');
-            navigate(`/quiz/pre/${pairId}`);
             return;
           }
-        } else if (result.error) {
-          // API返回错误，可能是题目还没生成，跳转到问卷页面
-          console.log('[Dialogue] 获取热身题目失败:', result.error);
-          navigate(`/quiz/pre/${pairId}`);
-          return;
         }
+        // 未完成、无题目或获取失败，跳转到热身问卷页面
+        console.log('[Dialogue] 热身测试未完成或无题目，跳转问卷页面');
+        navigate(`/quiz/pre/${pairId}`);
       } catch (err) {
         console.error('检查热身测试失败:', err);
-        // 网络错误也跳转到问卷页面
         navigate(`/quiz/pre/${pairId}`);
-        return;
       }
     };
 
@@ -256,7 +264,7 @@ const Dialogue = () => {
       // 学生错误检测通知（发给老师）
       if (notification.type === 'student_error_detected' && isThisPair) {
         console.log('[Socket] 收到学生错误检测通知:', notification);
-        alert(`检测到学生回答存在问题：${notification.content}`);
+        alert(`检测到回答存在问题：${notification.content}`);
         fetchRoundReviews();
         return;
       }
@@ -399,6 +407,8 @@ const Dialogue = () => {
 
       if (response.ok) {
         const pairData = await response.json();
+        // 检查AI教学模式并更新状态
+        setIsAITeachingMode(!!pairData.is_ai_teaching);
         checkEndRequest(pairData);
       }
     } catch (error) {
@@ -454,6 +464,7 @@ const Dialogue = () => {
             },
             body: JSON.stringify({
               content: inputText,
+              senderRole: 'student'
             }),
           }
         );
@@ -466,6 +477,62 @@ const Dialogue = () => {
 
       setInputText("");
       fetchMessages(false);
+
+      // AI教学模式：发送消息后请求AI学生追问
+      if (isAITeachingMode) {
+        setIsWaitingForAI(true);
+
+        // 构建对话历史
+        const conversationHistory = messages.map(msg => ({
+          role: msg.sender_role === 'ai_student' ? 'ai_student' : 'teacher',
+          content: msg.content
+        }));
+
+        try {
+          const aiResponse = await fetch('/api/ai/student-ask', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              pairId: parseInt(pairId),
+              teacherQuestion: inputText,
+              conversationHistory: conversationHistory
+            }),
+          });
+
+          if (aiResponse.ok) {
+            const aiData = await aiResponse.json();
+            if (aiData.success && aiData.data && aiData.data.question) {
+              // 保存AI回复到数据库 - 使用 teacher_id 作为 sender_id
+              // 因为AI学生没有真实账户，需要借用老师的sender_id但在消息中标记角色
+              try {
+                await fetch(`/api/chats/${pairId}`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({
+                    content: aiData.data.question,
+                    senderRole: 'ai_student'
+                  }),
+                });
+              } catch (saveErr) {
+                console.error('保存AI消息失败:', saveErr);
+              }
+
+              // 重新获取消息列表
+              fetchMessages(false);
+            }
+          }
+        } catch (err) {
+          console.error('AI追问请求失败:', err);
+        } finally {
+          setIsWaitingForAI(false);
+        }
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       setError(error.message || "发送失败");
@@ -560,7 +627,14 @@ const Dialogue = () => {
 
       if (response.ok) {
         setShowEndConfirmModal(false);
-        alert("已申请结束教学，等待对方确认");
+        if (data.message === '对话已结束') {
+          // AI教学模式：直接结束
+          setPairStatus('completed');
+          alert("对话已结束，正在生成总结...");
+          handleDialogueEnd();
+        } else {
+          alert("已申请结束教学，等待对方确认");
+        }
       } else {
         alert(data.error || data.message || "申请失败");
       }
@@ -996,15 +1070,15 @@ const Dialogue = () => {
             <div
               key={msg.id}
               className={`message-bubble ${
-                msg.sender_id === currentUserId ? "right" : "left"
+                msg.sender_role === 'ai_student' ? "left" : (msg.sender_id === currentUserId ? "right" : "left")
               }`}
             >
               <div className="message-header">
                 <span className="message-avatar">
-                  {msg.sender_id === currentUserId ? "👤" : "👥"}
+                  {msg.sender_role === 'ai_student' ? "🤖" : (msg.sender_id === currentUserId ? "👤" : "👥")}
                 </span>
                 <span className="message-sender">
-                  {msg.sender_nickname || (msg.sender_id === currentUserId ? "我" : "对方")}
+                  {msg.sender_role === 'ai_student' ? "小智（AI学生）" : (msg.sender_nickname || (msg.sender_id === currentUserId ? "我" : "对方"))}
                 </span>
               </div>
               {msg.image_url && (
@@ -1070,23 +1144,26 @@ const Dialogue = () => {
             <span className="input-icon"><PenIcon size={20} /></span>
             <textarea
               className="message-input"
-              placeholder="请输入消息...（可粘贴图片 Ctrl+V；支持 LaTeX 数学公式）"
+              placeholder={isWaitingForAI ? "等待AI学生追问中..." : "请输入消息...（可粘贴图片 Ctrl+V；支持 LaTeX 数学公式）"}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  handleSend(e);
+                  if (!isWaitingForAI) {
+                    handleSend(e);
+                  }
                 }
               }}
               onPaste={handlePaste}
+              disabled={isWaitingForAI}
             />
             <button
               className="send-btn"
               onClick={handleSend}
-              disabled={!inputText.trim() && !selectedImage}
+              disabled={(!inputText.trim() && !selectedImage) || isWaitingForAI}
             >
-              发送
+              {isWaitingForAI ? "..." : "发送"}
             </button>
           </div>
         </div>

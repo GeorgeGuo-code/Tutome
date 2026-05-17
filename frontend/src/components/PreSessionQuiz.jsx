@@ -180,6 +180,8 @@ const PreSessionQuiz = () => {
       setSubmitted(true);
       // 清除 sessionStorage
       sessionStorage.removeItem(`preQuiz_timeLeft_${pairId}`);
+      // 标记热身测试已完成（用于跨页面状态同步）
+      sessionStorage.setItem(`preQuiz_completed_${pairId}`, 'true');
 
       if (!isTimeout) {
         // 正常提交后跳转

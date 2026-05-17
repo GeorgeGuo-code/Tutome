@@ -1025,10 +1025,138 @@ const getConversationSummary = async (req, res) => {
   }
 };
 
+// AI 学生追问系统提示词
+const STUDENT_ASK_SYSTEM_PROMPT = `你是"小智"，一个好奇、热情的学生，正在和老师一对一学习。
+
+## 你的特点
+- 好奇心强，喜欢追问"为什么"和"怎么做"
+- 追问要有深度，能引发思考
+- 用学生的口吻，友好鼓励
+- 不会的问题会坦诚说"老师，这个我不太懂，能再解释一下吗"
+- 会在理解的基础上提出延伸问题
+
+## 追问原则
+1. 如果老师刚讲完一个概念/知识点，追问"这样理解对吗？"或"如果...会怎样？"
+2. 如果老师提到一个方法，追问"为什么要这样做？"或"有没有其他方法？"
+3. 如果理解了一个知识点，追问"这个能用在什么地方？"
+4. 追问要具体，不要太泛泛
+5. 每次只问1-2个问题，保持对话节奏
+
+## 禁止事项
+- **重要：一句话只能有1个问题**，必须等老师回答后才能问下一个
+- 不要问多个问题（1个是标准，2个是上限）
+- 不要一次问太多问题（最多2个）
+- 不要问与当前话题无关的问题
+- 不要问太简单的问题（如"这是什么"）
+- 不要重复老师刚讲过的内容
+
+## 输出格式
+直接输出你的追问内容即可，不要加引号或"学生："这样的前缀。`;
+
+/**
+ * POST /api/ai/student-ask
+ * AI学生追问接口
+ * 请求体: { pairId, teacherQuestion, conversationHistory }
+ */
+const studentAsk = async (req, res) => {
+  const { pairId, teacherQuestion, conversationHistory } = req.body;
+  const userId = req.user?.userId;
+
+  if (!pairId || !teacherQuestion) {
+    return res.status(400).json({ error: '缺少必要参数' });
+  }
+
+  try {
+    // 验证用户权限
+    const pair = await queries.pair.getById(pairId);
+    if (!pair) {
+      return res.status(404).json({ error: '结对不存在' });
+    }
+
+    if (pair.teacher_id !== userId) {
+      return res.status(403).json({ error: '只有老师可以请求AI追问' });
+    }
+
+    if (!pair.is_ai_teaching) {
+      return res.status(400).json({ error: '该结对不是AI教学模式' });
+    }
+
+    // 获取问题的难度/进度标签
+    const question = await queries.getQuestionById(pair.question_id);
+    const questionTags = question?.tags || [];
+    const difficulty = questionTags.find(t => t.category === 'difficulty')?.name || '中等';
+    const progress = questionTags.find(t => t.category === 'progress')?.name || '中程';
+
+    // 构建带学生背景的系统提示词
+    const studentBackgroundPrompt = `
+## 学生背景
+- 当前学习难度：${difficulty}
+- 学习进度：${progress}
+- 根据难度调整追问深度，进度较前的可以问更基础的问题
+`;
+    const dynamicSystemPrompt = STUDENT_ASK_SYSTEM_PROMPT + studentBackgroundPrompt;
+
+    // 构建对话上下文
+    const context = [
+      { role: 'system', content: dynamicSystemPrompt }
+    ];
+
+    // 添加初始问题（如果存在）
+    if (pair.initial_question) {
+      context.push({
+        role: 'assistant',
+        content: `老师的问题：${pair.initial_question}`
+      });
+    }
+
+    // 添加对话历史
+    if (conversationHistory && Array.isArray(conversationHistory)) {
+      for (const msg of conversationHistory) {
+        if (msg.role === 'teacher') {
+          context.push({ role: 'assistant', content: msg.content });
+        } else if (msg.role === 'ai_student' || msg.role === 'student') {
+          context.push({ role: 'user', content: msg.content });
+        }
+      }
+    }
+
+    // 添加老师最新的问题作为上下文
+    context.push({
+      role: 'user',
+      content: `老师刚才说："${teacherQuestion}"
+请作为学生小智，根据对话上下文追问（最多2个问题）。`
+    });
+
+    // 调用 AI 生成追问
+    const model = process.env.AI_MODEL || 'deepseek-chat';
+    const response = await openai.chat.completions.create({
+      model: model,
+      messages: context,
+      temperature: 0.7,
+      max_tokens: 500
+    });
+
+    const aiQuestion = response.choices[0].message.content.trim();
+
+    res.json({
+      success: true,
+      data: {
+        question: aiQuestion,
+        role: 'ai_student'
+      }
+    });
+
+  } catch (err) {
+    console.error('AI追问失败:', err);
+    res.status(500).json({ error: 'AI追问失败', message: err.message });
+  }
+};
+
 module.exports = {
   judgeConversation,
   summarizeConversation,
   reviewRound,
   getRoundReviews,
-  getConversationSummary
+  getConversationSummary,
+  studentAsk
 };

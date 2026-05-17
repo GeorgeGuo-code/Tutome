@@ -723,13 +723,31 @@ async function searchByMultipleTags(tagIds = [], page = 1, limit = 20, categoryR
 }
 // 通过id获取问题
 const getQuestionById = async (questionId) => {
-  const query = 'SELECT * FROM questions WHERE id = $1';  // SQL 查询语句
+  const query = 'SELECT * FROM questions WHERE id = $1';
   try {
     const result = await pool.query(query, [questionId]);
     if (result.rows.length === 0) {
-      return null; // 问题不存在
+      return null;
     }
-    return result.rows[0]; // 返回问题对象
+    const question = result.rows[0];
+
+    // 获取标签
+    const tagsQuery = `
+      SELECT t.id, t.name, t.category
+      FROM tags t
+      JOIN question_tags qt ON t.id = qt.tag_id
+      WHERE qt.question_id = $1
+      ORDER BY CASE t.category
+        WHEN 'subject' THEN 1
+        WHEN 'difficulty' THEN 2
+        WHEN 'progress' THEN 3
+        ELSE 4
+      END, t.name
+    `;
+    const tagsResult = await pool.query(tagsQuery, [questionId]);
+    question.tags = tagsResult.rows;
+
+    return question;
   } catch (error) {
     throw new Error('数据库查询失败');
   }
@@ -1031,11 +1049,55 @@ const queries = {
     // 创建结对申请（修改为 pending 状态）
     create: async (teacherId, studentId, topicId, questionId = null) => {
       const result = await pool.query(
-        `INSERT INTO pairs (teacher_id, student_id, topic_id, status, question_id) 
+        `INSERT INTO pairs (teacher_id, student_id, topic_id, status, question_id)
          VALUES ($1, $2, $3, 'pending', $4) RETURNING *`,
         [teacherId, studentId, topicId, questionId]
       );
       return result.rows[0];
+    },
+
+    // 创建AI教学结对（直接active状态）
+    createAITeachingPair: async (teacherId, questionTitle, questionContent, tagIds = []) => {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        // 创建问题
+        const questionResult = await client.query(
+          `INSERT INTO questions (title, content, user_id, role)
+           VALUES ($1, $2, $3, 'student')
+           RETURNING id`,
+          [questionTitle, questionContent, teacherId]
+        );
+        const questionId = questionResult.rows[0].id;
+
+        // 关联标签
+        if (tagIds && tagIds.length > 0) {
+          for (const tagId of tagIds) {
+            await client.query(
+              'INSERT INTO question_tags (question_id, tag_id) VALUES ($1, $2)',
+              [questionId, tagId]
+            );
+          }
+        }
+
+        // 创建结对（AI教学模式下，用户既是老师也是学生，实际学生是AI）
+        // 但我们需要创建一个虚拟的student_id，这里用teacherId作为占位
+        const pairResult = await client.query(
+          `INSERT INTO pairs (teacher_id, student_id, topic_id, status, question_id, is_ai_teaching, initial_question, started_at)
+           VALUES ($1, $1, NULL, 'active', $2, TRUE, $3, NOW())
+           RETURNING *`,
+          [teacherId, questionId, questionContent]
+        );
+
+        await client.query('COMMIT');
+        return pairResult.rows[0];
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
     },
 
     // 接受结对申请
@@ -1240,11 +1302,11 @@ const queries = {
   // 消息相关查询
   message: {
     // 创建消息（支持图片）
-    create: async (pairId, senderId, content, imageUrl = null) => {
+    create: async (pairId, senderId, content, imageUrl = null, senderRole = null) => {
       const result = await pool.query(
-        `INSERT INTO messages (pair_id, sender_id, content, image_url)
-         VALUES ($1, $2, $3, $4) RETURNING *`,
-        [pairId, senderId, content, imageUrl]
+        `INSERT INTO messages (pair_id, sender_id, content, image_url, sender_role)
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [pairId, senderId, content, imageUrl, senderRole]
       );
       return result.rows[0];
     },

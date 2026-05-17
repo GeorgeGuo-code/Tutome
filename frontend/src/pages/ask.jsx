@@ -11,6 +11,8 @@ const Ask = () => {
   const [message, setMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState(null);
   const [targetPage, setTargetPage] = useState(null);
+  const [teachingMode, setTeachingMode] = useState("normal"); // 教学模式：normal 或 ai-teaching
+  const [isLoading, setIsLoading] = useState(false);
 
   // 学科到标签 ID 的映射
   const subjectToTagId = {
@@ -43,11 +45,13 @@ const Ask = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage("发布中...");
+    setMessage("处理中...");
+    setIsLoading(true);
 
     const token = localStorage.getItem("token");
     if (!token) {
       setMessage("请先登录");
+      setIsLoading(false);
       return;
     }
 
@@ -58,6 +62,46 @@ const Ask = () => {
     if (progress) tagIds.push(progressToTagId[progress]);
 
     try {
+      // AI教学模式：创建AI教学结对
+      if (teachingMode === "ai-teaching") {
+        const response = await fetch("/api/pairs/ai-teaching", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            questionTitle: title,
+            questionContent: content,
+            tagIds: tagIds,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // 清空表单
+          setTitle("");
+          setContent("");
+          setSubject("");
+          setDifficulty("");
+          setProgress("");
+          setMessage("");
+          setIsLoading(false);
+
+          // 跳转到对话页面
+          const pairId = data.pair.id;
+          setSuccessMessage("✅ AI教学模式已启动！");
+          setTargetPage(`/dialogue/${pairId}`);
+        } else {
+          setSuccessMessage(data.error || data.message || "启动失败");
+          setTargetPage(null);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      // 普通模式：创建问题
       const response = await fetch("/api/questions", {
         method: "POST",
         headers: {
@@ -82,16 +126,19 @@ const Ask = () => {
         setDifficulty("");
         setProgress("");
         setMessage("");
+        setIsLoading(false);
         // 显示成功弹窗
         setSuccessMessage("✅ 提问发布成功！");
         setTargetPage("/browse");
       } else {
         setSuccessMessage(data.message || "发布失败");
         setTargetPage(null);
+        setIsLoading(false);
       }
     } catch (error) {
       setSuccessMessage("服务器错误，请稍后重试");
       setTargetPage(null);
+      setIsLoading(false);
       console.error("Error:", error);
     }
   };
@@ -103,16 +150,32 @@ const Ask = () => {
 
         <form className="ask-form" onSubmit={handleSubmit}>
           <div className="form-group">
+            <label className="form-label">教学模式</label>
+            <select
+              className="form-select"
+              value={teachingMode}
+              onChange={(e) => setTeachingMode(e.target.value)}
+            >
+              <option value="normal">普通模式（发布问题等待结对）</option>
+              <option value="ai-teaching">AI教学（AI扮演学生，追问深入）</option>
+            </select>
+          </div>
+
+          <div className="form-group">
             <label className="form-label">提问者身份</label>
             <select
               className="form-select"
-              value={role}
+              value={teachingMode === "ai-teaching" ? "teacher" : role}
               onChange={(e) => setRole(e.target.value)}
-              required
+              disabled={teachingMode === "ai-teaching"}
+              style={teachingMode === "ai-teaching" ? { backgroundColor: "#f5f5f5" } : {}}
             >
               <option value="student">学生</option>
               <option value="teacher">老师</option>
             </select>
+            {teachingMode === "ai-teaching" && (
+              <small style={{ color: "#888", fontSize: "12px" }}>AI模式须以老师身份进行</small>
+            )}
           </div>
 
           <div className="form-group">
@@ -194,8 +257,8 @@ const Ask = () => {
 
           {message && <p className="message">{message}</p>}
 
-          <button type="submit" className="submit-btn">
-            发布
+          <button type="submit" className="submit-btn" disabled={isLoading}>
+            {isLoading ? "处理中..." : (teachingMode === "ai-teaching" ? "启动AI教学" : "发布")}
           </button>
         </form>
       </div>
