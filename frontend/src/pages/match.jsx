@@ -177,23 +177,13 @@ const Match = () => {
           targetUserId: partnerUser.id,
           topicId,
           role,
+          questionId: question.id || undefined,
         }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        if (question.id) {
-          await fetch(apiUrl(`/api/pairs/${data.id}/associate`), {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ questionId: question.id }),
-          });
-        }
-
         setMessage("");
         setSuccessMessage(
           `✅ 已向 ${partnerUser.username} 发起结对申请\n\n请前往「个人中心」的「我的通知」查看对方是否同意`

@@ -194,8 +194,9 @@
 }
 
 .input-icon {
-  font-size: 16px;
-  color: #333;
+  display: flex;
+  align-items: center;
+  color: #9CA3AF;
   padding-bottom: 8px;
 }
 
@@ -565,11 +566,11 @@
 }
 
 .image-upload-btn {
-  font-size: 18px;
-  cursor: pointer;
-  padding: 8px 4px;
   display: flex;
   align-items: center;
+  color: #9CA3AF;
+  cursor: pointer;
+  padding: 8px 4px;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
@@ -1022,6 +1023,8 @@
 
   .image-upload-btn:hover {
     background: #F3F4F6;
+    color: #333;
+    border-radius: 6px;
   }
 
   .close-preview-btn:hover {

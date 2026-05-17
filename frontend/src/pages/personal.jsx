@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./personal.css";
 import { InteractiveGuide } from '../components/InteractiveGuide';
 import { userService, rewardService, messageService } from '../services/apiService';
-import { HistoryIcon, NotificationIcon, HomeIcon, GiftIcon } from '../components/icons';
+import { HistoryIcon, NotificationIcon, HomeIcon, GiftIcon, MessageIcon } from '../components/icons';
 
 // 自定义下拉多选组件
 function MultiSelectDropdown({ options, value, onChange, placeholder = "请选择" }) {
@@ -1129,14 +1129,13 @@ const NotificationsSection = ({ location: locationProp }) => {
 
       const token = localStorage.getItem("token");
       const response = await fetch(
-        "/api/pairs/accept",
+        `/api/pairs/${pairId}/accept`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify({ pairId }),
         }
       );
 
@@ -1526,7 +1525,7 @@ const NotificationsSection = ({ location: locationProp }) => {
             className="private-message-header"
             onClick={() => setShowPrivateMessage(!showPrivateMessage)}
           >
-            <span className="private-message-icon">💬</span>
+            <span className="private-message-icon"><MessageIcon size={20} /></span>
             <span className="private-message-title">发送私信</span>
             <span className={`private-message-arrow ${showPrivateMessage ? 'expanded' : ''}`}>▼</span>
           </div>

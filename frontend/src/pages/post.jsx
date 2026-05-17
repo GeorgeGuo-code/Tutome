@@ -215,6 +215,11 @@ const Post = () => {
 
     // 如果已经有结对
     if (validPairId) {
+      // 如果结对申请尚未被接受，提示用户
+      if (pairStatus === 'pending') {
+        alert('结对申请尚未被接受，请等待对方确认');
+        return;
+      }
       // 如果结对已结束，提示用户
       if (pairStatus === 'completed') {
         alert('该问题已结束教学，无法重新结对');
@@ -269,36 +274,16 @@ const Post = () => {
         body: JSON.stringify({
           targetUserId: publisherId,
           topicId: topicId,
-          role: userRole
+          role: userRole,
+          questionId: parseInt(questionId)
         }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // 创建成功，关联问题到结对
-        const pairId = data.id;
-
-        // 关联问题到结对
-        const associateResponse = await fetch(`/api/pairs/${pairId}/associate`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            questionId: parseInt(questionId)
-          }),
-        });
-
-        if (associateResponse.ok) {
-          // 显示成功弹窗
-          setSuccessMessage(`✅ 已向 ${question.username || question.user_name} 发起结对申请\n\n请前往"个人中心"的"我的通知"查看对方是否同意`);
-          setTargetPage('/browse');
-        } else {
-          setSuccessMessage('结对创建成功，但关联问题失败，请重试');
-          setTargetPage(null);
-        }
+        setSuccessMessage(`✅ 已向 ${question.username || question.user_name} 发起结对申请\n\n请前往"个人中心"的"我的通知"查看对方是否同意`);
+        setTargetPage('/browse');
       } else {
         setSuccessMessage(data.error || data.message || '创建结对失败，请重试');
         setTargetPage(null);

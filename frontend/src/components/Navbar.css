@@ -2,8 +2,10 @@
 .navbar-desktop {
   background: linear-gradient(135deg, #335A7A 0%, #A69298 100%);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 1000;
   display: none;
 }

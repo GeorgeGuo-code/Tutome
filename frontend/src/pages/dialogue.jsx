@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import "./dialogue.css";
 import 'katex/dist/katex.min.css';
 import InteractiveGuide from '../components/InteractiveGuide';
+import { CameraIcon, PenIcon } from '../components/icons';
 import socketService from '../services/socketService';
 import { parseLatexContent } from '../utils/renderLatex';
 
@@ -1064,9 +1065,9 @@ const Dialogue = () => {
                 onChange={handleImageSelect}
                 style={{ display: 'none' }}
               />
-              📷
+              <CameraIcon size={20} />
             </label>
-            <span className="input-icon">✏️</span>
+            <span className="input-icon"><PenIcon size={20} /></span>
             <textarea
               className="message-input"
               placeholder="请输入消息...（可粘贴图片 Ctrl+V；支持 LaTeX 数学公式）"

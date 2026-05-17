@@ -2627,7 +2627,9 @@
 }
 
 .private-message-icon {
-  font-size: 18px;
+  display: flex;
+  align-items: center;
+  color: #9CA3AF;
 }
 
 .private-message-title {

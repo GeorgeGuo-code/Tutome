@@ -52,7 +52,7 @@ const createQuestion = async (req, res) => {
 
     if (result.success) {
       // 生成热身题目模板（异步，不阻塞响应）
-      const questionId = result.questionId;
+      const questionId = result.question?.id;
       if (questionId) {
         surveyService.generatePreQuestionTemplates(questionId).catch(err => {
           console.error('[创建问题] 生成热身题目模板失败:', err);

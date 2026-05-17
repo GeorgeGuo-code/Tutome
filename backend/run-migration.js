@@ -125,6 +125,101 @@ async function runMigration() {
     console.log('✓ 为现有用户创建了统计数据');
 
     console.log('\n奖励系统表创建完成！');
+
+    // ==================== 调查/问卷系统表 ====================
+    console.log('\n开始创建调查问卷系统表...');
+
+    // 创建 pre_questions 表（热身题目）
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pre_questions (
+        id SERIAL PRIMARY KEY,
+        pair_id INT NOT NULL REFERENCES pairs(id) ON DELETE CASCADE,
+        question JSONB NOT NULL,
+        correct_index INT NOT NULL,
+        position INT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(pair_id, position)
+      )
+    `);
+    console.log('✓ pre_questions 表创建成功');
+
+    // 创建 pre_responses 表（热身回答）
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pre_responses (
+        id SERIAL PRIMARY KEY,
+        pair_id INT NOT NULL,
+        question_id INT NOT NULL REFERENCES pre_questions(id) ON DELETE CASCADE,
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        selected_index INT NOT NULL,
+        is_correct BOOLEAN NOT NULL,
+        answered_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(question_id, user_id)
+      )
+    `);
+    console.log('✓ pre_responses 表创建成功');
+
+    // 创建 post_surveys 表（对话后问卷）
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS post_surveys (
+        id SERIAL PRIMARY KEY,
+        pair_id INT NOT NULL REFERENCES pairs(id) ON DELETE CASCADE,
+        questions JSONB NOT NULL,
+        fixed_components JSONB,
+        status VARCHAR(20) DEFAULT 'pending',
+        expires_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✓ post_surveys 表创建成功');
+
+    // 创建 post_responses 表（问卷回答）
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS post_responses (
+        id SERIAL PRIMARY KEY,
+        survey_id INT NOT NULL REFERENCES post_surveys(id) ON DELETE CASCADE,
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_role VARCHAR(20) NOT NULL,
+        answers JSONB NOT NULL,
+        score FLOAT,
+        ai_review_result JSONB,
+        submitted_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(survey_id, user_id)
+      )
+    `);
+    console.log('✓ post_responses 表创建成功');
+
+    // 创建 mastery_progress 表（掌握度进度）
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS mastery_progress (
+        id SERIAL PRIMARY KEY,
+        pair_id INT NOT NULL REFERENCES pairs(id) ON DELETE CASCADE,
+        topic VARCHAR(100),
+        pre_correct_rate FLOAT,
+        post_correct_rate FLOAT,
+        pre_total INT,
+        post_total INT,
+        progress FLOAT,
+        calculated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(pair_id, topic)
+      )
+    `);
+    console.log('✓ mastery_progress 表创建成功');
+
+    // 添加 pre_questions_template 列到 questions 表
+    await client.query(`
+      ALTER TABLE questions ADD COLUMN IF NOT EXISTS pre_questions_template JSONB DEFAULT NULL
+    `);
+    console.log('✓ questions.pre_questions_template 列添加成功');
+
+    // 创建索引
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_pre_responses_pair ON pre_responses(pair_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_pre_responses_user ON pre_responses(user_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_post_responses_survey ON post_responses(survey_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_post_responses_user ON post_responses(user_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_mastery_progress_pair ON mastery_progress(pair_id)`);
+    console.log('✓ 调查系统索引创建成功');
+
+    console.log('\n所有迁移表创建完成！');
   } catch (error) {
     console.error('创建表失败:', error);
     throw error;

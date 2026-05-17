@@ -53,7 +53,10 @@ const generatePreQuestions = async (req, res) => {
 
   } catch (error) {
     console.error('[SurveyController] 生成热身题目失败:', error);
-    res.status(500).json({ error: error.message });
+    const message = error.message && error.message.includes('relation') && error.message.includes('does not exist')
+      ? '系统初始化中，请稍后重试'
+      : error.message;
+    res.status(500).json({ error: message });
   }
 };
 
@@ -100,7 +103,10 @@ const getPreQuestions = async (req, res) => {
 
   } catch (error) {
     console.error('[SurveyController] 获取热身题目失败:', error);
-    res.status(500).json({ error: error.message });
+    const message = error.message && error.message.includes('relation') && error.message.includes('does not exist')
+      ? '系统初始化中，请稍后重试'
+      : error.message;
+    res.status(500).json({ error: message });
   }
 };
 

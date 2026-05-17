@@ -15,7 +15,11 @@ const chatsRouter = require('./routes/chatsRouter');
 const aiRouter = require('./routes/aiRouter');
 const surveyRouter = require('./routes/surveyRouter');
 const rewardRouter = require('./routes/rewardRouter');
+const autoMigrate = require('./models/autoMigrate');
 const app = express();
+
+// 自动创建缺失的数据库表
+autoMigrate();
 
 app.use(cors());  // 使用 cors 中间件
 app.use(express.json());  // 用于解析 JSON 格式的请求体
@@ -37,7 +41,7 @@ const server = http.createServer(app);
 // 创建 Socket.IO 服务器
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173', // 前端开发服务器地址
+    origin: ['http://localhost:5173', /^https?:\/\/192\.168\.\d+\.\d+:5173$/], // 前端开发服务器地址 + 局域网
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -49,6 +53,6 @@ module.exports.io = io;
 // 导入在线状态管理
 require('./services/onlineStatusService')(io);
 
-server.listen(3000, () => {
-  console.log('Server listen on port 3000');
+server.listen(3000, '0.0.0.0', () => {
+  console.log('Server listen on port 3000 (LAN accessible)');
 });

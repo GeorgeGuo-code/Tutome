@@ -23,7 +23,7 @@ if (typeof verifyJWT === 'function') {
 
 // 结对相关
 router.post('/api/pairs/apply', chatsController.applyPair);
-router.post('/api/pairs/accept', chatsController.acceptPair);
+router.post('/api/pairs/:pairId/accept', chatsController.acceptPair);
 router.post('/api/pairs/:pairId/reject', chatsController.rejectPair);
 router.get('/api/pairs', chatsController.getMyPairs);
 router.get('/api/pairs/:pairId', chatsController.getPairById);

@@ -20,10 +20,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 桌面端不需要底部 padding */
+/* 桌面端不需要底部 padding，加上顶部 padding 为固定导航栏留空间 */
 @media (min-width: 769px) {
   body {
     padding-bottom: 0;
+    padding-top: 64px;
   }
 }
 

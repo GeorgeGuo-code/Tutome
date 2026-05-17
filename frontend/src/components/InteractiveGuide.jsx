@@ -295,10 +295,12 @@ const HighlightOverlay = ({ target, text, onClick, disabled }) => {
 
     const timer = setTimeout(updatePosition, delay);
     window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
     };
   }, [target, disabled]);
 
