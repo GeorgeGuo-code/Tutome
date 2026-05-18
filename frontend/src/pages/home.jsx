@@ -158,7 +158,7 @@ const Home = ({ guideActive, onGuideActiveChange }) => {
         如果您遇到任何问题或有任何建议，请随时联系我们。（向“管理员”发送私信）
       </p>
       <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;" />
-      <p style="font-size: 14px; color: #999; text-align: center;">（目前版本：Ver 2.0.0）</p>
+      <p style="font-size: 14px; color: #999; text-align: center;">（目前版本：Ver 2.1.0）</p>
     `;
 
     return (
