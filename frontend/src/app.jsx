@@ -94,10 +94,17 @@ export default function App() {
     setGuideActive(false);
     sessionStorage.removeItem('guideActive');
     sessionStorage.removeItem('guideStep');
+    sessionStorage.removeItem('guidePersonalReloaded');
+    sessionStorage.removeItem('guidePendingHighlight');
   };
 
   const handleGuideNavigate = (path) => {
-    navigate(path);
+    // 导航到 /personal 时使用 window.location.href 确保页面刷新
+    if (path === '/personal') {
+      window.location.href = '/personal';
+    } else {
+      navigate(path);
+    }
   };
 
   return (

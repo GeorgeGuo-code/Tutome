@@ -449,6 +449,8 @@ const InteractiveGuide = ({
       setCurrentStep(currentStep + 1);
     } else {
       localStorage.setItem('guideCompleted', 'true');
+      // 引导完成后清除相关标志
+      sessionStorage.removeItem('guidePendingHighlight');
       if (onComplete) {
         onComplete();
       }
@@ -466,21 +468,31 @@ const InteractiveGuide = ({
       sessionStorage.setItem('guideActive', 'true');
       // 保存下一步的索引
       sessionStorage.setItem('guideStep', String(currentStep + 1));
-      // 使用导航回调
-      if (onNavigate) {
-        onNavigate(step.navigateTo);
+      // 跳转到 /personal 时直接刷新页面
+      if (step.navigateTo === '/personal') {
+        sessionStorage.setItem('guidePendingHighlight', 'true');
+        // 使用 window.location.href 刷新页面（由 handleGuideNavigate 处理）
+        if (onNavigate) {
+          onNavigate(step.navigateTo);
+        }
+      } else {
+        sessionStorage.setItem('guidePendingHighlight', 'true');
+        if (onNavigate) {
+          onNavigate(step.navigateTo);
+        }
       }
       // 导航后不立即释放transitioning，而是等待页面加载
       // 通过sessionStorage传递一个标记，让目标页面的组件知道自己需要延迟初始化highlight
-      sessionStorage.setItem('guidePendingHighlight', 'true');
     } else if (step.nextAction === 'click') {
       // 立即更新sessionStorage，确保导航前状态正确
       sessionStorage.setItem('guideStep', String(currentStep + 1));
+
       // 触发目标元素的点击
       const element = document.querySelector(step.target);
       if (element) {
         element.click();
       }
+
       // 点击后进入下一步
       setTimeout(() => {
         handleNext();
@@ -566,6 +578,10 @@ const InteractiveGuide = ({
         // 调用导航
         if (onNavigate) {
           onNavigate(currentStepData.navigateTo);
+        }
+        // 跳转到 /personal 时由 handleGuideNavigate 处理刷新
+        if (currentStepData.navigateTo === '/personal') {
+          // 刷新由 handleGuideNavigate(window.location.href) 处理
         }
         // 延迟递增步骤并重置状态，等待目标页面完全加载
         const timer = setTimeout(() => {

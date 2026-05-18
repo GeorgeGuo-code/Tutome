@@ -54,6 +54,8 @@ const Home = ({ guideActive, onGuideActiveChange }) => {
     setShowGuidePrompt(false);
     sessionStorage.setItem('guideActive', 'true');
     sessionStorage.setItem('guideStep', '0');
+    // 开始引导时清除 personalTabChanged，确保正确刷新
+    sessionStorage.removeItem('personalTabChanged');
     onGuideActiveChange(true);
   };
 
@@ -66,7 +68,10 @@ const Home = ({ guideActive, onGuideActiveChange }) => {
   const handleGuideComplete = () => {
     onGuideActiveChange(false);
     sessionStorage.removeItem('guideActive');
-    navigate('/personal');
+    // 在导航到 /personal 之前重置 personalTabChanged
+    sessionStorage.setItem('personalTabChanged', 'false');
+    // 直接刷新页面，而不是通过 navigate 切换路由
+    window.location.href = '/personal';
   };
 
   const handleGuideNavigate = (path) => {

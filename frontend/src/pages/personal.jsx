@@ -2124,6 +2124,13 @@ const Personal = () => {
     if (isGuideActive === 'true') {
       setGuideActive(true);
     }
+    // 只有在非引导刷新型进入时才重置 personalTabChanged
+    // 如果 guidePendingHighlight 存在，说明是引导流程的刷新，不重置 personalTabChanged
+    // 这样刷新后 personalTabChanged 保持为 'false'，允许 InteractiveGuide 正确识别
+    const isGuideRefresh = sessionStorage.getItem('guidePendingHighlight') === 'true';
+    if (!isGuideRefresh) {
+      sessionStorage.setItem('personalTabChanged', 'false');
+    }
   }, []);
 
   // 监听 location.state，实现滚动到指定部分和标签页切换
@@ -2161,7 +2168,10 @@ const Personal = () => {
   const handleGuideComplete = () => {
     setGuideActive(false);
     sessionStorage.removeItem('guideActive');
-    navigate('/personal');
+    // 重置 personalTabChanged
+    sessionStorage.setItem('personalTabChanged', 'false');
+    // 直接刷新页面
+    window.location.href = '/personal';
   };
 
   const handleGuideNavigate = (path) => {
@@ -2180,14 +2190,17 @@ const Personal = () => {
           <nav className="sidebar-nav">
             <button
               className={`sidebar-item ${activeTab === 'profile' ? 'active' : ''}`}
-              onClick={() => setActiveTab('profile')}
+              onClick={() => {
+                sessionStorage.setItem('personalTabChanged', 'true');
+                setActiveTab('profile');
+              }}
             >
             <HomeIcon />
             <span className="sidebar-text">个人主页</span>
           </button>
           <button
             className={`sidebar-item ${activeTab === 'history' ? 'active' : ''}`}
-            onClick={() => setActiveTab('history')}
+            onClick={() => { sessionStorage.setItem('personalTabChanged', 'true'); setActiveTab('history'); }}
             data-guide="my-history"
           >
             <HistoryIcon />
@@ -2195,7 +2208,7 @@ const Personal = () => {
           </button>
           <button
             className={`sidebar-item ${activeTab === 'notifications' ? 'active' : ''}`}
-            onClick={() => setActiveTab('notifications')}
+            onClick={() => { sessionStorage.setItem('personalTabChanged', 'true'); setActiveTab('notifications'); }}
             data-guide="my-notifications"
           >
             <NotificationIcon />
@@ -2203,7 +2216,7 @@ const Personal = () => {
           </button>
           <button
             className={`sidebar-item ${activeTab === 'reward' ? 'active' : ''}`}
-            onClick={() => setActiveTab('reward')}
+            onClick={() => { sessionStorage.setItem('personalTabChanged', 'true'); setActiveTab('reward'); }}
             data-guide="reward-center"
           >
             <GiftIcon />
