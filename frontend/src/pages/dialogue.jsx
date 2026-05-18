@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import "./dialogue.css";
 import 'katex/dist/katex.min.css';
 import InteractiveGuide from '../components/InteractiveGuide';
@@ -30,10 +30,13 @@ const Dialogue = () => {
   const [roundReviews, setRoundReviews] = useState([]); // 轮次审查结果
   const [showReviewNotification, setShowReviewNotification] = useState(false); // 显示问题通知
   const notifiedErrorRoundsRef = useRef(new Set()); // 已显示过通知的问题轮次
+  const [showReviewComplete, setShowReviewComplete] = useState(false); // 审查完成无错误提示
+  const reviewCompleteTimeoutRef = useRef(null); // 自动消失定时器
   const [preQuizCompleted, setPreQuizCompleted] = useState(false); // 热身测试是否完成
   const [isAITeachingMode, setIsAITeachingMode] = useState(false); // 是否为AI教学模式
   const [isWaitingForAI, setIsWaitingForAI] = useState(false); // 是否正在等待AI回复
   const currentUserId = parseInt(localStorage.getItem("userId")) || null;
+  const currentRoundCountRef = useRef(0); // 记录当前轮次数
   const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
   const pollingIntervalRef = useRef(null); // 轮询定时器引用
@@ -47,6 +50,20 @@ const Dialogue = () => {
     const savedStep = sessionStorage.getItem('guideStep');
     return savedStep ? parseInt(savedStep, 10) : 19;
   });
+
+  // 计算轮次数：学生提问且上一条是老师 = 一轮（使用 sender_role 判断）
+  const calculateRoundCount = (msgs, pair) => {
+    let count = 0;
+    let lastWasTeacher = false;
+    for (const msg of msgs) {
+      const isTeacher = msg.sender_role === 'teacher';
+      if (!isTeacher && lastWasTeacher) {
+        count++; // AI学生提问且上一条是老师 = 一轮
+      }
+      lastWasTeacher = isTeacher;
+    }
+    return count;
+  };
 
   const guideModeRef = useRef({
     handleGuideAction: (action) => {
@@ -258,6 +275,15 @@ const Dialogue = () => {
             setShowReviewNotification(true);
             console.log('[Socket] 新发现问题轮次:', roundId);
           }
+        } else {
+          // 无错误：显示"轮次审查完成"提示，2秒后自动消失
+          setShowReviewComplete(true);
+          if (reviewCompleteTimeoutRef.current) {
+            clearTimeout(reviewCompleteTimeoutRef.current);
+          }
+          reviewCompleteTimeoutRef.current = setTimeout(() => {
+            setShowReviewComplete(false);
+          }, 2000);
         }
         return;
       }
@@ -286,6 +312,10 @@ const Dialogue = () => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
+      }
+      if (reviewCompleteTimeoutRef.current) {
+        clearTimeout(reviewCompleteTimeoutRef.current);
+        reviewCompleteTimeoutRef.current = null;
       }
       socketService.off('notification', handleNotification);
     };
@@ -645,13 +675,27 @@ const Dialogue = () => {
   };
 
   // 确认结束对话框（显示确认模态框）
-  const handleConfirmEnd = () => {
+  const handleConfirmEnd = async () => {
     if (guideMode) {
       // 引导模式：模拟对方同意
       alert('对方同意了您的结束申请');
       setPairStatus('completed');
       return;
     }
+
+    // AI教学模式：使用后端审查的轮次数判断
+    if (isAITeachingMode) {
+      // 先刷新轮次审查数据，确保使用最新值
+      const rounds = await fetchRoundReviews();
+      const reviewedRoundCount = rounds.length;
+      console.log('[handleConfirmEnd] 后端审查轮次数:', reviewedRoundCount);
+
+      if (reviewedRoundCount < 5) {
+        alert(`轮次数不足，当前轮次：${reviewedRoundCount}，需达到5轮才能结束`);
+        return;
+      }
+    }
+
     setShowEndConfirmModal(true);
   };
 
@@ -816,14 +860,14 @@ const Dialogue = () => {
 
   // 获取轮次审查结果
   const fetchRoundReviews = async () => {
-    // 引导模式：使用预制的审查结果
+    // 引导模式：使用预制的审查结果（通过 setRoundReviews 设置）
     if (guideMode) {
-      return;
+      return roundReviews;
     }
 
     try {
       const token = localStorage.getItem("token");
-      if (!token) return;
+      if (!token) return [];
 
       console.log('[fetchRoundReviews] 开始获取轮次审查结果, pairId:', pairId);
 
@@ -840,7 +884,7 @@ const Dialogue = () => {
 
       if (!response.ok) {
         console.error('获取轮次审查结果失败');
-        return;
+        return [];
       }
 
       const data = await response.json();
@@ -856,11 +900,15 @@ const Dialogue = () => {
         const hasProblems = data.rounds.some(r => r.reviewed && r.review?.has_error);
         console.log('[fetchRoundReviews] 是否有问题:', hasProblems);
         setShowReviewNotification(hasProblems);
+
+        return data.rounds; // 返回数据供直接使用
       } else {
         console.log('[fetchRoundReviews] 数据格式不对或无 rounds:', data);
+        return [];
       }
     } catch (error) {
       console.error('获取轮次审查结果失败:', error);
+      return [];
     }
   };
 
@@ -1022,6 +1070,13 @@ const Dialogue = () => {
           </div>
         );
       })()}
+
+      {/* 审查完成提示（无错误时） */}
+      {showReviewComplete && !reviewPanelOpen && (
+        <div className="review-complete-notification">
+          <div className="review-complete-text">✓ 轮次审查完成</div>
+        </div>
+      )}
 
       {/* 审查栏展开提示 - 收起时显示在左侧 */}
       <div

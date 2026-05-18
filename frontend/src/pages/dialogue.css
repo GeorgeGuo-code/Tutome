@@ -877,6 +877,32 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* 审查完成提示 */
+.review-complete-notification {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #4CAF50;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  z-index: 200;
+  animation: fadeInOut 2s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.review-complete-text {
+  font-size: 13px;
+  font-weight: 500;
+}
+
 /* LaTeX */
 .message-content .latex-inline {
   display: inline;
@@ -1085,6 +1111,14 @@
     left: auto;
     max-width: 300px;
     animation: slideIn 0.3s ease-out;
+  }
+
+  .review-complete-notification {
+    top: 80px;
+    left: 50%;
+    right: auto;
+    max-width: 300px;
+    transform: translateX(-50%);
   }
 
   @keyframes slideIn {

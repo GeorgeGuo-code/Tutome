@@ -13,7 +13,7 @@ const guideSteps = [
   {
     id: 2,
     type: 'highlight',
-    target: '[data-guide="personal-card"]',
+    target: '.card[data-guide="personal-card"]',
     text: '点击进入个人主页',
     nextAction: 'navigate',
     navigateTo: '/personal'
@@ -78,7 +78,7 @@ const guideSteps = [
     id: 11,
     type: 'modal',
     title: '您需要',
-    content: '填充问题的必要信息，让结对者清晰了解您的问题。请尽量在"标题"和"疑问"填写多一些信息，因为AI将根据这些信息生成"热身测试"，帮助您了解自己的薄弱点。'
+    content: '填充问题的必要信息，让结对者清晰了解您的问题。请尽量在"标题"和"疑问"填写多一些信息，因为AI将根据这些信息生成"热身测试"，帮助您了解自己的薄弱点。当然，您也可以选择<span style="color: red;">AI提问模式</span>，您将扮演老师，在对AI的教学中进步。'
   },
   {
     id: 12,
@@ -474,12 +474,14 @@ const InteractiveGuide = ({
       // 通过sessionStorage传递一个标记，让目标页面的组件知道自己需要延迟初始化highlight
       sessionStorage.setItem('guidePendingHighlight', 'true');
     } else if (step.nextAction === 'click') {
+      // 立即更新sessionStorage，确保导航前状态正确
+      sessionStorage.setItem('guideStep', String(currentStep + 1));
       // 触发目标元素的点击
       const element = document.querySelector(step.target);
       if (element) {
         element.click();
       }
-      // 点击后直接进入下一步
+      // 点击后进入下一步
       setTimeout(() => {
         handleNext();
         setTimeout(() => setTransitioning(false), 300);

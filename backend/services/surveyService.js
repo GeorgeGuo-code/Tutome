@@ -537,6 +537,13 @@ async function generatePostSurvey(pairId) {
           is_fixed: true,
           question: "与真人对话模式相比，AI对话模式是否让您学到更多内容？",
           options: ["A. 是的，让我学到更多", "B. 我觉得差不多", "C. 不，与真人对话收获更多"]
+        },
+        {
+          id: knowledgeQuestions.length + 5,
+          component_type: 'ai_mode_evaluation',
+          is_fixed: true,
+          question: "与向AI提问（例如使用豆包）相比，让AI向您提问是否提高了您的学习效果？",
+          options: ["A. 是的，AI提问让我发现了知识漏洞", "B. 是的，但是因为其他原因", "C. 不是，无法获得高质量的回答", "不是，但是因为其他原因"]
         }
       ];
       studentEval = [];

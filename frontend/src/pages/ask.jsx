@@ -1,7 +1,11 @@
 import React, { useState } from "react";
+import { useLocation } from "react-router-dom";
 import "./ask.css";
 
 const Ask = () => {
+  const location = useLocation();
+  const aiTeachingMode = location.state?.mode === "ai_teaching";
+
   const [subject, setSubject] = useState("");
   const [difficulty, setDifficulty] = useState("");
   const [progress, setProgress] = useState("");
@@ -11,7 +15,7 @@ const Ask = () => {
   const [message, setMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState(null);
   const [targetPage, setTargetPage] = useState(null);
-  const [teachingMode, setTeachingMode] = useState("normal"); // 教学模式：normal 或 ai-teaching
+  const [teachingMode, setTeachingMode] = useState(aiTeachingMode ? "ai-teaching" : "normal"); // 教学模式：normal 或 ai-teaching
   const [isLoading, setIsLoading] = useState(false);
 
   // 学科到标签 ID 的映射
@@ -155,6 +159,8 @@ const Ask = () => {
               className="form-select"
               value={teachingMode}
               onChange={(e) => setTeachingMode(e.target.value)}
+              disabled={aiTeachingMode}
+              style={aiTeachingMode ? { backgroundColor: "#f5f5f5" } : {}}
             >
               <option value="normal">普通模式（发布问题等待结对）</option>
               <option value="ai-teaching">AI教学（AI扮演学生，追问深入）</option>

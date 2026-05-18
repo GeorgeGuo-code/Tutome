@@ -75,13 +75,19 @@ const Home = ({ guideActive, onGuideActiveChange }) => {
 
   const handleAskClick = () => handleAuthAction("/ask");
 
-  const handleDialogueClick = () => handleAuthAction("/personal", { state: { scrollTo: 'in-progress' } });
+  const handleDialogueClick = () => handleAuthAction("/ask", { state: { mode: "ai_teaching" } });
 
   const handleBrowseClick = () => handleAuthAction("/browse");
 
   const handleMatchClick = () => handleAuthAction("/match");
 
-  const handlePersonalClick = () => handleAuthAction("/personal");
+  const handlePersonalClick = () => {
+    // 如果处于引导状态，不执行直接导航，让引导系统处理
+    if (sessionStorage.getItem('guideActive') === 'true') {
+      return;
+    }
+    handleAuthAction("/personal");
+  };
 
   const handleFeynmanClick = () => {
     setShowAboutModal(true);
@@ -182,13 +188,13 @@ const Home = ({ guideActive, onGuideActiveChange }) => {
           </div>
 
           <div className="card" onClick={handleAskClick}>
-            <h3>提问</h3>
+            <h3>真人提问</h3>
             <p>惟学无际，以问促知</p>
           </div>
 
           <div className="card" onClick={handleDialogueClick}>
-            <h3>交流对话</h3>
-            <p>海纳江河，辩理明真</p>
+            <h3>AI提问</h3>
+            <p>与AI学生对话练习</p>
           </div>
 
           <div className="card" onClick={handleBrowseClick}>
