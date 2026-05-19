@@ -269,14 +269,30 @@ const GuideModal = ({ step, onNext, isLast }) => {
 const HighlightOverlay = ({ target, text, onClick, disabled }) => {
   const [position, setPosition] = useState(null);
   const [visible, setVisible] = useState(false);
+  const [placement, setPlacement] = useState('bottom');
 
   useEffect(() => {
     if (!target || disabled) return;
 
     const updatePosition = () => {
-      const element = document.querySelector(target);
+      // 关闭可能遮挡目标元素的编辑弹窗（个人页面修改资料弹窗等）
+      document.querySelector('.profile-edit-modal-close')?.click();
+      // 关闭可能遮挡目标元素的AI审查面板（对话页面审查栏展开时全屏覆盖）
+      const expandedReviewPanel = document.querySelector('.review-panel.expanded');
+      if (expandedReviewPanel) {
+        document.querySelector('.review-panel-header')?.click();
+      }
+      // 查找所有匹配元素，优先使用可见的（解决移动端桌面导航被隐藏导致位置错误的问题）
+      const allElements = document.querySelectorAll(target);
+      const element = Array.from(allElements).find(el => el.offsetParent !== null) || allElements[0];
       if (element) {
+        // 自动滚动到目标元素，移动端无需手动滚动
+        element.scrollIntoView({ behavior: 'instant', block: 'center' });
         const rect = element.getBoundingClientRect();
+        const tipHeight = 60; // 提示框估算高度
+        const gap = 20;
+        const fitsBelow = rect.bottom + gap + tipHeight <= window.innerHeight;
+        setPlacement(fitsBelow ? 'bottom' : 'top');
         setPosition({
           top: rect.top,
           left: rect.left,
@@ -284,12 +300,10 @@ const HighlightOverlay = ({ target, text, onClick, disabled }) => {
           height: rect.height
         });
         setVisible(true);
-        // 清除pending标记
         sessionStorage.removeItem('guidePendingHighlight');
       }
     };
 
-    // 检查是否需要延迟初始化（跨页面导航后）
     const isPending = sessionStorage.getItem('guidePendingHighlight') === 'true';
     const delay = isPending ? 500 : 100;
 
@@ -306,9 +320,10 @@ const HighlightOverlay = ({ target, text, onClick, disabled }) => {
 
   if (!visible || !position || disabled) return null;
 
+  const isBottom = placement === 'bottom';
+
   return (
     <div className="guide-highlight-overlay">
-      {/* 遮罩层 - 使用box-shadow实现挖孔效果 */}
       <div
         className="guide-highlight-mask"
         onClick={() => onClick && onClick()}
@@ -336,19 +351,20 @@ const HighlightOverlay = ({ target, text, onClick, disabled }) => {
         />
       </div>
 
-      {/* 提示框 */}
       <div
-        className="guide-highlight-tip"
+        className={`guide-highlight-tip ${isBottom ? 'guide-highlight-tip-below' : 'guide-highlight-tip-above'}`}
         style={{
           position: 'fixed',
-          top: `${position.top + position.height + 20}px`,
+          top: isBottom
+            ? `${position.top + position.height + 20}px`
+            : `${position.top - 20}px`,
           left: `${position.left + position.width / 2}px`,
-          transform: 'translateX(-50%)',
+          transform: isBottom ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
           zIndex: 9999
         }}
       >
         <p>{text}</p>
-        <div className="guide-highlight-arrow"></div>
+        <div className={`guide-highlight-arrow ${isBottom ? '' : 'guide-highlight-arrow-down'}`}></div>
       </div>
     </div>
   );

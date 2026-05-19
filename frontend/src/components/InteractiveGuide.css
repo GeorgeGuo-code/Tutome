@@ -199,13 +199,27 @@
   color: #333;
 }
 
-.guide-highlight-arrow {
+.guide-highlight-tip-below .guide-highlight-arrow {
   width: 0;
   height: 0;
   margin: 8px auto 0;
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
   border-bottom: 8px solid #fff;
+}
+
+.guide-highlight-tip-above {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.guide-highlight-tip-above .guide-highlight-arrow-down {
+  width: 0;
+  height: 0;
+  margin: 0 auto 8px;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #fff;
 }
 
 /* 引导激活时的全局样式 */

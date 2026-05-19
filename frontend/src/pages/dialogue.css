@@ -702,7 +702,7 @@
   padding: 10px 14px;
   border-radius: 20px;
   cursor: pointer;
-  z-index: 99;
+  z-index: 101;
   font-size: 13px;
   font-weight: 500;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);

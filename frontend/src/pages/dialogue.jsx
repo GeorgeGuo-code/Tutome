@@ -23,6 +23,7 @@ const Dialogue = () => {
   const [isSummarizing, setIsSummarizing] = useState(false); // 是否正在生成总结
   const [summary, setSummary] = useState(null); // 总结的容
   const [showSummaryModal, setShowSummaryModal] = useState(false); // 显示总结弹窗
+  const [showGuideEndModal, setShowGuideEndModal] = useState(false); // 引导模式：对方同意结束的弹窗
   const [selectedImage, setSelectedImage] = useState(null); // 选择的图片文件
   const [imagePreview, setImagePreview] = useState(null); // 图片预览 URL
   const [imagePreviewModal, setImagePreviewModal] = useState(null); // 全屏预览的图片 URL
@@ -633,6 +634,12 @@ const Dialogue = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // 引导模式：确认对方同意结束的弹窗处理
+  const handleGuideEndConfirm = () => {
+    setShowGuideEndModal(false);
+    setPairStatus('completed');
+  };
+
   // 申请结束对话
   const handleRequestEnd = async () => {
     try {
@@ -677,9 +684,8 @@ const Dialogue = () => {
   // 确认结束对话框（显示确认模态框）
   const handleConfirmEnd = async () => {
     if (guideMode) {
-      // 引导模式：模拟对方同意
-      alert('对方同意了您的结束申请');
-      setPairStatus('completed');
+      // 引导模式：弹窗提示对方同意
+      setShowGuideEndModal(true);
       return;
     }
 
@@ -985,7 +991,7 @@ const Dialogue = () => {
   };
 
   return (
-    <div className={`dialogue-container ${reviewPanelOpen ? 'review-panel-open' : ''} ${guideMode ? 'guide-mode' : ''} ${(showEndConfirmModal || showEndRequestModal || showSummaryModal) ? 'modal-showing' : ''}`}>
+    <div className={`dialogue-container ${reviewPanelOpen ? 'review-panel-open' : ''} ${guideMode ? 'guide-mode' : ''} ${(showEndConfirmModal || showEndRequestModal || showSummaryModal || showGuideEndModal) ? 'modal-showing' : ''}`}>
       {/* AI 审查栏 */}
       <div className={`review-panel ${reviewPanelOpen ? 'expanded' : 'collapsed'}`}>
         <div className="review-panel-header" onClick={toggleReviewPanel}>
@@ -1246,6 +1252,24 @@ const Dialogue = () => {
                 onClick={handleRequestEnd}
               >
                 确认
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 引导模式：对方同意结束 */}
+      {showGuideEndModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">对方同意了您的结束申请</h3>
+            <p className="modal-message">对方已同意结束当前教学对话</p>
+            <div className="modal-buttons">
+              <button
+                className="btn-confirm"
+                onClick={handleGuideEndConfirm}
+              >
+                确定
               </button>
             </div>
           </div>
